@@ -1,0 +1,36 @@
+name: Verify studio
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: go mod download
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - run: go build -trimpath -o bin/studio ./cmd/studio
+      - name: Check complete API workflow
+        shell: bash
+        run: |
+          STUDIO_DATA="$RUNNER_TEMP/studio-ci.db" ./bin/studio &
+          studio_pid=$!
+          trap 'kill "$studio_pid"' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/api/health; then break; fi
+            sleep 1
+          done
+          node scripts/acceptance.mjs

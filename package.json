@@ -1,0 +1,11 @@
+{
+  "name": "software-studio",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env.local scripts/dev.mjs",
+    "build": "npm --prefix web run build",
+    "check": "npm --prefix web run typecheck"
+  }
+}

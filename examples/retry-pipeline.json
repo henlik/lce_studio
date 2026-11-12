@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "retry-lab",
+  "name": "Reliable request pipeline",
+  "description": "A lost response triggers a retry. Compare database deduplication on and off to see why a retry can repeat an operation.",
+  "nodes": [
+    {
+      "id": "client",
+      "type": "client",
+      "name": "Client",
+      "position": {
+        "x": 60,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 0,
+        "capacity": 1,
+        "deduplicate": false
+      }
+    },
+    {
+      "id": "service",
+      "type": "service",
+      "name": "Order service",
+      "position": {
+        "x": 360,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 15,
+        "capacity": 2,
+        "deduplicate": false
+      }
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "name": "Ledger",
+      "position": {
+        "x": 660,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 5,
+        "capacity": 1,
+        "deduplicate": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-service",
+      "source": "client",
+      "target": "service",
+      "latencyMs": 10
+    },
+    {
+      "id": "service-database",
+      "source": "service",
+      "target": "database",
+      "latencyMs": 10
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "text": "A retried request must not create a duplicate operation.",
+      "rule": "no_duplicates",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-002",
+      "text": "Every request receives a successful response before retries are exhausted.",
+      "rule": "all_complete",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-003",
+      "text": "95% of requests complete within 300 ms, including retries.",
+      "rule": "latency_p95",
+      "targetMs": 300
+    }
+  ],
+  "scenario": {
+    "requestCount": 12,
+    "intervalMs": 40,
+    "timeoutMs": 100,
+    "maxRetries": 2,
+    "dropFirstResponse": true,
+    "jitterMs": 0,
+    "seed": 42
+  }
+}
