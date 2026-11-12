@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.payment-disposition",
+    "version": "1.0.0",
+    "digest": "0796a2680195766eef01dd3da1f49e68fa45a372c39b50cc918fab5fce488390"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.payment-disposition",
+        "version": "1.0.0",
+        "name": "Interpret explicit payment policy",
+        "description": "Consumes an explicit policy disposition. Allow, defer and waive permit routine continuation; review, error and unknown values require review. It does not charge money, infer coverage or block emergency routing.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "disposition",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "proceed",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "allow",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "disposition"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "allow"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "defer",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "disposition"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "defer"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "waive",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "disposition"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "waive"
+                  }
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "alternatives",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "defer",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "waive",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "proceed",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "allow",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "alternatives",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "route",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "proceed",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "review"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "proceed"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            }
+          ],
+          "bindings": {
+            "proceed": {
+              "node": "proceed",
+              "port": "result"
+            },
+            "route": {
+              "node": "route",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "allow",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "allow"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "proceed"
+              }
+            }
+          },
+          {
+            "name": "defer",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "defer"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "proceed"
+              }
+            }
+          },
+          {
+            "name": "waive",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "waive"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "proceed"
+              }
+            }
+          },
+          {
+            "name": "review",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "review"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "policyError",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "policyError"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "unknown",
+            "inputs": {
+              "disposition": {
+                "type": "string",
+                "string": "unknown"
+              }
+            },
+            "expected": {
+              "proceed": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          }
+        ]
+      },
+      "digest": "0796a2680195766eef01dd3da1f49e68fa45a372c39b50cc918fab5fce488390"
+    }
+  ]
+}

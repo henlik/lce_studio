@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.forward-boolean",
+    "version": "1.0.0",
+    "digest": "866b8f44f61a0e1ecefb7c972d883f2c3fe1b664ce8f38ed302b796363755fcd"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.forward-boolean",
+        "version": "1.0.0",
+        "name": "Branch on explicit boolean",
+        "description": "Forwards an explicit boolean without deriving additional authority.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "value",
+              "type": "boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [],
+          "bindings": {
+            "result": {
+              "input": "value"
+            }
+          }
+        }
+      },
+      "digest": "866b8f44f61a0e1ecefb7c972d883f2c3fe1b664ce8f38ed302b796363755fcd"
+    }
+  ]
+}

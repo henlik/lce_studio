@@ -1,0 +1,808 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.typed-candidate-eligible",
+    "version": "1.0.0",
+    "digest": "f5b7eb5f64fe8d2a5ddecae751056ec2f4c42d7c7524209ff23817aa5513d133"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 3,
+        "id": "lce.typed-candidate-eligible",
+        "version": "1.0.0",
+        "name": "Read typed candidate eligibility",
+        "description": "Reads exact adapter facts and checks the configured resource identity before reusing the scalar eligibility decision.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "candidate",
+              "type": "record",
+              "recordRef": {
+                "contractId": "health.reception-values",
+                "version": "1.0.0",
+                "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e",
+                "record": "CandidateFacts"
+              }
+            },
+            {
+              "name": "expectedResource",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "eligible",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "resourceId",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              },
+              "field": "resourceId"
+            },
+            {
+              "id": "facilityMatches",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 280,
+                "y": 0
+              },
+              "field": "facilityMatches"
+            },
+            {
+              "id": "serviceMatches",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 560,
+                "y": 0
+              },
+              "field": "serviceMatches"
+            },
+            {
+              "id": "qualified",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 840,
+                "y": 0
+              },
+              "field": "qualified"
+            },
+            {
+              "id": "onDuty",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 1120,
+                "y": 0
+              },
+              "field": "onDuty"
+            },
+            {
+              "id": "available",
+              "op": "record_get",
+              "inputs": {
+                "value": {
+                  "input": "candidate"
+                }
+              },
+              "position": {
+                "x": 1400,
+                "y": 0
+              },
+              "field": "available"
+            },
+            {
+              "id": "eligibility",
+              "component": {
+                "packageId": "lce.candidate-eligible",
+                "version": "1.0.0",
+                "digest": "55f9ce6a6f2cc750abece6b4e20a1da28192d8e27998b9abce50e28426a4746a"
+              },
+              "inputs": {
+                "available": {
+                  "node": "available",
+                  "port": "result"
+                },
+                "facilityMatches": {
+                  "node": "facilityMatches",
+                  "port": "result"
+                },
+                "onDuty": {
+                  "node": "onDuty",
+                  "port": "result"
+                },
+                "qualified": {
+                  "node": "qualified",
+                  "port": "result"
+                },
+                "serviceMatches": {
+                  "node": "serviceMatches",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "sameResource",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "node": "resourceId",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "expectedResource"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "allowed",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "sameResource",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "eligibility",
+                  "port": "eligible"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            }
+          ],
+          "bindings": {
+            "eligible": {
+              "node": "allowed",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Eligible known resource",
+            "inputs": {
+              "candidate": {
+                "type": "record",
+                "recordRef": {
+                  "contractId": "health.reception-values",
+                  "version": "1.0.0",
+                  "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e",
+                  "record": "CandidateFacts"
+                },
+                "record": {
+                  "available": {
+                    "type": "integer",
+                    "integer": 1
+                  },
+                  "facilityMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "onDuty": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "qualified": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "resourceId": {
+                    "type": "string",
+                    "string": "providerA"
+                  },
+                  "serviceMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  }
+                }
+              },
+              "expectedResource": {
+                "type": "string",
+                "string": "providerA"
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Wrong resource",
+            "inputs": {
+              "candidate": {
+                "type": "record",
+                "recordRef": {
+                  "contractId": "health.reception-values",
+                  "version": "1.0.0",
+                  "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e",
+                  "record": "CandidateFacts"
+                },
+                "record": {
+                  "available": {
+                    "type": "integer",
+                    "integer": 1
+                  },
+                  "facilityMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "onDuty": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "qualified": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "resourceId": {
+                    "type": "string",
+                    "string": "other"
+                  },
+                  "serviceMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  }
+                }
+              },
+              "expectedResource": {
+                "type": "string",
+                "string": "providerA"
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "No capacity",
+            "inputs": {
+              "candidate": {
+                "type": "record",
+                "recordRef": {
+                  "contractId": "health.reception-values",
+                  "version": "1.0.0",
+                  "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e",
+                  "record": "CandidateFacts"
+                },
+                "record": {
+                  "available": {
+                    "type": "integer",
+                    "integer": 0
+                  },
+                  "facilityMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "onDuty": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "qualified": {
+                    "type": "boolean",
+                    "boolean": true
+                  },
+                  "resourceId": {
+                    "type": "string",
+                    "string": "providerA"
+                  },
+                  "serviceMatches": {
+                    "type": "boolean",
+                    "boolean": true
+                  }
+                }
+              },
+              "expectedResource": {
+                "type": "string",
+                "string": "providerA"
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ],
+        "dataContracts": [
+          {
+            "contract": {
+              "schemaVersion": 1,
+              "id": "health.reception-values",
+              "version": "1.0.0",
+              "name": "Synthetic reception adapter facts",
+              "description": "Explicit candidate eligibility evidence for bounded reception experiments. Fields are supplied by a synthetic workforce adapter, not inferred by the runner.",
+              "author": "LCE Studio contributors",
+              "license": "MIT",
+              "records": [
+                {
+                  "name": "CandidateFacts",
+                  "fields": [
+                    {
+                      "name": "resourceId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "facilityMatches",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "serviceMatches",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "qualified",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "onDuty",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "available",
+                      "type": "integer"
+                    }
+                  ]
+                }
+              ],
+              "entities": [],
+              "relationships": []
+            },
+            "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e"
+          }
+        ]
+      },
+      "digest": "f5b7eb5f64fe8d2a5ddecae751056ec2f4c42d7c7524209ff23817aa5513d133"
+    },
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.candidate-eligible",
+        "version": "1.0.0",
+        "name": "Check explicit candidate eligibility",
+        "description": "Combines explicit authority-supplied facility/service/qualification/duty facts and positive capacity. The result is only a proposal; the capacity owner must reserve atomically.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "facilityMatches",
+              "type": "boolean"
+            },
+            {
+              "name": "serviceMatches",
+              "type": "boolean"
+            },
+            {
+              "name": "qualified",
+              "type": "boolean"
+            },
+            {
+              "name": "onDuty",
+              "type": "boolean"
+            },
+            {
+              "name": "available",
+              "type": "integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "eligible",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "rightPlace",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "facilityMatches"
+                },
+                "right": {
+                  "input": "serviceMatches"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "onQualifiedDuty",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "qualified"
+                },
+                "right": {
+                  "input": "onDuty"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "eligibleAuthority",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "rightPlace",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "onQualifiedDuty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "hasCapacity",
+              "op": "less_than",
+              "inputs": {
+                "left": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                },
+                "right": {
+                  "input": "available"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "eligible",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "eligibleAuthority",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "hasCapacity",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            }
+          ],
+          "bindings": {
+            "eligible": {
+              "node": "eligible",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Eligible",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Wrong facility",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Wrong service",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": false
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Not qualified",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Off duty",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Full",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": 0
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Invalid capacity",
+            "inputs": {
+              "available": {
+                "type": "integer",
+                "integer": -1
+              },
+              "facilityMatches": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "onDuty": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "qualified": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "serviceMatches": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "eligible": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "55f9ce6a6f2cc750abece6b4e20a1da28192d8e27998b9abce50e28426a4746a"
+    }
+  ]
+}

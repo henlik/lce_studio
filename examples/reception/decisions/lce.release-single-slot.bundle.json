@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.release-single-slot",
+    "version": "1.0.0",
+    "digest": "6e95931400283848daa691ef0210eb414ba7353c10beda3d80fe2e56a650e7d4"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.release-single-slot",
+        "version": "1.0.0",
+        "name": "release one owned resource slot",
+        "description": "Checks exact resource/case ownership. Reserve consumes one available slot atomically; release restores it only for its holder; accept records the receiving party's separately supplied acceptance.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "currentResource",
+              "type": "string"
+            },
+            {
+              "name": "available",
+              "type": "integer"
+            },
+            {
+              "name": "holder",
+              "type": "string"
+            },
+            {
+              "name": "alreadyAccepted",
+              "type": "boolean"
+            },
+            {
+              "name": "resourceId",
+              "type": "string"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "available",
+              "type": "integer"
+            },
+            {
+              "name": "holder",
+              "type": "string"
+            },
+            {
+              "name": "received",
+              "type": "boolean"
+            },
+            {
+              "name": "held",
+              "type": "boolean"
+            },
+            {
+              "name": "reservationToken",
+              "type": "string"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "sameResource",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentResource"
+                },
+                "right": {
+                  "input": "resourceId"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "caseNamedEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "caseId"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "caseNamed",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "caseNamedEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "validTarget",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "sameResource",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "caseNamed",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "sameHolder",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "holder"
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "reserved",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "available"
+                },
+                "right": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "ownedReservation",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "sameHolder",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "reserved",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "ownedTarget",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "validTarget",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "ownedReservation",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "alreadyReceived",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "ownedTarget",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "alreadyAccepted"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            },
+            {
+              "id": "actualReceived",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "ownedTarget",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "node": "alreadyReceived",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "boolean",
+                    "boolean": false
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 400
+              }
+            },
+            {
+              "id": "actualHeld",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "ownedTarget",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "node": "ownedTarget",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "boolean",
+                    "boolean": false
+                  }
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 400
+              }
+            },
+            {
+              "id": "tokenPrefix",
+              "op": "concat",
+              "inputs": {
+                "left": {
+                  "input": "currentResource"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ":"
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 400
+              }
+            },
+            {
+              "id": "token",
+              "op": "concat",
+              "inputs": {
+                "left": {
+                  "node": "tokenPrefix",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 600
+              }
+            },
+            {
+              "id": "actualToken",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "actualHeld",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                },
+                "trueValue": {
+                  "node": "token",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 600
+              }
+            }
+          ],
+          "bindings": {
+            "accepted": {
+              "node": "ownedTarget",
+              "port": "result"
+            },
+            "available": {
+              "literal": {
+                "type": "integer",
+                "integer": 1
+              }
+            },
+            "held": {
+              "node": "actualHeld",
+              "port": "result"
+            },
+            "holder": {
+              "literal": {
+                "type": "string",
+                "string": ""
+              }
+            },
+            "received": {
+              "node": "actualReceived",
+              "port": "result"
+            },
+            "reservationToken": {
+              "node": "actualToken",
+              "port": "result"
+            }
+          }
+        }
+      },
+      "digest": "6e95931400283848daa691ef0210eb414ba7353c10beda3d80fe2e56a650e7d4"
+    }
+  ]
+}

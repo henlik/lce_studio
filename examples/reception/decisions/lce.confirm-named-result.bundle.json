@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.confirm-named-result",
+    "version": "1.0.0",
+    "digest": "3d02bce2450c1bc45a720e0d4d867d931915ee60270acf747720c822c1093caf"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.confirm-named-result",
+        "version": "1.0.0",
+        "name": "Confirm named response",
+        "description": "Accepts a named value only when an explicit response confirms it.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "confirmed",
+              "type": "boolean"
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "valid",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "namedEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "value"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "named",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "namedEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "valid",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "confirmed"
+                },
+                "right": {
+                  "node": "named",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            }
+          ],
+          "bindings": {
+            "valid": {
+              "node": "valid",
+              "port": "result"
+            }
+          }
+        }
+      },
+      "digest": "3d02bce2450c1bc45a720e0d4d867d931915ee60270acf747720c822c1093caf"
+    }
+  ]
+}

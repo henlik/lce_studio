@@ -1,0 +1,508 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.confirm-dispatch-choice",
+    "version": "1.0.0",
+    "digest": "e0ca0b100b5a0d447e28dc0329adeb5d75131e7a01b31a569b33b4ce27e36b5a"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.confirm-dispatch-choice",
+        "version": "1.0.0",
+        "name": "Validate a human dispatcher choice",
+        "description": "A dispatcher explicitly selects candidateA or candidateB. Only an eligible selected candidate advances to atomic reservation. No candidate is silently chosen when neither is eligible.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "choice",
+              "type": "string"
+            },
+            {
+              "name": "candidateAEligible",
+              "type": "boolean"
+            },
+            {
+              "name": "candidateBEligible",
+              "type": "boolean"
+            },
+            {
+              "name": "resourceA",
+              "type": "string"
+            },
+            {
+              "name": "resourceB",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "available",
+              "type": "boolean"
+            },
+            {
+              "name": "selectedA",
+              "type": "boolean"
+            },
+            {
+              "name": "resourceId",
+              "type": "string"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "choseA",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "choice"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "candidateA"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "allowA",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "choseA",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "candidateAEligible"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "choseB",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "choice"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "candidateB"
+                  }
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "allowB",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "choseB",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "candidateBEligible"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "bRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "allowB",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "wait"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "candidateB"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "route",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "allowA",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "node": "bRoute",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "candidateA"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "available",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "allowA",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "allowB",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "chosenResource",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "allowA",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "input": "resourceB"
+                },
+                "trueValue": {
+                  "input": "resourceA"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "resourceId",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "available",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                },
+                "trueValue": {
+                  "node": "chosenResource",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            }
+          ],
+          "bindings": {
+            "available": {
+              "node": "available",
+              "port": "result"
+            },
+            "resourceId": {
+              "node": "resourceId",
+              "port": "result"
+            },
+            "route": {
+              "node": "route",
+              "port": "result"
+            },
+            "selectedA": {
+              "node": "allowA",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Select eligible A",
+            "inputs": {
+              "candidateAEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "candidateBEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "choice": {
+                "type": "string",
+                "string": "candidateA"
+              },
+              "resourceA": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "resourceB": {
+                "type": "string",
+                "string": "resourceB"
+              }
+            },
+            "expected": {
+              "available": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "route": {
+                "type": "string",
+                "string": "candidateA"
+              },
+              "selectedA": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Select eligible B",
+            "inputs": {
+              "candidateAEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "candidateBEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "choice": {
+                "type": "string",
+                "string": "candidateB"
+              },
+              "resourceA": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "resourceB": {
+                "type": "string",
+                "string": "resourceB"
+              }
+            },
+            "expected": {
+              "available": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "resourceB"
+              },
+              "route": {
+                "type": "string",
+                "string": "candidateB"
+              },
+              "selectedA": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Selected A ineligible",
+            "inputs": {
+              "candidateAEligible": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "candidateBEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "choice": {
+                "type": "string",
+                "string": "candidateA"
+              },
+              "resourceA": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "resourceB": {
+                "type": "string",
+                "string": "resourceB"
+              }
+            },
+            "expected": {
+              "available": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resourceId": {
+                "type": "string",
+                "string": ""
+              },
+              "route": {
+                "type": "string",
+                "string": "wait"
+              },
+              "selectedA": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "No eligible candidate",
+            "inputs": {
+              "candidateAEligible": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "candidateBEligible": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "choice": {
+                "type": "string",
+                "string": "candidateB"
+              },
+              "resourceA": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "resourceB": {
+                "type": "string",
+                "string": "resourceB"
+              }
+            },
+            "expected": {
+              "available": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resourceId": {
+                "type": "string",
+                "string": ""
+              },
+              "route": {
+                "type": "string",
+                "string": "wait"
+              },
+              "selectedA": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Explicitly wait",
+            "inputs": {
+              "candidateAEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "candidateBEligible": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "choice": {
+                "type": "string",
+                "string": "wait"
+              },
+              "resourceA": {
+                "type": "string",
+                "string": "resourceA"
+              },
+              "resourceB": {
+                "type": "string",
+                "string": "resourceB"
+              }
+            },
+            "expected": {
+              "available": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resourceId": {
+                "type": "string",
+                "string": ""
+              },
+              "route": {
+                "type": "string",
+                "string": "wait"
+              },
+              "selectedA": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "e0ca0b100b5a0d447e28dc0329adeb5d75131e7a01b31a569b33b4ce27e36b5a"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ const contexts: Record<string, { kind: string; detail: string }> = {
   data: { kind: "Reusable data contract", detail: "Define information shared by components at any level." },
   state: { kind: "Stateful component model", detail: "Give an owner state and commands backed by pure decisions." },
   messages: { kind: "Component collaboration model", detail: "Connect independent owners through typed message routes." },
+  workflows: { kind: "Reusable workflow component", detail: "Connect tasks, exact decisions and owned commands, then follow their execution." },
 };
 const context = computed(() => contexts[props.workspace] || contexts.design);
 const levels = [
@@ -81,10 +82,11 @@ const levels = [
         <li><strong>Use it at a larger boundary.</strong> Pin its exact version inside another component or supported owner model.</li>
       </ol>
       <p class="orientation-status">
-        Today, pure components support nested composition. Data, state,
-        message and timed application models have separate editors and artifacts.
-        A unified parent/child design tree and reusable application/system packages
-        are planned; this guide does not convert an artifact between those kinds.
+        Workflows assemble explicit human or adapter tasks, pure decisions and
+        owned commands behind a reusable contract. Their exact dependencies can
+        be inspected down to primitive operations. Data, state, message and timed
+        deployment experiments retain separate artifacts; a common system tree,
+        generated applications and live service adapters remain future work.
       </p>
     </div>
   </section>

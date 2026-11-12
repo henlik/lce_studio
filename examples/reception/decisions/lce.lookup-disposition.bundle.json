@@ -1,0 +1,408 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.lookup-disposition",
+    "version": "1.0.0",
+    "digest": "e31d5bc2b490a571432c52987d46e7ecea77ac1a609bce57a0daa0979ac24485"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.lookup-disposition",
+        "version": "1.0.0",
+        "name": "Classify explicit lookup result",
+        "description": "Distinguishes confirmed zero/one/many matches from unavailable or invalid lookup results. No lookup or identity verification is performed.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "completed",
+              "type": "boolean"
+            },
+            {
+              "name": "matchCount",
+              "type": "integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "register",
+              "type": "boolean"
+            },
+            {
+              "name": "confirm",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "validCount",
+              "op": "less_or_equal",
+              "inputs": {
+                "left": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                },
+                "right": {
+                  "input": "matchCount"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "zeroMatches",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "matchCount"
+                },
+                "right": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "oneMatch",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "matchCount"
+                },
+                "right": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 1
+                  }
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "knownResult",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "completed"
+                },
+                "right": {
+                  "node": "validCount",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "matchedRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "oneMatch",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "review"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "confirm"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "completedRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "zeroMatches",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "node": "matchedRoute",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "register"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "route",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "knownResult",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "review"
+                  }
+                },
+                "trueValue": {
+                  "node": "completedRoute",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "canRegister",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "knownResult",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "zeroMatches",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "canConfirm",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "knownResult",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "oneMatch",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            }
+          ],
+          "bindings": {
+            "confirm": {
+              "node": "canConfirm",
+              "port": "result"
+            },
+            "register": {
+              "node": "canRegister",
+              "port": "result"
+            },
+            "route": {
+              "node": "route",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Confirmed absence",
+            "inputs": {
+              "completed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "matchCount": {
+                "type": "integer",
+                "integer": 0
+              }
+            },
+            "expected": {
+              "confirm": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "register": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "register"
+              }
+            }
+          },
+          {
+            "name": "One candidate needs confirmation",
+            "inputs": {
+              "completed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "matchCount": {
+                "type": "integer",
+                "integer": 1
+              }
+            },
+            "expected": {
+              "confirm": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "register": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "confirm"
+              }
+            }
+          },
+          {
+            "name": "Ambiguous matches",
+            "inputs": {
+              "completed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "matchCount": {
+                "type": "integer",
+                "integer": 2
+              }
+            },
+            "expected": {
+              "confirm": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "register": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Unavailable is not absence",
+            "inputs": {
+              "completed": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "matchCount": {
+                "type": "integer",
+                "integer": 0
+              }
+            },
+            "expected": {
+              "confirm": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "register": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Invalid negative count",
+            "inputs": {
+              "completed": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "matchCount": {
+                "type": "integer",
+                "integer": -1
+              }
+            },
+            "expected": {
+              "confirm": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "register": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          }
+        ]
+      },
+      "digest": "e31d5bc2b490a571432c52987d46e7ecea77ac1a609bce57a0daa0979ac24485"
+    }
+  ]
+}

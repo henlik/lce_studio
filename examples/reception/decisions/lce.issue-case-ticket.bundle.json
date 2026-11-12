@@ -1,0 +1,654 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.issue-case-ticket",
+    "version": "1.0.0",
+    "digest": "4818ba7cbbaed9c779b0f5d4075dcb0f32ff2795ab964031dc04b9edcd7c5d1a"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.issue-case-ticket",
+        "version": "1.0.0",
+        "name": "Issue or reuse case ticket",
+        "description": "Proposes one case-derived ticket; another case cannot take ownership of an existing ticket.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "currentCase",
+              "type": "string"
+            },
+            {
+              "name": "currentTicket",
+              "type": "string"
+            },
+            {
+              "name": "cancelled",
+              "type": "boolean"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "currentNext",
+              "type": "integer"
+            },
+            {
+              "name": "currentNumber",
+              "type": "integer"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "ticketId",
+              "type": "string"
+            },
+            {
+              "name": "ticketNumber",
+              "type": "integer"
+            },
+            {
+              "name": "nextNumber",
+              "type": "integer"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "unowned",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentCase"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "sameCase",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentCase"
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "ownerAllowed",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "unowned",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "sameCase",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "caseNamedEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "caseId"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "caseNamed",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "caseNamedEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "active",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "input": "cancelled"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "validOwner",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "ownerAllowed",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "caseNamed",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "positiveSequence",
+              "op": "less_than",
+              "inputs": {
+                "left": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                },
+                "right": {
+                  "input": "currentNext"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "boundedSequence",
+              "op": "less_than",
+              "inputs": {
+                "left": {
+                  "input": "currentNext"
+                },
+                "right": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 9007199254740991
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            },
+            {
+              "id": "sequenceValid",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "positiveSequence",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "boundedSequence",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 400
+              }
+            },
+            {
+              "id": "eligible",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "validOwner",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "active",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 400
+              }
+            },
+            {
+              "id": "accepted",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "eligible",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "sequenceValid",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 400
+              }
+            },
+            {
+              "id": "firstIssue",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "accepted",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "unowned",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 600
+              }
+            },
+            {
+              "id": "increment",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "firstIssue",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 0
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "integer",
+                    "integer": 1
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 600
+              }
+            },
+            {
+              "id": "nextNumber",
+              "op": "add",
+              "inputs": {
+                "left": {
+                  "input": "currentNext"
+                },
+                "right": {
+                  "node": "increment",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 600
+              }
+            },
+            {
+              "id": "ticketNumber",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "unowned",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "input": "currentNumber"
+                },
+                "trueValue": {
+                  "input": "currentNext"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 600
+              }
+            },
+            {
+              "id": "newTicket",
+              "op": "concat",
+              "inputs": {
+                "left": {
+                  "literal": {
+                    "type": "string",
+                    "string": "ticket:"
+                  }
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 800
+              }
+            },
+            {
+              "id": "ticket",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "unowned",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "input": "currentTicket"
+                },
+                "trueValue": {
+                  "node": "newTicket",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 800
+              }
+            }
+          ],
+          "bindings": {
+            "accepted": {
+              "node": "accepted",
+              "port": "result"
+            },
+            "caseId": {
+              "input": "caseId"
+            },
+            "nextNumber": {
+              "node": "nextNumber",
+              "port": "result"
+            },
+            "ticketId": {
+              "node": "ticket",
+              "port": "result"
+            },
+            "ticketNumber": {
+              "node": "ticketNumber",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Issue first ticket",
+            "inputs": {
+              "cancelled": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentCase": {
+                "type": "string",
+                "string": ""
+              },
+              "currentNext": {
+                "type": "integer",
+                "integer": 100
+              },
+              "currentNumber": {
+                "type": "integer",
+                "integer": 99
+              },
+              "currentTicket": {
+                "type": "string",
+                "string": ""
+              }
+            },
+            "expected": {
+              "accepted": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "nextNumber": {
+                "type": "integer",
+                "integer": 101
+              },
+              "ticketId": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              },
+              "ticketNumber": {
+                "type": "integer",
+                "integer": 100
+              }
+            }
+          },
+          {
+            "name": "Same case reuses ticket",
+            "inputs": {
+              "cancelled": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentCase": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentNext": {
+                "type": "integer",
+                "integer": 100
+              },
+              "currentNumber": {
+                "type": "integer",
+                "integer": 99
+              },
+              "currentTicket": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              }
+            },
+            "expected": {
+              "accepted": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "nextNumber": {
+                "type": "integer",
+                "integer": 100
+              },
+              "ticketId": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              },
+              "ticketNumber": {
+                "type": "integer",
+                "integer": 99
+              }
+            }
+          },
+          {
+            "name": "Different case denied",
+            "inputs": {
+              "cancelled": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseTwo"
+              },
+              "currentCase": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentNext": {
+                "type": "integer",
+                "integer": 100
+              },
+              "currentNumber": {
+                "type": "integer",
+                "integer": 99
+              },
+              "currentTicket": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              }
+            },
+            "expected": {
+              "accepted": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseTwo"
+              },
+              "nextNumber": {
+                "type": "integer",
+                "integer": 100
+              },
+              "ticketId": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              },
+              "ticketNumber": {
+                "type": "integer",
+                "integer": 99
+              }
+            }
+          },
+          {
+            "name": "Cancelled case denied",
+            "inputs": {
+              "cancelled": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentCase": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "currentNext": {
+                "type": "integer",
+                "integer": 100
+              },
+              "currentNumber": {
+                "type": "integer",
+                "integer": 99
+              },
+              "currentTicket": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              }
+            },
+            "expected": {
+              "accepted": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "caseId": {
+                "type": "string",
+                "string": "caseOne"
+              },
+              "nextNumber": {
+                "type": "integer",
+                "integer": 100
+              },
+              "ticketId": {
+                "type": "string",
+                "string": "ticket:caseOne"
+              },
+              "ticketNumber": {
+                "type": "integer",
+                "integer": 99
+              }
+            }
+          }
+        ]
+      },
+      "digest": "4818ba7cbbaed9c779b0f5d4075dcb0f32ff2795ab964031dc04b9edcd7c5d1a"
+    }
+  ]
+}

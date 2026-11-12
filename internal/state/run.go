@@ -349,6 +349,17 @@ func (e *engine) retain(step StepResult, candidate *ownedInstance, receipt *Rece
 			projection.InstanceBytes += bytes
 		}
 		if step.Receipt != nil {
+			projection.ReceiptPresent, projection.ReceiptAccepted = true, step.Receipt.Accepted
+			projection.OutputBytes, projection.BooleanOutputs = map[string]int{}, map[string]bool{}
+			for name, value := range step.Receipt.Outputs {
+				projection.OutputBytes[name], err = jsonSize(value)
+				if err != nil {
+					return err
+				}
+				if value.Boolean != nil {
+					projection.BooleanOutputs[name] = *value.Boolean
+				}
+			}
 			projection.ReceiptBytes, err = jsonSize(step.Receipt)
 			if err != nil {
 				return err

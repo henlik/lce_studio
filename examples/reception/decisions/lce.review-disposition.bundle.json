@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.review-disposition",
+    "version": "1.0.0",
+    "digest": "229d6cd6ca6a7c06ecefe37fdca7709bc046c99c94366de96c3ff9f3256144c0"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.review-disposition",
+        "version": "1.0.0",
+        "name": "Record professional review disposition",
+        "description": "Release requires an explicit authorized response tied to the current assessment. An emergency disposition takes precedence over ordinary release. This decision performs no clinical assessment or treatment.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "disposition",
+              "type": "string"
+            },
+            {
+              "name": "authorized",
+              "type": "boolean"
+            },
+            {
+              "name": "assessmentRef",
+              "type": "string"
+            },
+            {
+              "name": "currentAssessmentRef",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "released",
+              "type": "boolean"
+            },
+            {
+              "name": "emergency",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "emergency",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "disposition"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "emergency"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "released",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "disposition"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "released"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "currentAssessment",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "assessmentRef"
+                },
+                "right": {
+                  "input": "currentAssessmentRef"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "emptyAssessment",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "assessmentRef"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "assessmentNamed",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "emptyAssessment",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "currentAuthority",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "authorized"
+                },
+                "right": {
+                  "node": "currentAssessment",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "validAssessment",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "currentAuthority",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "assessmentNamed",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "releaseAllowed",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "validAssessment",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "released",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "routineRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "releaseAllowed",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "review"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "released"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            },
+            {
+              "id": "route",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "emergency",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "node": "routineRoute",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "emergency"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 400
+              }
+            }
+          ],
+          "bindings": {
+            "emergency": {
+              "node": "emergency",
+              "port": "result"
+            },
+            "released": {
+              "node": "releaseAllowed",
+              "port": "result"
+            },
+            "route": {
+              "node": "route",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Explicit current release",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "disposition": {
+                "type": "string",
+                "string": "released"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "released"
+              }
+            }
+          },
+          {
+            "name": "Review remains pending",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "disposition": {
+                "type": "string",
+                "string": "review"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Old assessment cannot clear new review",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": "assessment2"
+              },
+              "disposition": {
+                "type": "string",
+                "string": "released"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Unauthorized release rejected",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": "assessment1"
+              },
+              "disposition": {
+                "type": "string",
+                "string": "released"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Unnamed assessment rejected",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": ""
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": ""
+              },
+              "disposition": {
+                "type": "string",
+                "string": "released"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "Emergency bypasses routine paperwork",
+            "inputs": {
+              "assessmentRef": {
+                "type": "string",
+                "string": ""
+              },
+              "authorized": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "currentAssessmentRef": {
+                "type": "string",
+                "string": "assessment2"
+              },
+              "disposition": {
+                "type": "string",
+                "string": "emergency"
+              }
+            },
+            "expected": {
+              "emergency": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "released": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "emergency"
+              }
+            }
+          }
+        ]
+      },
+      "digest": "229d6cd6ca6a7c06ecefe37fdca7709bc046c99c94366de96c3ff9f3256144c0"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Hospital reception: top-down reusable design guide
 
-Design baseline: 12 November 2026, LCE Studio 0.7.1. This is a design and authoring guide, not an implemented reception application or a clinical treatment protocol. All scenario data should be synthetic.
+Design baseline: 12 November 2026. LCE Studio 0.8 adds an executable reference workflow following this design; use [HOSPITAL_RECEPTION_REPLICATION.md](HOSPITAL_RECEPTION_REPLICATION.md) to run and recreate it. This is a software model, not a clinical treatment protocol or deployed reception application. All scenario data should be synthetic.
 
 ## 1. Name the boundary before drawing the process
 
@@ -324,16 +324,17 @@ Do not label an unresolved placeholder executable. A future application or syste
 
 | Work | Current path | Limit |
 | --- | --- | --- |
-| Top-down hierarchy and contracts | This guide and conceptual diagrams | No stored common artifact tree or runnable Reception workflow yet |
+| Top-down workflow and contracts | Workflows: portable root contract, typed tasks, exact decisions and owners | Workflow-local hierarchy; no common project/system tree or nested workflow calls |
 | Shared types and relationship fixtures | Data → New data contract → add records/entities → check fixtures → install/export | Flat required scalar records; no SQL generation or live patient database |
 | Pure rules and nested reuse | Components → New definition → Typed interface / Composition / Evaluate & test → install/export | Sixteen pure operations; bounded acyclic composition, no effects |
 | Owned transitions and retries | State → New state machine → Ownership & handlers / Scenario & expectations | Bounded finite experiments, not deployed state services |
-| Owner-to-owner handoff failures | Messages → New message model → Owners & routes / Delivery scenario | Explicit steps, bounded owners, no automatic broker or human work engine |
+| Human/adapter tasks and workflow routing | Workflows: pause for typed responses, route automatically and interrupt stale work | Finite synthetic experiments, no live clinical services or authorization enforcement |
+| Owner-to-owner handoff failures | Messages → New message model → Owners & routes / Delivery scenario | Explicit steps and bounded owners; no automatic broker |
 | Resource/deployment experiments | Design, Deployment and Experiments | Separate timed model; not coupled to these reception decisions yet |
 
 The complete pure leaf catalog is: `identity`, `equal`, `less_than`, `less_or_equal`, `and`, `or`, `not`, `select`, `add`, `subtract`, `concat`, `record_make`, `record_get`, `collection_count`, `collection_at`, `collection_append`. Literals, ports, bindings and nested component calls are modeling constructs, not extra pure primitive operations.
 
-The next product increment should connect design targets, parent/child scopes and artifact references without pretending that human tasks, external effects or generated applications are already implemented. This reference design supplies concrete acceptance criteria for that increment.
+The workflow increment connects tasks, pure decisions and modeled ownership in one executable artifact. The broader project/system registry, live external adapters, nested workflow calls and generated applications remain separate capabilities. This reference design supplies acceptance criteria for extending them.
 
 ## Sources and implementation contracts
 

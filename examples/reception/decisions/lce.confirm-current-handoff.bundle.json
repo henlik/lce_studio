@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.confirm-current-handoff",
+    "version": "1.0.0",
+    "digest": "df5c3a0fdff3521a14cd316ced918896b805bb9c0863b25aa49644ab6ac35ceb"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.confirm-current-handoff",
+        "version": "1.0.0",
+        "name": "Confirm receiving handoff",
+        "description": "Requires explicit acceptance tied to the current case and selected resource, with a nonempty receiving reference.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "resourceId",
+              "type": "string"
+            },
+            {
+              "name": "expectedResource",
+              "type": "string"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "expectedCase",
+              "type": "string"
+            },
+            {
+              "name": "reference",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "valid",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "resource",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "resourceId"
+                },
+                "right": {
+                  "input": "expectedResource"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "caseMatch",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "caseId"
+                },
+                "right": {
+                  "input": "expectedCase"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "matches",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "resource",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "caseMatch",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "referenceEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "reference"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "reference",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "referenceEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "evidence",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "matches",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "reference",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "valid",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "evidence",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "accepted"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            }
+          ],
+          "bindings": {
+            "valid": {
+              "node": "valid",
+              "port": "result"
+            }
+          }
+        }
+      },
+      "digest": "df5c3a0fdff3521a14cd316ced918896b805bb9c0863b25aa49644ab6ac35ceb"
+    }
+  ]
+}

@@ -62,4 +62,10 @@ The path above is a target interaction, not an existing stored hierarchy. A unif
 
 Nested pure components are executable within the existing depth and work bounds. State machines use pure command decisions. Message models connect state owners through explicit typed delivery. The older timed application/deployment model remains a separate model. Reusable generated application/system packages, a common project tree and navigation through recursively nested systems are not yet implemented.
 
-The next UX/model milestone should establish this common artifact hierarchy and explicit design targets before extending the coupling to hardware, networks and power simulation. See [COMPOSITION_ARCHITECTURE.md](COMPOSITION_ARCHITECTURE.md) for the broader architecture and the individual execution contracts for current limits.
+## Workflow composition in v0.8
+
+Workflows add a concrete reusable root contract that contains typed task nodes and exact references to pure decisions and owned-state components. Its execution follows declared control flow, pauses for explicit responses, and accepts declared interrupt signals. The workbench exposes the workflow, referenced decisions, their nested definitions and primitive operations for inspection. Exported dependencies can be reused separately; the whole workflow can be instantiated with different inputs and scenarios.
+
+This is a workflow-local composition boundary. It does not create a common parent/child project registry, imply nested workflow calls, execute external medical services or generate applications. The [reception replication guide](HOSPITAL_RECEPTION_REPLICATION.md) distinguishes the working reference from those future capabilities.
+
+The next UX/model milestone should extend these explicit identities into the common artifact hierarchy before coupling execution to hardware, networks and power simulation. See [COMPOSITION_ARCHITECTURE.md](COMPOSITION_ARCHITECTURE.md) for the broader architecture and the individual execution contracts for current limits.

@@ -1,0 +1,425 @@
+{
+  "machine": {
+    "schemaVersion": 1,
+    "id": "lce.case-encounter",
+    "version": "1.0.0",
+    "name": "Case-scoped encounter identity",
+    "description": "Owns one explicit case/patient association and stable encounter reference. Distinct case IDs produce distinct encounter IDs even when the patient is the same. This is modeled ownership, not a patient registry or live clinical database.",
+    "author": "LCE Studio contributors",
+    "license": "MIT",
+    "dataContracts": [],
+    "state": [
+      {
+        "name": "caseId",
+        "type": "string",
+        "durability": "durable",
+        "initial": {
+          "type": "string",
+          "string": ""
+        }
+      },
+      {
+        "name": "patientId",
+        "type": "string",
+        "durability": "durable",
+        "initial": {
+          "type": "string",
+          "string": ""
+        }
+      },
+      {
+        "name": "encounterId",
+        "type": "string",
+        "durability": "durable",
+        "initial": {
+          "type": "string",
+          "string": ""
+        }
+      }
+    ],
+    "effects": [],
+    "commands": [
+      {
+        "name": "open",
+        "inputs": [
+          {
+            "name": "caseId",
+            "type": "string"
+          },
+          {
+            "name": "patientId",
+            "type": "string"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "encounterId",
+            "type": "string"
+          }
+        ],
+        "decision": {
+          "schemaVersion": 1,
+          "root": {
+            "packageId": "lce.open-case-encounter",
+            "version": "1.0.0",
+            "digest": "1ec7b32f544695a9eaa37119808521d18d7c3cf8ccf2eebc8f1f38b8f0653ba7"
+          },
+          "packages": [
+            {
+              "package": {
+                "schemaVersion": 2,
+                "id": "lce.open-case-encounter",
+                "version": "1.0.0",
+                "name": "Open or reuse case encounter",
+                "description": "Requires named case and patient, and prevents another case/patient pair from replacing an already owned encounter.",
+                "author": "LCE Studio contributors",
+                "license": "MIT",
+                "kernel": "composite",
+                "capabilities": [
+                  "design",
+                  "evaluate"
+                ],
+                "config": {
+                  "processingMs": {
+                    "default": 0,
+                    "min": 0,
+                    "max": 0
+                  },
+                  "capacity": {
+                    "default": 0,
+                    "min": 0,
+                    "max": 0
+                  },
+                  "memoryMb": {
+                    "default": 0,
+                    "min": 0,
+                    "max": 0
+                  },
+                  "deduplicate": false
+                },
+                "behavior": {
+                  "inputs": [
+                    {
+                      "name": "currentCase",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentPatient",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentEncounter",
+                      "type": "string"
+                    },
+                    {
+                      "name": "caseId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "patientId",
+                      "type": "string"
+                    }
+                  ],
+                  "outputs": [
+                    {
+                      "name": "accepted",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "caseId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "patientId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "encounterId",
+                      "type": "string"
+                    }
+                  ],
+                  "nodes": [
+                    {
+                      "id": "unopened",
+                      "op": "equal",
+                      "inputs": {
+                        "left": {
+                          "input": "currentCase"
+                        },
+                        "right": {
+                          "literal": {
+                            "type": "string",
+                            "string": ""
+                          }
+                        }
+                      },
+                      "position": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    },
+                    {
+                      "id": "sameCase",
+                      "op": "equal",
+                      "inputs": {
+                        "left": {
+                          "input": "currentCase"
+                        },
+                        "right": {
+                          "input": "caseId"
+                        }
+                      },
+                      "position": {
+                        "x": 360,
+                        "y": 0
+                      }
+                    },
+                    {
+                      "id": "samePatient",
+                      "op": "equal",
+                      "inputs": {
+                        "left": {
+                          "input": "currentPatient"
+                        },
+                        "right": {
+                          "input": "patientId"
+                        }
+                      },
+                      "position": {
+                        "x": 720,
+                        "y": 0
+                      }
+                    },
+                    {
+                      "id": "sameVisit",
+                      "op": "and",
+                      "inputs": {
+                        "left": {
+                          "node": "sameCase",
+                          "port": "result"
+                        },
+                        "right": {
+                          "node": "samePatient",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 1080,
+                        "y": 0
+                      }
+                    },
+                    {
+                      "id": "ownerAllowed",
+                      "op": "or",
+                      "inputs": {
+                        "left": {
+                          "node": "unopened",
+                          "port": "result"
+                        },
+                        "right": {
+                          "node": "sameVisit",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 0,
+                        "y": 200
+                      }
+                    },
+                    {
+                      "id": "caseNamedEmpty",
+                      "op": "equal",
+                      "inputs": {
+                        "left": {
+                          "input": "caseId"
+                        },
+                        "right": {
+                          "literal": {
+                            "type": "string",
+                            "string": ""
+                          }
+                        }
+                      },
+                      "position": {
+                        "x": 360,
+                        "y": 200
+                      }
+                    },
+                    {
+                      "id": "caseNamed",
+                      "op": "not",
+                      "inputs": {
+                        "value": {
+                          "node": "caseNamedEmpty",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 720,
+                        "y": 200
+                      }
+                    },
+                    {
+                      "id": "patientNamedEmpty",
+                      "op": "equal",
+                      "inputs": {
+                        "left": {
+                          "input": "patientId"
+                        },
+                        "right": {
+                          "literal": {
+                            "type": "string",
+                            "string": ""
+                          }
+                        }
+                      },
+                      "position": {
+                        "x": 1080,
+                        "y": 200
+                      }
+                    },
+                    {
+                      "id": "patientNamed",
+                      "op": "not",
+                      "inputs": {
+                        "value": {
+                          "node": "patientNamedEmpty",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 0,
+                        "y": 400
+                      }
+                    },
+                    {
+                      "id": "named",
+                      "op": "and",
+                      "inputs": {
+                        "left": {
+                          "node": "caseNamed",
+                          "port": "result"
+                        },
+                        "right": {
+                          "node": "patientNamed",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 360,
+                        "y": 400
+                      }
+                    },
+                    {
+                      "id": "accepted",
+                      "op": "and",
+                      "inputs": {
+                        "left": {
+                          "node": "ownerAllowed",
+                          "port": "result"
+                        },
+                        "right": {
+                          "node": "named",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 720,
+                        "y": 400
+                      }
+                    },
+                    {
+                      "id": "newEncounter",
+                      "op": "concat",
+                      "inputs": {
+                        "left": {
+                          "literal": {
+                            "type": "string",
+                            "string": "encounter:"
+                          }
+                        },
+                        "right": {
+                          "input": "caseId"
+                        }
+                      },
+                      "position": {
+                        "x": 1080,
+                        "y": 400
+                      }
+                    },
+                    {
+                      "id": "encounter",
+                      "op": "select",
+                      "inputs": {
+                        "condition": {
+                          "node": "unopened",
+                          "port": "result"
+                        },
+                        "falseValue": {
+                          "input": "currentEncounter"
+                        },
+                        "trueValue": {
+                          "node": "newEncounter",
+                          "port": "result"
+                        }
+                      },
+                      "position": {
+                        "x": 0,
+                        "y": 600
+                      }
+                    }
+                  ],
+                  "bindings": {
+                    "accepted": {
+                      "node": "accepted",
+                      "port": "result"
+                    },
+                    "caseId": {
+                      "input": "caseId"
+                    },
+                    "encounterId": {
+                      "node": "encounter",
+                      "port": "result"
+                    },
+                    "patientId": {
+                      "input": "patientId"
+                    }
+                  }
+                }
+              },
+              "digest": "1ec7b32f544695a9eaa37119808521d18d7c3cf8ccf2eebc8f1f38b8f0653ba7"
+            }
+          ]
+        },
+        "bindings": {
+          "caseId": {
+            "input": "caseId"
+          },
+          "currentCase": {
+            "state": "caseId"
+          },
+          "currentEncounter": {
+            "state": "encounterId"
+          },
+          "currentPatient": {
+            "state": "patientId"
+          },
+          "patientId": {
+            "input": "patientId"
+          }
+        },
+        "acceptedOutput": "accepted",
+        "writes": {
+          "caseId": "caseId",
+          "encounterId": "encounterId",
+          "patientId": "patientId"
+        },
+        "results": {
+          "encounterId": "encounterId"
+        },
+        "effects": []
+      }
+    ]
+  },
+  "digest": "a3f7bd341c2f1632cbe882f5051b6917594ea10b3bbf19ceb95851acb495b191"
+}

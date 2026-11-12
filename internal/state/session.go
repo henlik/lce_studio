@@ -26,6 +26,11 @@ type Projection struct {
 	Operations, Invocations                int
 	Status, Message                        string
 	FaultApplied                           bool
+	// Workflow callers can admit typed assignments before ownership copies.
+	// These maps contain scalar metadata only, never mutable owned values.
+	ReceiptPresent, ReceiptAccepted bool
+	OutputBytes                     map[string]int
+	BooleanOutputs                  map[string]bool
 }
 
 // Session reuses the exact v0.6 transition kernel without retaining a history.

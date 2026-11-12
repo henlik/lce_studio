@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.cancel-case-ticket",
+    "version": "1.0.0",
+    "digest": "afe4765da37a19b1ea21fcdd5ec6f79bac652cd20afa9a26af1277659a40f4c4"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.cancel-case-ticket",
+        "version": "1.0.0",
+        "name": "cancel case ticket",
+        "description": "Checks case ownership and existing ticket before changing a durable lifecycle flag.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "currentCase",
+              "type": "string"
+            },
+            {
+              "name": "ticketId",
+              "type": "string"
+            },
+            {
+              "name": "cancelled",
+              "type": "boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "ticketId",
+              "type": "string"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "sameCase",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "caseId"
+                },
+                "right": {
+                  "input": "currentCase"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "ticketExistsEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "ticketId"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "ticketExists",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "ticketExistsEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "ownedTicket",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "sameCase",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "ticketExists",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            }
+          ],
+          "bindings": {
+            "accepted": {
+              "node": "ownedTicket",
+              "port": "result"
+            },
+            "ticketId": {
+              "input": "ticketId"
+            }
+          }
+        }
+      },
+      "digest": "afe4765da37a19b1ea21fcdd5ec6f79bac652cd20afa9a26af1277659a40f4c4"
+    }
+  ]
+}

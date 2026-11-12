@@ -2,9 +2,11 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.7.1** improves authoring space and empty starts: collapse navigation and side panels, expand diagrams, and create empty projects/definitions with examples loaded only on request. A design-context guide distinguishes primitives, components, applications and systems from their data/state/deployment views. See [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md).
+Version **0.8.0** adds executable task workflows: connect human/adapter tasks, exact pure decisions and owned-state commands; follow automatic branches, interrupt an active task, and retain complete experiment evidence. The **Workflows** workspace includes hospital reception and a service-desk reuse example. See [the reception replication guide](docs/HOSPITAL_RECEPTION_REPLICATION.md).
 
-The [hospital reception design guide](docs/HOSPITAL_RECEPTION_DESIGN.md) walks top-down from a reusable reception contract through queueing, identity, affiliation, clinical tasks, payment policy and dispatch to pure primitives and explicit state/adapter boundaries. It includes a first component authoring exercise, acceptance scenarios and current implementation limits; it is a reference design, not a running hospital application.
+Navigation and side panels remain collapsible, diagrams can expand, and new projects/definitions start empty with examples loaded only on request. The design-context guide distinguishes primitives, components, applications and systems from their data/state/deployment views. See [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md).
+
+The [hospital reception design guide](docs/HOSPITAL_RECEPTION_DESIGN.md) walks top-down from a reusable reception contract through queueing, identity, affiliation, clinical tasks, payment policy and dispatch to pure primitives and explicit state/adapter boundaries. The executable reference remains a bounded synthetic experiment: it does not connect to a live registry, authenticate staff, prescribe treatment, settle payments or generate a deployed hospital application.
 
 The **Messages workspace** connects exact owned-state machines through typed routes, freezes message payloads and recipient revisions at dispatch, and tests delivery drops, rollback, lost acknowledgements and safe receipt replay. Pharmacy and school-library experiments share one reservation-to-ledger model. The delivery runner remains 0.7.0; state remains 0.6.0, pure/data remain 0.5.0 and application/deployment simulation remains 0.3.0.
 
@@ -254,11 +256,12 @@ node scripts/acceptance-composites.mjs
 node scripts/acceptance-data.mjs
 node scripts/acceptance-state.mjs
 node scripts/acceptance-delivery.mjs
+node scripts/acceptance-reception.mjs
 ```
 
-Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/state ./internal/delivery ./internal/simulation`.
+Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/state ./internal/delivery ./internal/workflow ./internal/simulation`.
 
-Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract/state-machine/delivery-model versions and evaluation/validation/scenario evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all seven acceptance suites against the Compose stack.
+Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract/state-machine/delivery-model versions and evaluation/validation/scenario evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all eight acceptance suites against the Compose stack.
 
 ## Repository structure
 
@@ -268,6 +271,7 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `internal/model/` | Versioned data model, example project, validation |
 | `internal/behavior/` | Bounded deterministic pure component evaluation and tests |
 | `internal/state/` | Owned-state scenarios, receipts, effect intents and restart evidence |
+| `internal/workflow/` | Typed tasks, automatic routes, decision/owner calls and interrupt evidence |
 | `internal/simulation/` | Deterministic event engine, metrics, assertions |
 | `internal/store/` | PostgreSQL projects, catalogs and immutable simulation/evaluation/validation evidence |
 | `internal/testutil/` | Isolated PostgreSQL test schemas |
@@ -276,6 +280,8 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `cmd/componentcheck/` | Offline profile/bundle validation and composite test execution |
 | `cmd/datacheck/` | Offline data-contract, complete-fixture and compatibility checks |
 | `cmd/statecheck/` | Offline state-machine validation and scenario execution |
+| `cmd/workflowcheck/` | Offline workflow validation and independent scenario execution |
+| `cmd/receptionexport/` | Reproducible reception/service-desk packages and handwritten scenarios |
 | `cmd/deliverycheck/` | Offline delivery-model validation and message experiments |
 | `internal/delivery/` | Typed dispatch, explicit delivery and acknowledgement simulation |
 | `scripts/` | Development launcher and API acceptance checks |

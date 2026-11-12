@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.affiliation-disposition",
+    "version": "1.0.0",
+    "digest": "67e99b13064039879e2e761fbafc3e08de874c7bab1b1f0deeca238d388d4797"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.affiliation-disposition",
+        "version": "1.0.0",
+        "name": "Classify affiliation evidence",
+        "description": "Only explicit verified or confirmedNone evidence permits routine continuation. Unknown, unavailable, expired and contradictory evidence remains unresolved; absence is never inferred.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "status",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "noAffiliation",
+              "type": "boolean"
+            },
+            {
+              "name": "resolved",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "verified",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "status"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "verified"
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "confirmedNone",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "status"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": "confirmedNone"
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "resolved",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "verified",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "confirmedNone",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "route",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "resolved",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "review"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "continue"
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            }
+          ],
+          "bindings": {
+            "noAffiliation": {
+              "node": "confirmedNone",
+              "port": "result"
+            },
+            "resolved": {
+              "node": "resolved",
+              "port": "result"
+            },
+            "route": {
+              "node": "route",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "verified",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "verified"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "continue"
+              }
+            }
+          },
+          {
+            "name": "confirmedNone",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "confirmedNone"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "route": {
+                "type": "string",
+                "string": "continue"
+              }
+            }
+          },
+          {
+            "name": "unknown",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "unknown"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "unavailable",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "unavailable"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "expired",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "expired"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          },
+          {
+            "name": "contradictory",
+            "inputs": {
+              "status": {
+                "type": "string",
+                "string": "contradictory"
+              }
+            },
+            "expected": {
+              "noAffiliation": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "resolved": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "route": {
+                "type": "string",
+                "string": "review"
+              }
+            }
+          }
+        ]
+      },
+      "digest": "67e99b13064039879e2e761fbafc3e08de874c7bab1b1f0deeca238d388d4797"
+    }
+  ]
+}

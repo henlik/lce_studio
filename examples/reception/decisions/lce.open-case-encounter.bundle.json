@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.open-case-encounter",
+    "version": "1.0.0",
+    "digest": "1ec7b32f544695a9eaa37119808521d18d7c3cf8ccf2eebc8f1f38b8f0653ba7"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.open-case-encounter",
+        "version": "1.0.0",
+        "name": "Open or reuse case encounter",
+        "description": "Requires named case and patient, and prevents another case/patient pair from replacing an already owned encounter.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "currentCase",
+              "type": "string"
+            },
+            {
+              "name": "currentPatient",
+              "type": "string"
+            },
+            {
+              "name": "currentEncounter",
+              "type": "string"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "patientId",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "caseId",
+              "type": "string"
+            },
+            {
+              "name": "patientId",
+              "type": "string"
+            },
+            {
+              "name": "encounterId",
+              "type": "string"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "unopened",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentCase"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "sameCase",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentCase"
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 0
+              }
+            },
+            {
+              "id": "samePatient",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "currentPatient"
+                },
+                "right": {
+                  "input": "patientId"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 0
+              }
+            },
+            {
+              "id": "sameVisit",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "sameCase",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "samePatient",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 0
+              }
+            },
+            {
+              "id": "ownerAllowed",
+              "op": "or",
+              "inputs": {
+                "left": {
+                  "node": "unopened",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "sameVisit",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 200
+              }
+            },
+            {
+              "id": "caseNamedEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "caseId"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 200
+              }
+            },
+            {
+              "id": "caseNamed",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "caseNamedEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 200
+              }
+            },
+            {
+              "id": "patientNamedEmpty",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "patientId"
+                },
+                "right": {
+                  "literal": {
+                    "type": "string",
+                    "string": ""
+                  }
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 200
+              }
+            },
+            {
+              "id": "patientNamed",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "node": "patientNamedEmpty",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 400
+              }
+            },
+            {
+              "id": "named",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "caseNamed",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "patientNamed",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 360,
+                "y": 400
+              }
+            },
+            {
+              "id": "accepted",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "ownerAllowed",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "named",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 720,
+                "y": 400
+              }
+            },
+            {
+              "id": "newEncounter",
+              "op": "concat",
+              "inputs": {
+                "left": {
+                  "literal": {
+                    "type": "string",
+                    "string": "encounter:"
+                  }
+                },
+                "right": {
+                  "input": "caseId"
+                }
+              },
+              "position": {
+                "x": 1080,
+                "y": 400
+              }
+            },
+            {
+              "id": "encounter",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "node": "unopened",
+                  "port": "result"
+                },
+                "falseValue": {
+                  "input": "currentEncounter"
+                },
+                "trueValue": {
+                  "node": "newEncounter",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 0,
+                "y": 600
+              }
+            }
+          ],
+          "bindings": {
+            "accepted": {
+              "node": "accepted",
+              "port": "result"
+            },
+            "caseId": {
+              "input": "caseId"
+            },
+            "encounterId": {
+              "node": "encounter",
+              "port": "result"
+            },
+            "patientId": {
+              "input": "patientId"
+            }
+          }
+        }
+      },
+      "digest": "1ec7b32f544695a9eaa37119808521d18d7c3cf8ccf2eebc8f1f38b8f0653ba7"
+    }
+  ]
+}

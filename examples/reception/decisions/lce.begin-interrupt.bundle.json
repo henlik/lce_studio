@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "lce.begin-interrupt",
+    "version": "1.0.0",
+    "digest": "88caf8c20ae3ddd7b23071b45d2122b9fcf907e9bfea74aa28e9f6902ea64253"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.begin-interrupt",
+        "version": "1.0.0",
+        "name": "Begin exclusive interrupt path",
+        "description": "Marks the ordinary path inactive and clears its release flag before cleanup and explicit receiving acceptance.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "routineActive",
+              "type": "boolean"
+            },
+            {
+              "name": "emergencyActive",
+              "type": "boolean"
+            },
+            {
+              "name": "clinicalReleased",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [],
+          "bindings": {
+            "clinicalReleased": {
+              "literal": {
+                "type": "boolean",
+                "boolean": false
+              }
+            },
+            "emergencyActive": {
+              "literal": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "routineActive": {
+              "literal": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        }
+      },
+      "digest": "88caf8c20ae3ddd7b23071b45d2122b9fcf907e9bfea74aa28e9f6902ea64253"
+    }
+  ]
+}

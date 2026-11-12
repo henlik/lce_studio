@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "health.reception.entry-route",
+    "version": "1.0.0",
+    "digest": "a3b1ba4f0fd5faa449a511c9d1f168c8f11d744705f78d23abc43205b22aa1c4"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "health.reception.entry-route",
+        "version": "1.0.0",
+        "name": "Entry route",
+        "description": "Routes explicit assessment facts to awaitAssessment, routine or emergency. This synthetic decision does not diagnose, authenticate actors or implement a human workflow.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "assessmentRecorded",
+              "type": "boolean"
+            },
+            {
+              "name": "emergencyIdentified",
+              "type": "boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "routineAllowed",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "knownRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "input": "assessmentRecorded"
+                },
+                "falseValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "awaitAssessment"
+                  }
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "routine"
+                  }
+                }
+              },
+              "position": {
+                "x": 250,
+                "y": 80
+              }
+            },
+            {
+              "id": "finalRoute",
+              "op": "select",
+              "inputs": {
+                "condition": {
+                  "input": "emergencyIdentified"
+                },
+                "falseValue": {
+                  "node": "knownRoute",
+                  "port": "result"
+                },
+                "trueValue": {
+                  "literal": {
+                    "type": "string",
+                    "string": "emergency"
+                  }
+                }
+              },
+              "position": {
+                "x": 550,
+                "y": 80
+              }
+            },
+            {
+              "id": "noEmergency",
+              "op": "not",
+              "inputs": {
+                "value": {
+                  "input": "emergencyIdentified"
+                }
+              },
+              "position": {
+                "x": 250,
+                "y": 300
+              }
+            },
+            {
+              "id": "allowRoutine",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "input": "assessmentRecorded"
+                },
+                "right": {
+                  "node": "noEmergency",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 550,
+                "y": 300
+              }
+            }
+          ],
+          "bindings": {
+            "route": {
+              "node": "finalRoute",
+              "port": "result"
+            },
+            "routineAllowed": {
+              "node": "allowRoutine",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Unassessed",
+            "inputs": {
+              "assessmentRecorded": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "emergencyIdentified": {
+                "type": "boolean",
+                "boolean": false
+              }
+            },
+            "expected": {
+              "route": {
+                "type": "string",
+                "string": "awaitAssessment"
+              },
+              "routineAllowed": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Routine",
+            "inputs": {
+              "assessmentRecorded": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "emergencyIdentified": {
+                "type": "boolean",
+                "boolean": false
+              }
+            },
+            "expected": {
+              "route": {
+                "type": "string",
+                "string": "routine"
+              },
+              "routineAllowed": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Emergency before documentation",
+            "inputs": {
+              "assessmentRecorded": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "emergencyIdentified": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "route": {
+                "type": "string",
+                "string": "emergency"
+              },
+              "routineAllowed": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Emergency after documentation",
+            "inputs": {
+              "assessmentRecorded": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "emergencyIdentified": {
+                "type": "boolean",
+                "boolean": true
+              }
+            },
+            "expected": {
+              "route": {
+                "type": "string",
+                "string": "emergency"
+              },
+              "routineAllowed": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "a3b1ba4f0fd5faa449a511c9d1f168c8f11d744705f78d23abc43205b22aa1c4"
+    }
+  ]
+}

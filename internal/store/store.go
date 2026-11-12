@@ -148,6 +148,21 @@ CREATE TABLE IF NOT EXISTS delivery_runs (
  summary JSON NOT NULL
 );
 CREATE INDEX IF NOT EXISTS delivery_runs_created ON delivery_runs(created_at DESC, id DESC);
+CREATE TABLE IF NOT EXISTS workflow_packages (
+ id TEXT NOT NULL,
+ version TEXT NOT NULL,
+ digest TEXT NOT NULL,
+ body JSON NOT NULL,
+ installed_at TIMESTAMPTZ NOT NULL,
+ PRIMARY KEY(id, version)
+);
+CREATE TABLE IF NOT EXISTS workflow_runs (
+ id TEXT PRIMARY KEY,
+ created_at TIMESTAMPTZ NOT NULL,
+ body JSON NOT NULL,
+ summary JSON NOT NULL
+);
+CREATE INDEX IF NOT EXISTS workflow_runs_created ON workflow_runs(created_at DESC, id DESC);
 `)
 	if err != nil {
 		return err

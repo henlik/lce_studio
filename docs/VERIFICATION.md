@@ -1,5 +1,30 @@
 # Verification
 
+## v0.8 executable task workflows and reception reference — 12 November 2026
+
+Verified with PostgreSQL 17.11, Go 1.25.5, Node.js 24.22.1, npm 11.9.0 and the production Vue build.
+
+- Full `go test -race -count=1 ./...`, `go vet ./...` and backend build passed. Vue TypeScript checking and production build passed without new dependencies. The existing main JavaScript chunk advisory remains.
+- All eight live API suites pass **122 acceptance groups**: the existing 101 plus 21 independent workflow/reception groups. Existing pure/data, state, delivery and timed simulation schema/digest fixtures remain valid.
+- Nineteen handwritten reference scenarios pass: eighteen reception cases and one nonclinical service-desk reuse case. Forty-seven portable artifacts include raw definitions, exact locks, run files, decisions, state owners and a nominal data contract. The original EntryRoute digest remains unchanged.
+- Reception normal completion requires explicit identity confirmation, current clinical release, payment disposition, an atomic owner reservation and receiving-doctor acceptance. Numeric tickets, new-patient registration, confirmed-no-affiliation, unresolved identity/affiliation, fever review, missing observations, stale release, no-doctor and reservation-denial paths are checked independently.
+- Emergency interruption is checked at all eleven routine task activations. It cancels the exact task, releases a held routine reservation and waits for explicit ECU acceptance. An unavailable unit remains pending; a late physician response cannot restart routine routing. Separate arrivals can reuse a patient while retaining distinct encounter/case identities.
+- Generic protocol checks cover exact dependency/type validation, rejected-event receipts, same-ID replay/conflict, structured snapshot isolation, simultaneous signal assignments, ordinary command error routes, immutable catalogs and complete failed/unverified evidence. Bound violations create no partial saved result.
+- Exact limits are exercised: 256 transitions with 64 tasks and 64 event receipts succeeds; a 257th transition rejects. Shared pure/owned work reaches 4,096 operations and 160 component invocations before the next loop rejects. Context, task fan-out, package closure and complete-evidence byte limits are also tested.
+
+### Production browser checks
+
+- The Workflows workspace initially contained zero steps. Examples loaded only on request. Starting Interactive used root inputs with zero scripted events, paused at initial screening, then issued ticket 100 and waited for its call. Replaying the screening event left the same ticket/task active.
+- An interactive emergency signal cancelled that queue task, waited for receiving acceptance and completed only after explicit synthetic ECU acceptance. Saving retained the trace as **unverified**.
+- The complete ordinary scenario passed with eleven completed tasks, 152 pure operations and 24 component invocations. Changing its expected completed count to ten produced a saved failed verdict with `Expected 10, got 11.` Opening earlier passing evidence preserved the edited scenario.
+- The fever scenario passed while waiting at `feverReview`, with no reservation. The post-reservation emergency scenario passed with the physician task cancelled and its late response rejected.
+- Inspected EntryRoute down to its four primitive nodes. Hierarchy/inspector collapse, workflow expansion and Escape restore worked. Installed the exact workflow, exported it and reimported it through canonical server validation.
+- No application-origin browser warnings or errors were observed. Mobile-specific visual verification remains incomplete because viewport resizing is not exposed by the available browser API.
+
+### Implemented boundary
+
+This is a bounded, deterministic task-workflow experiment runner. Interactive continuation reruns the declared event sequence from its initial owner configuration. PostgreSQL stores definitions and experiment evidence, not live patient sessions. Registry/affiliation/workforce/payment responses and professional assessments are explicit synthetic task responses. Queue numbering is scoped to a single-case experiment; doctor owners model individual slots. No live staff authentication, treatment automation, payment execution, persistent multi-patient scheduling, nested workflow calls or coupling to hardware/network/power simulation is claimed. These remain separate runtime integration work. See [TASK_WORKFLOW_CONTRACT.md](TASK_WORKFLOW_CONTRACT.md) and [HOSPITAL_RECEPTION_REPLICATION.md](HOSPITAL_RECEPTION_REPLICATION.md).
+
 ## v0.7.1 empty workspaces and canvas usability — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.

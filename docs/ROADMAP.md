@@ -69,6 +69,12 @@ A separate Messages workspace composes exact owned-state machines through typed 
 
 Transport durability is a modeled assumption. Steps are serial and explicitly ordered; there is no hidden routing, automatic retry, live broker, external I/O or clock. The delivery engine is 0.7.0; state/pure/data/timed engines remain at their prior versions. See [DELIVERY_CONTRACT.md](DELIVERY_CONTRACT.md) and [DELIVERY_AUTHORING.md](DELIVERY_AUTHORING.md).
 
+### v0.8 — executable task workflows and reception reference
+
+The Workflows workspace combines typed human/adapter tasks, exact reusable decisions and owned-state commands in a portable workflow package. Automatic routes and Boolean branches advance to the next task; explicit signals interrupt pending work. Stable task activations and event receipts distinguish accepted, rejected, duplicate and conflicting completions. Finite scenarios have independent expectations, and PostgreSQL retains immutable package versions and complete run snapshots.
+
+The hospital-reception reference exercises registration, affiliation, encounters, observation/clinical review, payment disposition, doctor reservation and receiving acceptance, with an emergency path that cancels routine work. A service-desk reference reuses queue and resource-assignment definitions. Adapter responses are supplied synthetic facts, not live registry, clinical or financial integrations. Workflow-local inspection exposes dependencies; common project/system containment, nested workflow calls, generated applications and hardware coupling remain separate work. See [HOSPITAL_RECEPTION_REPLICATION.md](HOSPITAL_RECEPTION_REPLICATION.md).
+
 ## Development milestones and acceptance gates
 
 ### v0.7.1 authoring usability
