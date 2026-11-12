@@ -14,12 +14,13 @@ COPY internal/ ./internal/
 RUN CGO_ENABLED=0 go build -trimpath -o /studio ./cmd/studio
 
 FROM debian:bookworm-slim
-RUN useradd --system --uid 10001 --create-home studio && mkdir -p /app/data && chown studio:studio /app/data
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 --create-home studio
 WORKDIR /app
 COPY --from=backend /studio /app/studio
 COPY --from=frontend /src/web/dist /app/web/dist
 USER studio
-ENV STUDIO_ADDR=0.0.0.0:8080 STUDIO_DATA=/app/data/studio.db STUDIO_WEB_DIR=/app/web/dist
+ENV STUDIO_ADDR=0.0.0.0:8080 STUDIO_WEB_DIR=/app/web/dist
 EXPOSE 8080
-VOLUME ["/app/data"]
 ENTRYPOINT ["/app/studio"]

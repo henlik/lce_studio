@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 
 	"software-studio/internal/model"
 )
@@ -34,71 +34,84 @@ type RunSummary struct {
 	Events        []model.TraceEvent `json:"events"`
 }
 
-func Open(filename string) (*Store, error) {
-	if filename != ":memory:" {
-		if err := os.MkdirAll(filepath.Dir(filename), 0700); err != nil {
-			return nil, fmt.Errorf("create data directory: %w", err)
-		}
-		file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0600)
-		if err != nil {
-			return nil, fmt.Errorf("open database file: %w", err)
-		}
-		err = file.Chmod(0600)
-		closeErr := file.Close()
-		if err != nil {
-			return nil, fmt.Errorf("protect database: %w", err)
-		}
-		if closeErr != nil {
-			return nil, closeErr
-		}
+// Open connects to PostgreSQL and initializes the schema before serving requests.
+// DATABASE_URL is explicit: there is no embedded database or credential fallback.
+func Open(databaseURL string) (*Store, error) {
+	if strings.TrimSpace(databaseURL) == "" {
+		return nil, errors.New("DATABASE_URL is required (PostgreSQL connection string)")
 	}
-	db, err := sql.Open("sqlite", filename)
+	config, err := pgx.ParseConfig(databaseURL)
 	if err != nil {
-		return nil, err
+		// Parser errors can echo the connection string, including its password.
+		return nil, errors.New("invalid PostgreSQL DATABASE_URL")
 	}
-	// One connection keeps :memory: databases consistent and serializes writes.
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	s := &Store{db: db}
-	_, err = db.Exec(`
-PRAGMA busy_timeout = 5000;
-PRAGMA journal_mode = WAL;
+	db := stdlib.OpenDB(*config)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("connect to PostgreSQL: %w", err)
+	}
+	if err := initialize(ctx, db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("initialize PostgreSQL schema: %w", err)
+	}
+	return &Store{db: db}, nil
+}
+
+func initialize(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// Serialize bootstrap across processes; all schema changes commit together.
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1279477075, 1)`); err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
 CREATE TABLE IF NOT EXISTS projects (
  id TEXT PRIMARY KEY,
- body TEXT NOT NULL,
- updated_at TEXT NOT NULL
+ body JSON NOT NULL,
+ updated_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE IF NOT EXISTS runs (
  id TEXT PRIMARY KEY,
  project_id TEXT NOT NULL,
- created_at TEXT NOT NULL,
- body TEXT NOT NULL,
- summary TEXT NOT NULL
+ created_at TIMESTAMPTZ NOT NULL,
+ body JSON NOT NULL,
+ summary JSON NOT NULL
 );
 CREATE INDEX IF NOT EXISTS runs_project_created ON runs(project_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS runs_created ON runs(created_at DESC, id DESC);
 `)
 	if err != nil {
-		db.Close()
-		return nil, fmt.Errorf("initialize database: %w", err)
+		return err
 	}
-	return s, nil
+	return tx.Commit()
 }
 
 func (s *Store) Close() error { return s.db.Close() }
+
+func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 
 func (s *Store) SaveProject(ctx context.Context, p model.Project) error {
 	body, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO projects(id,body,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body,updated_at=excluded.updated_at`, p.ID, body, time.Now().UTC().Format(time.RFC3339Nano))
+	_, err = s.db.ExecContext(ctx, `INSERT INTO projects(id,body,updated_at) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET body=excluded.body,updated_at=excluded.updated_at`, p.ID, string(body), time.Now().UTC())
 	return err
 }
 
 func (s *Store) Project(ctx context.Context, id string) (model.Project, error) {
 	var p model.Project
 	var body []byte
-	err := s.db.QueryRowContext(ctx, `SELECT body FROM projects WHERE id=?`, id).Scan(&body)
+	err := s.db.QueryRowContext(ctx, `SELECT body FROM projects WHERE id=$1`, id).Scan(&body)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, ErrNotFound
 	}
@@ -131,7 +144,7 @@ func (s *Store) Projects(ctx context.Context) ([]model.Project, error) {
 }
 
 func (s *Store) DeleteProject(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM projects WHERE id=?`, id)
+	result, err := s.db.ExecContext(ctx, `DELETE FROM projects WHERE id=$1`, id)
 	if err != nil {
 		return err
 	}
@@ -147,6 +160,10 @@ func (s *Store) DeleteProject(ctx context.Context, id string) error {
 }
 
 func (s *Store) SaveRun(ctx context.Context, r model.Run) error {
+	createdAt, err := time.Parse(time.RFC3339Nano, r.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("invalid run creation time: %w", err)
+	}
 	body, err := json.Marshal(r)
 	if err != nil {
 		return err
@@ -156,14 +173,14 @@ func (s *Store) SaveRun(ctx context.Context, r model.Run) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO runs(id,project_id,created_at,body,summary) VALUES(?,?,?,?,?)`, r.ID, r.ProjectID, r.CreatedAt, body, brief)
+	_, err = s.db.ExecContext(ctx, `INSERT INTO runs(id,project_id,created_at,body,summary) VALUES($1,$2,$3,$4,$5)`, r.ID, r.ProjectID, createdAt, string(body), string(brief))
 	return err
 }
 
 func (s *Store) Run(ctx context.Context, id string) (model.Run, error) {
 	var r model.Run
 	var body []byte
-	err := s.db.QueryRowContext(ctx, `SELECT body FROM runs WHERE id=?`, id).Scan(&body)
+	err := s.db.QueryRowContext(ctx, `SELECT body FROM runs WHERE id=$1`, id).Scan(&body)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, ErrNotFound
 	}
@@ -179,7 +196,7 @@ func (s *Store) Runs(ctx context.Context, projectID string) ([]RunSummary, error
 	query := `SELECT summary FROM runs`
 	args := []any{}
 	if projectID != "" {
-		query += ` WHERE project_id=?`
+		query += ` WHERE project_id=$1`
 		args = append(args, projectID)
 	}
 	query += ` ORDER BY created_at DESC, id DESC LIMIT 50`

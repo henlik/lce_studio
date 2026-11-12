@@ -13,16 +13,30 @@ import (
 
 	"software-studio/internal/model"
 	"software-studio/internal/store"
+	"software-studio/internal/testutil"
 )
 
 func testServer(t *testing.T) *Server {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "studio.db"))
+	db, err := store.Open(testutil.DatabaseURL(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
 	return New(db, "")
+}
+
+func TestHealthRequiresDatabase(t *testing.T) {
+	s := testServer(t)
+	if w := req(t, s, "GET", "/api/health", nil); w.Code != http.StatusOK {
+		t.Fatalf("healthy database: %d %s", w.Code, w.Body.String())
+	}
+	if err := s.store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if w := req(t, s, "GET", "/api/health", nil); w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("unavailable database: %d %s", w.Code, w.Body.String())
+	}
 }
 
 func req(t *testing.T, s http.Handler, method, path string, body any) *httptest.ResponseRecorder {

@@ -2,7 +2,9 @@ web/node_modules/
 web/dist/
 bin/
 .cache/
-.env.local
+.env
+.env.*
+!.env.example
 data/
 *.db
 *.db-shm

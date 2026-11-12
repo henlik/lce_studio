@@ -43,7 +43,7 @@ GET /api/runs?projectId=... -> Run[] (can omit events/project in summaries; fron
 GET /api/runs/{id} -> Run
 Errors {error:string,issues?:ValidationIssue[]}. Unknown API paths JSON 404. Body limit 2MiB. Reject unknown model fields via strict JSON decode; exactly one JSON value.
 
-Serve built web/dist from Go with SPA fallback; API paths must not become HTML. Go server localhost default 127.0.0.1:8080 configurable STUDIO_ADDR, STUDIO_DATA, STUDIO_WEB_DIR. SQLite stores projects and immutable runs. This is local single-user software with no built-in authentication; it simulates models rather than executing application source code.
+Serve built web/dist from Go with SPA fallback; API paths must not become HTML. Go server localhost default 127.0.0.1:8080 configurable STUDIO_ADDR, DATABASE_URL, STUDIO_WEB_DIR. DATABASE_URL is required. PostgreSQL stores projects and immutable runs as JSON, with TIMESTAMPTZ ordering columns. Startup checks the connection and initializes the schema transactionally; GET /api/health returns 503 if the database cannot be reached within two seconds. This is local single-user software with no built-in authentication; it simulates models rather than executing application source code.
 
 ## Demo defaults
 

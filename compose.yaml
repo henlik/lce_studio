@@ -1,11 +1,31 @@
 services:
   studio:
     build: .
+    environment:
+      DATABASE_URL: postgres://studio:studio_dev_only@postgres:5432/studio?sslmode=disable
     ports:
       - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio_dev_only
+      POSTGRES_DB: studio
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
-      - studio-data:/app/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d studio"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
     restart: unless-stopped
 
 volumes:
-  studio-data:
+  postgres-data:

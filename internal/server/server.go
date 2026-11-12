@@ -63,6 +63,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !method(w, r, http.MethodGet) {
 			return
 		}
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := s.store.Ping(ctx); err != nil {
+			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
+			return
+		}
 		respond(w, 200, map[string]string{"status": "ok", "version": "0.1.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {

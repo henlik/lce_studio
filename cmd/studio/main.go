@@ -29,7 +29,7 @@ func main() {
 }
 
 func run() error {
-	db, err := store.Open(env("STUDIO_DATA", "data/studio.db"))
+	db, err := store.Open(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return fmt.Errorf("open storage: %w", err)
 	}
