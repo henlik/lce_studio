@@ -1,0 +1,781 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "packageId": "example.school-record-access",
+    "version": "1.0.0",
+    "digest": "93d9cd77db39c746cc627caa916b4ff819fa5f51ef9718ce9ef52f45528a0554"
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "example.school-record-access",
+        "version": "1.0.0",
+        "name": "School record access",
+        "description": "Reuses the exact shared access-policy component with explicit domain role and scope literals. Synthetic inputs demonstrate composition, not real authentication or security enforcement.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "subjectTenant",
+              "type": "string"
+            },
+            {
+              "name": "resourceTenant",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string"
+            },
+            {
+              "name": "requestedScope",
+              "type": "string"
+            },
+            {
+              "name": "active",
+              "type": "boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "permitted",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "policy",
+              "component": {
+                "packageId": "lce.access-policy",
+                "version": "1.0.0",
+                "digest": "c3ea0e265eda646913c821beb717b099c6cdc4fbc4bc018ef43e3f744fd72ee6"
+              },
+              "inputs": {
+                "active": {
+                  "input": "active"
+                },
+                "allowedScope": {
+                  "literal": {
+                    "type": "string",
+                    "string": "student:read"
+                  }
+                },
+                "requestedScope": {
+                  "input": "requestedScope"
+                },
+                "requiredRole": {
+                  "literal": {
+                    "type": "string",
+                    "string": "teacher"
+                  }
+                },
+                "resourceTenant": {
+                  "input": "resourceTenant"
+                },
+                "role": {
+                  "input": "role"
+                },
+                "subjectTenant": {
+                  "input": "subjectTenant"
+                }
+              },
+              "position": {
+                "x": 320,
+                "y": 160
+              }
+            }
+          ],
+          "bindings": {
+            "permitted": {
+              "node": "policy",
+              "port": "permitted"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Permit",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "student:read"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "teacher"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Wrong tenant",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "student:read"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-beta"
+              },
+              "role": {
+                "type": "string",
+                "string": "teacher"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Wrong role",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "student:read"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "visitor"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Wrong scope",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "other:write"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "teacher"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Inactive subject",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "student:read"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "teacher"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "93d9cd77db39c746cc627caa916b4ff819fa5f51ef9718ce9ef52f45528a0554"
+    },
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.access-policy",
+        "version": "1.0.0",
+        "name": "Explicit access policy",
+        "description": "Permits only when tenant, required role, requested scope and active status all match. This small pure decision is not production authorization enforcement.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "subjectTenant",
+              "type": "string"
+            },
+            {
+              "name": "resourceTenant",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string"
+            },
+            {
+              "name": "requiredRole",
+              "type": "string"
+            },
+            {
+              "name": "requestedScope",
+              "type": "string"
+            },
+            {
+              "name": "allowedScope",
+              "type": "string"
+            },
+            {
+              "name": "active",
+              "type": "boolean"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "permitted",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "tenant",
+              "component": {
+                "packageId": "lce.same-tenant",
+                "version": "1.0.0",
+                "digest": "122757d94e9c45a2376d28d9d415312e18df91766376a2b9366ba9d23efb9888"
+              },
+              "inputs": {
+                "resourceTenant": {
+                  "input": "resourceTenant"
+                },
+                "subjectTenant": {
+                  "input": "subjectTenant"
+                }
+              },
+              "position": {
+                "x": 80,
+                "y": 40
+              }
+            },
+            {
+              "id": "role",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "role"
+                },
+                "right": {
+                  "input": "requiredRole"
+                }
+              },
+              "position": {
+                "x": 80,
+                "y": 180
+              }
+            },
+            {
+              "id": "scope",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "requestedScope"
+                },
+                "right": {
+                  "input": "allowedScope"
+                }
+              },
+              "position": {
+                "x": 80,
+                "y": 320
+              }
+            },
+            {
+              "id": "tenantRole",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "tenant",
+                  "port": "sameTenant"
+                },
+                "right": {
+                  "node": "role",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 420,
+                "y": 110
+              }
+            },
+            {
+              "id": "tenantRoleScope",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "tenantRole",
+                  "port": "result"
+                },
+                "right": {
+                  "node": "scope",
+                  "port": "result"
+                }
+              },
+              "position": {
+                "x": 760,
+                "y": 190
+              }
+            },
+            {
+              "id": "decision",
+              "op": "and",
+              "inputs": {
+                "left": {
+                  "node": "tenantRoleScope",
+                  "port": "result"
+                },
+                "right": {
+                  "input": "active"
+                }
+              },
+              "position": {
+                "x": 1100,
+                "y": 220
+              }
+            }
+          ],
+          "bindings": {
+            "permitted": {
+              "node": "decision",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Permit",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "allowedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requiredRole": {
+                "type": "string",
+                "string": "reader"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "reader"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Wrong tenant",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "allowedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requiredRole": {
+                "type": "string",
+                "string": "reader"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-beta"
+              },
+              "role": {
+                "type": "string",
+                "string": "reader"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Wrong role",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "allowedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requiredRole": {
+                "type": "string",
+                "string": "reader"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "visitor"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Wrong scope",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": true
+              },
+              "allowedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "other:write"
+              },
+              "requiredRole": {
+                "type": "string",
+                "string": "reader"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "reader"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          },
+          {
+            "name": "Inactive subject",
+            "inputs": {
+              "active": {
+                "type": "boolean",
+                "boolean": false
+              },
+              "allowedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requestedScope": {
+                "type": "string",
+                "string": "data:read"
+              },
+              "requiredRole": {
+                "type": "string",
+                "string": "reader"
+              },
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "role": {
+                "type": "string",
+                "string": "reader"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "permitted": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "c3ea0e265eda646913c821beb717b099c6cdc4fbc4bc018ef43e3f744fd72ee6"
+    },
+    {
+      "package": {
+        "schemaVersion": 2,
+        "id": "lce.same-tenant",
+        "version": "1.0.0",
+        "name": "Same tenant",
+        "description": "Compares two explicit tenant identifiers as exact strings; it does not authenticate either identity.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "composite",
+        "capabilities": [
+          "design",
+          "evaluate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "capacity": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "memoryMb": {
+            "default": 0,
+            "min": 0,
+            "max": 0
+          },
+          "deduplicate": false
+        },
+        "behavior": {
+          "inputs": [
+            {
+              "name": "subjectTenant",
+              "type": "string"
+            },
+            {
+              "name": "resourceTenant",
+              "type": "string"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "sameTenant",
+              "type": "boolean"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "compare",
+              "op": "equal",
+              "inputs": {
+                "left": {
+                  "input": "subjectTenant"
+                },
+                "right": {
+                  "input": "resourceTenant"
+                }
+              },
+              "position": {
+                "x": 240,
+                "y": 120
+              }
+            }
+          ],
+          "bindings": {
+            "sameTenant": {
+              "node": "compare",
+              "port": "result"
+            }
+          }
+        },
+        "tests": [
+          {
+            "name": "Same tenant",
+            "inputs": {
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "sameTenant": {
+                "type": "boolean",
+                "boolean": true
+              }
+            }
+          },
+          {
+            "name": "Different tenant",
+            "inputs": {
+              "resourceTenant": {
+                "type": "string",
+                "string": "tenant-beta"
+              },
+              "subjectTenant": {
+                "type": "string",
+                "string": "tenant-alpha"
+              }
+            },
+            "expected": {
+              "sameTenant": {
+                "type": "boolean",
+                "boolean": false
+              }
+            }
+          }
+        ]
+      },
+      "digest": "122757d94e9c45a2376d28d9d415312e18df91766376a2b9366ba9d23efb9888"
+    }
+  ]
+}

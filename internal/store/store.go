@@ -96,6 +96,13 @@ CREATE TABLE IF NOT EXISTS component_packages (
  installed_at TIMESTAMPTZ NOT NULL,
  PRIMARY KEY(id, version)
 );
+CREATE TABLE IF NOT EXISTS component_evaluations (
+ id TEXT PRIMARY KEY,
+ created_at TIMESTAMPTZ NOT NULL,
+ body JSON NOT NULL,
+ summary JSON NOT NULL
+);
+CREATE INDEX IF NOT EXISTS component_evaluations_created ON component_evaluations(created_at DESC, id DESC);
 `)
 	if err != nil {
 		return err

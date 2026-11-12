@@ -14,7 +14,7 @@ Version 1 must not include infrastructure or positive memory reservations, since
 
 Versions 1/2 execute one directed client → service(s) → database pipeline. Version 3 adds exclusive branches and convergence. Parallel fan-out, synchronized joins, cycles, executable third-party plugins, application generation, real deployment, batteries, migration, and multihop network routing are not implemented.
 
-The authoritative implementation contracts are [CONTINUUM_CONTRACT.md](CONTINUUM_CONTRACT.md) and [WORKFLOW_CONTRACT.md](WORKFLOW_CONTRACT.md). Execution details belong to [SIMULATION.md](SIMULATION.md).
+The authoritative implementation contracts are [CONTINUUM_CONTRACT.md](CONTINUUM_CONTRACT.md), [WORKFLOW_CONTRACT.md](WORKFLOW_CONTRACT.md), and [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md). Resource simulation details belong to [SIMULATION.md](SIMULATION.md). Pure component evaluation is a separate capability and does not add a project schema.
 
 ## Exclusive workflows
 
@@ -35,7 +35,7 @@ Responses return along the selected attempt's path. Deduplication and duplicate-
 
 ## Declarative component packages
 
-An engineer can define a reusable profile for an existing `service`, `database`, or `router` kernel. A package supplies metadata, bounded editable defaults for processing time, capacity, and memory, and a database deduplication default. It contains no scripts or external executable modules. Adding a new execution primitive still requires core implementation work; this increment is the declarative subset of a future extension SDK.
+An engineer can define a reusable schema 1 profile for an existing `service`, `database`, or `router` kernel. A profile supplies metadata, bounded editable defaults for processing time, capacity, and memory, and a database deduplication default. It contains no scripts or external executable modules. Package schema 2 separately supports the pure typed compositions described below; these cannot be inserted into project schemas 1–3.
 
 The package manifest has its own `schemaVersion: 1`, independent of the project version. It declares `id`, `version`, `name`, `description`, `author`, `license`, `kernel`, `capabilities`, and `config`:
 
@@ -61,6 +61,54 @@ The digest is 64 lowercase hexadecimal characters: SHA-256 of Go `encoding/json.
 The PostgreSQL catalog stores immutable installed versions, but project validation and simulation resolve embedded locks without consulting that catalog. Exports and saved run snapshots therefore carry the complete package definitions. A self-consistent edited definition can be imported as a new project snapshot; installation of conflicting content at an already installed ID/version returns a conflict.
 
 Starter manifests are available in [queued-worker.json](../examples/components/queued-worker.json), [durable-store.json](../examples/components/durable-store.json), and [weighted-router.json](../examples/components/weighted-router.json), and through `GET /api/components/examples`.
+
+## Pure typed composite packages
+
+Package schema 2 defines a recursively reusable pure function in the Components workbench. Its kernel is `composite` and its capabilities are exactly `["design", "evaluate"]`. It retains the legacy `config` object with all values zero, solely to preserve the established typed representation; this object supplies no resource costs. The new `behavior` and optional `tests` fields are appended after the original fields. Omitting these additions keeps every schema 1 profile's bytes and digest unchanged. Schema 1 rejects nonempty tests or a behavior definition.
+
+An executable composite can contain supported pure primitives and calls to other exact composite versions. No executable source code, network operation, storage effect, clock, random input, or implicit authorization enforcement is provided. The evaluator has no virtual time or hardware cost model. Composition adds functional behavior without claiming that nested nodes are deployed services or independently atomic steps in a distributed system.
+
+| Behavior field | Meaning |
+| --- | --- |
+| `inputs`, `outputs` | Named public ports with an exact scalar type |
+| `nodes` | Local primitive operations or pinned component calls, with explicit input bindings and canvas positions |
+| `bindings` | One source binding for each public output |
+| `tests` on the package | Named input/expected-output cases included in the package digest |
+
+Port names and local node IDs use 1–64 letters, digits, and underscores, starting with a letter. A node declares exactly one `op` or `component` reference. A binding selects exactly one source: a public `input`, a local `node` plus output `port`, or a typed `literal`. Every input must be bound with no extras. Every local node must contribute transitively to a public output; unused internal execution is rejected. Behavior port/node collections must be arrays, including `[]` when empty; bindings and node inputs must be objects, including `{}` when empty.
+
+Values are explicitly tagged: `{ "type": "boolean", "boolean": false }`, `{ "type": "integer", "integer": 0 }`, or `{ "type": "string", "string": "" }`. Exactly one matching value member is present. There are no null values, floating-point values, implicit conversions, or truthiness. Integers are bounded by ±9007199254740991; strings are valid UTF-8 of at most 4096 bytes with the existing text/control-character rules. False, zero, and the empty string are valid values.
+
+Supported primitives are `identity`, `equal`, `less_than`, `less_or_equal`, `and`, `or`, `not`, `select`, `add`, `subtract`, and `concat`. Each has one output named `result`. Generic `T` in primitive discovery means one invocation-local scalar type; public ports must declare a concrete type. Equality requires identical types. `select` eagerly computes both candidate values before selecting; it is not conditional control flow. Arithmetic overflow and an oversized concatenated string fail explicitly.
+
+## Portable composite bundles
+
+A bundle has `schemaVersion: 1`, one exact `root` reference, and `packages` containing the full transitive closure of `{package, digest}` locks. All locks must be composite schema 2 packages, unique by ID/version, reachable from the root, and consistent with every reference. Missing dependencies, extra unused locks, digest mismatches, local graph cycles, and dependency cycles are rejected. Validation/evaluation never resolves a mutable catalog or an external network location.
+
+The package digest still hashes typed Go JSON. The behavior, tests, display metadata, and canvas positions all participate; this identifies exact content rather than behavioral equivalence or publisher trust. A bundle hash separately hashes the complete typed bundle, including lock order. Catalog installation keeps the full closure immutable and checks conflicts atomically. Project schemas 1–3 reject composite locks and references, including unused locks, so their simulation cannot silently ignore functional behavior.
+
+| Composite bound | Limit |
+| --- | --- |
+| Public inputs / outputs | `0..16` / `1..16` |
+| Local nodes / declared tests | `0..32` / `0..32` |
+| Canonical manifest size, including tests | 128 KiB |
+| Bundle definitions | `1..50` |
+| Nesting depth, including root | 8 |
+| Expanded primitive executions per evaluation | 256 |
+| Expanded component invocations per evaluation | 256 |
+| Serialized successful evaluation result | 1 MiB |
+
+Expansion counts repeated calls separately. Reusing one component many times therefore consumes the same work budget as separate calls, even when it has no primitives. Collection bounds are checked before recursive work. Local dataflow executes in stable topological order using the lexicographically smallest ready node ID; child calls execute depth-first at their call node. Diagnostic and evidence map traversal is sorted.
+
+Evaluation returns typed outputs and bounded evidence with `component_enter`, `primitive`, and `component_exit` events. Root path is `$`; nested nodes append `/nodeID`. Errors, cancellation, invalid values, and bound violations return no successful partial evaluation. Tests run the root's declared cases in definition order; a false decision can pass a test, while an evaluation error fails that case. An empty test list does not count as verification.
+
+## Shared access-policy examples
+
+[health-record-access.json](../examples/composites/health-record-access.json) and [school-record-access.json](../examples/composites/school-record-access.json) are complete portable bundles. Their wrappers call the identical `lce.access-policy@1.0.0`, which calls the identical `lce.same-tenant@1.0.0`. This demonstrates three composition levels and reuse across healthcare and education without domain-specific evaluator primitives.
+
+The shared policy permits only when tenant equality, role equality, scope equality, and active status are all true. The wrappers bind `clinician`/`record:read` and `teacher`/`student:read` respectively. Each has cases for permit, wrong tenant, wrong role, wrong scope, and inactive subject. Missing or mistyped values fail evaluation instead of producing an implicit decision. Each wrapper performs six primitives across three component invocations.
+
+These synthetic examples illustrate executable composition. They do not implement real authentication, consent management, IAM provisioning, or a production authorization boundary. The studio's own access control is separate from the policy being modeled.
 
 ## Infrastructure entities
 

@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.3.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.4.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return
@@ -103,6 +103,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Valid  bool                    `json:"valid"`
 			Issues []model.ValidationIssue `json:"issues"`
 		}{len(issues) == 0, issues})
+	case path == "/api/components/primitives":
+		s.componentPrimitives(w, r)
+	case path == "/api/components/composite-examples":
+		s.compositeExamples(w, r)
+	case path == "/api/components/prepare":
+		s.componentPrepare(w, r)
+	case path == "/api/components/validate-bundle":
+		s.componentValidateBundle(w, r)
+	case path == "/api/components/bundles":
+		s.componentBundles(w, r)
+	case path == "/api/components/bundle":
+		s.componentBundle(w, r)
+	case path == "/api/components/evaluate":
+		s.componentEvaluate(w, r)
+	case path == "/api/components/test":
+		s.componentTest(w, r)
+	case path == "/api/components/evaluations":
+		s.componentEvaluations(w, r)
+	case strings.HasPrefix(path, "/api/components/evaluations/"):
+		s.componentEvaluation(w, r, strings.TrimPrefix(path, "/api/components/evaluations/"))
 	case path == "/api/components/examples":
 		s.componentExamples(w, r)
 	case path == "/api/components":

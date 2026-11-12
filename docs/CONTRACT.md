@@ -1,6 +1,6 @@
-# LCE Studio v0.3 integration contract
+# LCE Studio v0.4 integration contract
 
-This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and SIMULATION.md for execution semantics. CONTINUUM_CONTRACT.md defines the additive schema v2 infrastructure model and result fields. WORKFLOW_CONTRACT.md defines schema3 exclusive branching, declarative packages, portable locks and catalog APIs. Schema1 and schema2 remain supported.
+This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and SIMULATION.md for execution semantics. CONTINUUM_CONTRACT.md defines the additive schema v2 infrastructure model and result fields. WORKFLOW_CONTRACT.md defines schema3 exclusive branching, declarative packages, portable locks and catalog APIs. Schema1 and schema2 remain supported. COMPOSITION_CONTRACT.md defines package schema2, typed pure components, bundles, functional evaluation/tests and immutable evaluation history. Project schemas and timed simulation semantics remain unchanged; the resource simulator still reports engine version 0.3.0.
 
 ## Scope
 
@@ -32,13 +32,13 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.3.0'}
+GET /api/health -> {status:'ok',version:'0.4.0'}
 GET /api/example -> Project
 GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
 GET /api/example?template=branching -> schema3 Project with embedded component locks
 GET /api/components -> installed immutable component records
 GET /api/components/examples -> bundled portable package locks
-POST /api/components body ComponentPackage -> installed record (201 new, 200 identical reinstall, 409 conflict/capacity, 422 invalid)
+POST /api/components body schema1 ComponentPackage -> installed record (201 new, 200 identical reinstall, 409 conflict/capacity, 422 invalid)
 POST /api/validate body Project -> Validation (200 even invalid)
 POST /api/validate?draft=true body Project -> Validation of fields/references only, permitting incomplete topology for JSON import
 GET /api/projects -> Project[]
@@ -51,6 +51,10 @@ GET /api/runs/{id} -> Run
 Errors {error:string,issues?:ValidationIssue[]}. Unknown API paths JSON 404. Body limit 2MiB. Reject unknown model fields via strict JSON decode; exactly one JSON value.
 
 Serve built web/dist from Go with SPA fallback; API paths must not become HTML. Go server localhost default 127.0.0.1:8080 configurable STUDIO_ADDR, DATABASE_URL, STUDIO_WEB_DIR. DATABASE_URL is required. PostgreSQL stores projects and immutable runs as JSON, with TIMESTAMPTZ ordering columns. Startup checks the connection and initializes the schema transactionally; GET /api/health returns 503 if the database cannot be reached within two seconds. This is local single-user software with no built-in authentication; it simulates models rather than executing application source code.
+
+## Composite component API
+
+The exact request/response and persistence contract for `/api/components/primitives`, `/composite-examples`, `/prepare`, `/validate-bundle`, `/bundles`, `/bundle`, `/evaluate`, `/evaluations` and `/test` is in [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md). Relative names here are under `/api/components`. The common component list contains both schema1 resource profiles and schema2 pure composites; callers must respect capabilities. Application projects reject schema2 package locks, including unused locks.
 
 ## Demo defaults
 

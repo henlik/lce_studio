@@ -1,5 +1,43 @@
 # Verification
 
+## v0.4 typed recursive components — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.
+
+- `go test -race -count=1 ./...`, `go vet ./...`, the production Go build and Vue TypeScript/production build passed.
+- All four live API suites passed: 13 legacy, 11 continuum, 12 workflow and 12 composite acceptance groups (48 total).
+- Component model tests cover exact scalar representations, safe integer bounds, type/signature compatibility, nonnull collections, graph reachability, cycles, missing/tampered/extra dependency locks, immutable schema-1 digests, 128 KiB manifests, nesting depth and repeated expansion limits.
+- Evaluator tests cover all eleven operations, stable topological order, independent repeated invocations, eager selection, cancellation, overflow, bounded result/test evidence and no successful partial result. Bounded composition fuzzing completed 9,715 executions in ten seconds without failure.
+- Independent flat policies and all sixteen combinations of the four Boolean access conditions were compared with nested execution in both healthcare and education examples. Outputs and primitive counts agree; nested traces retain separate instance identities.
+- PostgreSQL tests verify atomic installation and rollback on dependency conflicts, concurrent installs, exact closure export and immutable evaluation persistence. API checks confirm failed evaluation creates no saved success record and portable evaluation needs no catalog lookup.
+- CLI checks cover legacy profile locks, portable bundles, root tests, failed/empty suites and malformed input. Both example bundles are included under `examples/composites/`.
+
+### Reference cases
+
+| Controlled case | Observed result |
+| --- | --- |
+| Matching tenant, role, scope and active subject | `permitted: true`, six primitive executions, three component invocations |
+| Any one of those four conditions fails | `permitted: false`; still a successful pure evaluation |
+| Missing or invalid typed input | Explicit error; no recorded evaluation |
+| Both domain wrapper test suites | Five cases each pass with shared exact policy and tenant-check locks |
+| Zero-node constant-output component | Zero primitive executions, one component invocation |
+| Integer overflow or oversized concatenation | Explicit error, including in an unselected eager `select` input |
+
+### Production browser workflow
+
+- Inspected the healthcare wrapper, nested access policy and nested tenant comparison. Evaluated permit and tenant-mismatch denial; inspected six operations, three invocations and qualified trace paths. Missing input returned an error while preserving the earlier snapshot.
+- Ran both domain suites: five cases passed in each. Imported a school bundle whose JSON struct fields used alternate casing; the canonical server response safely populated the editor and passed the tests. Unknown fields and invalid locks remain rejected.
+- Created a string component through the graphical interface, added concatenation, bound its public input and a literal suffix, connected the public output, and obtained `Hello from LCE`. Captured the expected output as a definition test and ran it successfully.
+- Switched between Design and Components without losing the draft. Installed and exported the component, rejected conflicting content under version 1.0.0, installed the edit as 1.0.1, and reimported the original export with version 1.0.0 and its bindings intact.
+- Verified that input changes, definition edits and added tests mark earlier evidence as belonging to an earlier snapshot. Test verdicts are also marked stale when the definition changes.
+- Unapplied advanced JSON survived hide/reopen and triggered a discard confirmation when replacing the draft. A zero-input definition with a null test-input map remained editable after adding a public input; the updated case passed. The integer editor rejected `9007199254740990.5` before numeric conversion.
+
+Desktop browser checks use the production Vue build and real Go/PostgreSQL backend. Mobile-specific visual verification remains incomplete because the browser API does not expose viewport resizing. Docker execution is delegated to the separate GitHub Actions Compose job, which runs all four acceptance suites.
+
+### Implemented boundary
+
+This release verifies finite pure composition and its separate workbench. It does not add state, effects, parallel workflow execution, authentication, production authorization enforcement, nested timed deployment or application generation. Project schemas 1–3 and simulation engine 0.3.0 remain unchanged; the pure evaluator is 0.4.0. Root test verdicts are session results, while individual successful evaluations have immutable PostgreSQL history. Content digests identify exact definitions, not trusted publishers or behavior equivalence.
+
 ## v0.3 components and exclusive workflows — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1, npm 11.9.0 and the production Vue build.

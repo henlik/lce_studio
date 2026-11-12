@@ -1,8 +1,8 @@
 # Component authoring and SDK direction
 
-v0.3 implements **declarative component profiles** for the service, database and exclusive-router simulation kernels. An engineer can install, reuse and share a new profile without modifying studio source. A profile defines a name, exact version, parameter defaults and permitted ranges. It cannot introduce a new execution primitive or execute arbitrary code. The general executable SDK described later in this document is still a proposal.
+v0.4 adds typed pure composites while preserving the **declarative component profiles** introduced in v0.3 for the service, database and exclusive-router simulation kernels. An engineer can install, reuse and share a new profile without modifying studio source. A profile defines a name, exact version, parameter defaults and permitted ranges. It cannot introduce a new execution primitive or execute arbitrary code. The general external-code SDK described later in this document is still a proposal. Pure composites execute only the bounded operations documented below.
 
-## Author a usable component
+## Author a resource profile
 
 1. Copy `examples/components/queued-worker.json`, `durable-store.json` or `weighted-router.json`. Choose the kernel whose stated semantics fit the component you intend to model.
 2. Give it a namespaced ID such as `example.validation-worker`, an exact version such as `1.0.0`, a meaningful name, author and licence. Document assumptions in its description.
@@ -30,7 +30,7 @@ Use a new package version when changing its contents. Reinstalling identical con
 
 ## Implemented capabilities
 
-| Capability | v0.3 behavior |
+| Capability | Resource-profile behavior |
 | --- | --- |
 | Design | Display metadata; insert nodes; edit processing/capacity/memory within package bounds |
 | Simulation | Use the declared bounded `service`, `database` or `router` kernel |
@@ -40,9 +40,31 @@ Use a new package version when changing its contents. Reinstalling identical con
 | Compatibility | Older v1/v2 projects remain usable; package-backed projects use schema3 |
 | Generation, deployment and executable plugins | Not implemented |
 
-The accepted capabilities array is exactly `["design","simulate"]`. Unsupported declarations are rejected. A digest identifies package content; it does not certify the publisher or validate a performance claim. The full JSON schema, canonical hash rules, resource semantics and API responses are defined in [WORKFLOW_CONTRACT.md](WORKFLOW_CONTRACT.md).
+For resource profiles, the accepted capabilities array is exactly `["design","simulate"]`. Unsupported declarations are rejected. A digest identifies package content; it does not certify the publisher or validate a performance claim. The full JSON schema, canonical hash rules, resource semantics and API responses are defined in [WORKFLOW_CONTRACT.md](WORKFLOW_CONTRACT.md).
 
 For example, a validation worker profile could be reused for a logistics order or an administrative request by giving its instances different names and processing parameters. That reuse models queueing and processing demand; the studio does not execute the real validation business logic.
+
+## Author a typed composite
+
+Use the **Components** workspace or an exported bundle from `examples/composites/`. A schema2 package declares kernel `composite`, capabilities `["design","evaluate"]`, scalar input/output ports, a graph of primitive/nested instances, public output bindings and test fixtures. Its legacy `config` triples are zero; they have no runtime resource meaning. Definition metadata, layouts and tests participate in the content digest.
+
+1. Define public ports using `boolean`, `integer` or `string`. Integers use the JavaScript-safe exact range; values are explicitly tagged and never coerced.
+2. Add one of the eleven supported operations or a nested exact component version. Bind each required input to an outer input, another instance's output or a typed literal. Bind every public output with the declared type.
+3. Add exact expected input/output cases. An empty suite is unverified. Errors such as missing attributes or arithmetic overflow are distinct from a valid Boolean denial.
+4. Prepare the root plus dependency-only locks. The API returns a complete bundle after validating types, reachability, acyclic definitions/dataflow, nesting and expanded execution bounds.
+5. Evaluate and test the same visible definition. Inspect paths such as `$/policy/tenant`; names inside different instances do not merge their execution identity.
+6. Install the complete bundle atomically, or export it for portable use without catalog access. Changing any installed ID/version's contents is rejected. To update a dependency, prepare its new version, then update and version each consuming definition explicitly.
+
+Offline checks:
+
+```sh
+go run ./cmd/componentcheck --bundle path/to/bundle.json
+go run ./cmd/componentcheck --test path/to/bundle.json
+```
+
+The root test suite travels inside the immutable definition. A bundle contains every dependency and rejects unrelated definitions, mismatched digests and hidden catalog resolution. Tests and evaluation have bounded outputs and no arbitrary code or external I/O.
+
+`select` computes both inputs before choosing a value; it is not a conditional workflow branch. Composition is finite nested invocation, not unbounded self-recursion. Functional evaluation has no virtual-time or infrastructure metrics. Stateful execution, message delivery, effectful persistence, timed composition and independent application deployment follow separate acceptance gates in [COMPOSITION_ARCHITECTURE.md](COMPOSITION_ARCHITECTURE.md). See [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md) for precise syntax, limits and endpoints.
 
 ## Future executable SDK proposal
 

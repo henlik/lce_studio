@@ -41,6 +41,8 @@ type ComponentPackage struct {
 	Kernel        string          `json:"kernel"`
 	Capabilities  []string        `json:"capabilities"`
 	Config        ComponentConfig `json:"config"`
+	Behavior      *Behavior       `json:"behavior,omitempty"`
+	Tests         []BehaviorCase  `json:"tests,omitempty"`
 }
 
 type PackageLock struct {
@@ -69,8 +71,8 @@ func ValidateComponentPackage(p ComponentPackage) []ValidationIssue {
 			}
 		}
 	}
-	if p.SchemaVersion != 1 {
-		add("schemaVersion", "Only component package schema version 1 is supported.")
+	if p.SchemaVersion != 1 && p.SchemaVersion != 2 {
+		add("schemaVersion", "Supported component package schema versions are 1 (profiles) and 2 (pure composites).")
 	}
 	if !safeID.MatchString(p.ID) || !strings.Contains(p.ID, ".") {
 		add("id", "Use a namespaced safe identifier containing a dot, such as example.queued-worker.")
@@ -82,6 +84,35 @@ func ValidateComponentPackage(p ComponentPackage) []ValidationIssue {
 	text("description", p.Description, 4000, false)
 	text("author", p.Author, 200, true)
 	text("license", p.License, 200, true)
+	if p.SchemaVersion == 2 {
+		if p.Kernel != "composite" {
+			add("kernel", "Schema 2 packages require the composite kernel.")
+		}
+		if len(p.Capabilities) != 2 || p.Capabilities[0] != "design" || p.Capabilities[1] != "evaluate" {
+			add("capabilities", `Composite capabilities must be exactly ["design","evaluate"] in this order.`)
+		}
+		if p.Config != (ComponentConfig{}) {
+			add("config", "Composite packages require the legacy config representation to be entirely zero.")
+		}
+		if p.Behavior == nil {
+			add("behavior", "Composite packages require a behavior definition.")
+		} else {
+			issues = append(issues, validateBehaviorLocal(p)...)
+		}
+		if len(issues) == 0 {
+			encoded, err := json.Marshal(p)
+			if err != nil || len(encoded) > 128*1024 {
+				add("", "Composite package typed JSON must not exceed 128 KiB, including tests.")
+			}
+		}
+		return issues
+	}
+	if p.Behavior != nil {
+		add("behavior", "Behavior definitions require component package schema version 2.")
+	}
+	if len(p.Tests) != 0 {
+		add("tests", "Behavior tests require component package schema version 2.")
+	}
 	if p.Kernel != "service" && p.Kernel != "database" && p.Kernel != "router" {
 		add("kernel", "Supported component kernels are service, database and router.")
 	}

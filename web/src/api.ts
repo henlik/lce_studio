@@ -11,12 +11,30 @@ export async function api<T>(
   method = "GET",
   body?: unknown,
 ): Promise<T> {
+  return request<T>(
+    path,
+    method,
+    body === undefined ? undefined : JSON.stringify(body),
+  );
+}
+export async function apiRawJson<T>(
+  path: string,
+  body: string,
+  method = "POST",
+): Promise<T> {
+  return request<T>(path, method, body);
+}
+async function request<T>(
+  path: string,
+  method: string,
+  body?: string,
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
       method,
       headers: body === undefined ? {} : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body,
     });
   } catch {
     throw new APIError(

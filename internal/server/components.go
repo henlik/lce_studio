@@ -22,6 +22,10 @@ func (s *Server) components(w http.ResponseWriter, r *http.Request) {
 		if !decode(w, r, &p) {
 			return
 		}
+		if p.SchemaVersion == 2 {
+			fail(w, http.StatusUnprocessableEntity, "Composite packages require their complete dependency closure. Install through /api/components/bundles.", nil)
+			return
+		}
 		if issues := model.ValidateComponentPackage(p); len(issues) > 0 {
 			fail(w, http.StatusUnprocessableEntity, "Component package contains invalid fields.", issues)
 			return

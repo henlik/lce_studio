@@ -10,6 +10,9 @@ func validateProjectPackages(p Project) []ValidationIssue {
 	locks := make(map[identity]PackageLock, len(p.Packages))
 	for i, lock := range p.Packages {
 		path := fmt.Sprintf("packages[%d]", i)
+		if lock.Package.SchemaVersion != 1 {
+			add(path+".package.schemaVersion", "Application projects support resource profiles only. Evaluate composite components in the Components workspace.")
+		}
 		for _, issue := range ValidateComponentPackage(lock.Package) {
 			add(path+".package."+issue.Path, issue.Message)
 		}

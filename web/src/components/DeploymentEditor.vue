@@ -1034,7 +1034,8 @@ function serialization(l: NetworkLink) {
           <strong>Model assumptions.</strong> Power is estimated from CPU
           activity over the run horizon. Scheduled outages interrupt work;
           durable writes remain. Battery state, migration, storage-device
-          energy, and geographic latency inference are not modelled in v0.3.
+          energy, and geographic latency inference are not modelled in this
+          release.
         </p>
         <button class="button quiet" @click="disable" :disabled="busy">
           Remove infrastructure

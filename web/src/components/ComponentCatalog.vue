@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-vue-next";
 import { api, APIError } from "../api";
+import type { CatalogRecord } from "../behaviorTypes";
 import type {
   ComponentPackage,
   InstalledComponent,
@@ -93,11 +94,14 @@ async function load() {
   try {
     const results = await Promise.allSettled([
       api<PackageLock[]>("/components/examples"),
-      api<InstalledComponent[]>("/components"),
+      api<CatalogRecord[]>("/components"),
     ]);
     if (results[0].status === "fulfilled") bundled.value = results[0].value;
     else fail(results[0].reason);
-    if (results[1].status === "fulfilled") installed.value = results[1].value;
+    if (results[1].status === "fulfilled")
+      installed.value = results[1].value.filter(
+        (p): p is InstalledComponent => p.package.schemaVersion === 1,
+      );
     else fail(results[1].reason);
   } finally {
     busy.value = "";
