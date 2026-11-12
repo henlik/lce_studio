@@ -1,5 +1,36 @@
 # Verification
 
+## v0.7 typed delivery between owned machines — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.
+
+- Full Go race tests, vet and the production backend build passed. Additional completed state-session/delivery tests passed with race detection. The Vue TypeScript and production build passed without new dependencies; Messages loads as a separate approximately 70 kB uncompressed chunk. The existing large initial JavaScript chunk advisory remains.
+- Seven live API suites pass **101 acceptance groups**: 13 legacy, 11 continuum, 12 workflow, 12 scalar composite, 16 data/structured, 19 state and 18 delivery. The new suite uses independently calculated outcomes, hashes and capacity boundaries rather than copying engine results into expectations.
+- The shared pharmacy/library model passes both 19-step reference scenarios at 172 primitive operations and eight component invocations. Six delivery attempts produce three recipient commits. A separate 27-step relay oracle checks downstream dispatch before upstream acknowledgement, explicit cycles, fanout, denial, immutable stale revisions and retry faults.
+- Delivery checks distinguish dispatch from execution, drops from rollback, committed acknowledgement loss from acceptance, historical receipt replay from current state, and already acknowledged no-ops from additional attempts. Acknowledgement loss applies to replayed receipts too. Frozen input maps and target revisions remain unchanged across retries and redispatch conflicts.
+- State sessions reuse the existing kernel, retain no growing history, isolate definitions/initial values and share conservative work, receipt and effect budgets. Both complete canonical v0.6 result digests remain unchanged after the refactor.
+- Boundaries include 8 owners, 16 routes, 32 messages, 64 receipts, 128 effects, 4,096 operations/invocations, model-wide unions of 64 component and 32 data locks, 64 KiB mapped values and 2 MiB complete evidence. A 4,096-operation experiment across distinct machine sessions succeeds; the next command aborts. Failed work consumes shared reservations. Mapping and evidence amplification reject before retained copies or publication.
+- Strict raw decoding checks explicit message attempt counts, safe revisions, unsupported fields, null maps and trailing input. Original raw JSON reaches Go before browser canonicalization. Model/scenario/body byte limits, cancellation and shared computation admission prevent rejected work from producing saved evidence.
+- PostgreSQL checks cover an independent immutable model catalog, concurrent installation, version conflicts/capacity, complete run snapshots and newest-50 summaries. Installing delivery models does not populate other catalogs. Repeated run submissions initialize fresh simulated owners and transport state.
+- The offline delivery checker validates raw models and exact locks, runs both portable examples without PostgreSQL, emits independent failed verdicts with a nonzero exit status, and explicitly labels empty expectation lists unverified.
+
+### Production browser workflow
+
+- Ran both reference experiments and inspected acknowledgement loss followed by receipt replay after restart. The historical recipient counter remains 11 while current state remains 10. The first envelope stays frozen at recipient revision zero.
+- Added a graphical redispatch and an absent-message expectation: the resulting 20-step scenario passed with unchanged 172-operation work. New dispatch defaults reuse the existing alias/revision for the same selector; undeclared assertion aliases default to absent.
+- Fractional revision text survives step reordering and blocks execution/duplication. Fractional attempt counts block export. Nonfinite coordinates remain visible across owner selection and block validation.
+- Changed an expected attempt count and observed a failed saved verdict. A recipient tenant mismatch with empty assertion lists produced an unverified run showing the first message acknowledged and its business receipt denied; later stale messages remained pending.
+- Opening immutable history preserved the graphical draft and hidden pending JSON. Applying JSON after a newer graphical edit prompted; cancelling preserved both. A confirmed scenario import replaced the scenario and cleared pending JSON only after canonical validation succeeded.
+- Installed the original model, rejected changed content under the existing version, installed that edit as 1.0.1, and reimported the original exact 1.0.0 export. Exported/reimported the scenario and reproduced the passing result.
+- Removed and graphically rebuilt the nominal notice-to-command route, then reproduced the reference verdict. Dragging the source owner changed its coordinates from (70, 100) to (124, 172), with the route following its new position.
+- Imported a valid CLI-generated negative-zero lock: the browser displayed an explicit limitation and preserved the current route and coordinates. The retained draft still ran successfully. No application-origin browser warnings or errors were observed; browser-extension messages are outside this statement.
+
+### Implemented boundary
+
+Messages are explicit finite correctness experiments, with transport metadata assumed durable across modeled owner restarts. There is no broker, automatic retry/routing, wall clock, external message delivery, distributed transaction or generated application. Coupling owned transitions and delivery to the existing hardware/network/power simulator requires a later scheduling contract. PostgreSQL retains definitions and experiment evidence, not live business instances. Delivery/app version is 0.7.0; state remains 0.6.0, pure/data remain 0.5.0 and timed application simulation remains 0.3.0. Existing schemas/digests are unchanged. Native and Docker Compose CI run all seven acceptance suites.
+
+The browser rejects exact locks containing negative-zero coordinates before cloning, since JavaScript JSON serialization would change their hashes. The CLI can retain those artifacts; a graphical edit requires a new version with ordinary zero coordinates. Desktop browser verification is recorded above; mobile-specific visual verification remains incomplete because viewport resizing is not exposed by the available browser API.
+
 ## v0.6 owned state, receipts and recovery — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.

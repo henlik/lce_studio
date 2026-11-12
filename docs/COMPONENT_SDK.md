@@ -82,6 +82,12 @@ State machines are separate immutable artifacts that embed existing pure compone
 
 The State workspace tests this protocol with explicit rollback, reply-loss and restart scenarios. Pure packages retain their earlier schemas and exact digests; no mutable state is hidden inside a pure node. Installing a machine does not install its embedded dependencies into other catalogs. See [STATE_AUTHORING.md](STATE_AUTHORING.md) for authoring and [STATE_CONTRACT.md](STATE_CONTRACT.md) for the exact protocol. External delivery, live stateful application execution and coupling these transitions to timed infrastructure remain later increments.
 
+## Typed collaboration available in v0.7
+
+The Messages workspace embeds exact state-machine locks, instantiates independent owners and maps declared effect payloads to recipient command inputs. Dispatch freezes a request; explicit delivery attempts exercise receipt deduplication and acknowledgements without external I/O. A model can reuse the same owner definition in several instances and chain downstream effects through named messages. Its machine, component and data dependencies remain portable and immutable.
+
+Use independent final state and transport expectations to distinguish successful processing from business acceptance. See [DELIVERY_AUTHORING.md](DELIVERY_AUTHORING.md) and [DELIVERY_CONTRACT.md](DELIVERY_CONTRACT.md). Delivery models cannot yet be nested as state-machine commands or coupled to the timed deployment canvas; those require separate composition and scheduling contracts.
+
 ## Future executable SDK proposal
 
 The remaining sections describe the broader extension boundary. They are design goals rather than available runtime APIs.

@@ -57,6 +57,7 @@ jobs:
           node scripts/acceptance-composites.mjs
           node scripts/acceptance-data.mjs
           node scripts/acceptance-state.mjs
+          node scripts/acceptance-delivery.mjs
 
   compose:
     runs-on: ubuntu-latest
@@ -81,6 +82,7 @@ jobs:
           node scripts/acceptance-composites.mjs
           node scripts/acceptance-data.mjs
           node scripts/acceptance-state.mjs
+          node scripts/acceptance-delivery.mjs
       - if: failure()
         run: docker compose logs
       - if: always()

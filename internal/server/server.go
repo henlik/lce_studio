@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.6.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.7.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return
@@ -103,6 +103,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Valid  bool                    `json:"valid"`
 			Issues []model.ValidationIssue `json:"issues"`
 		}{len(issues) == 0, issues})
+	case path == "/api/delivery/examples":
+		s.deliveryExamples(w, r)
+	case path == "/api/delivery/prepare":
+		s.deliveryPrepare(w, r)
+	case path == "/api/delivery/validate-lock":
+		s.deliveryValidateLock(w, r)
+	case path == "/api/delivery/models":
+		s.deliveryModels(w, r)
+	case path == "/api/delivery/model":
+		s.deliveryModel(w, r)
+	case path == "/api/delivery/check":
+		s.deliveryCheck(w, r, false)
+	case path == "/api/delivery/runs":
+		s.deliveryRuns(w, r)
+	case strings.HasPrefix(path, "/api/delivery/runs/"):
+		s.deliveryRun(w, r, strings.TrimPrefix(path, "/api/delivery/runs/"))
 	case path == "/api/state/examples":
 		s.stateExamples(w, r)
 	case path == "/api/state/prepare":

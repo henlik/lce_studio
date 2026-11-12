@@ -32,7 +32,7 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.6.0'}
+GET /api/health -> {status:'ok',version:'0.7.0'}
 GET /api/example -> Project
 GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
 GET /api/example?template=branching -> schema3 Project with embedded component locks
@@ -71,3 +71,7 @@ The data-contract catalog, complete-fixture validation, immutable validation his
 ## Owned-state scenarios (v0.6)
 
 The app adds an independent `/api/state/*` machine catalog and deterministic scenario API. [STATE_CONTRACT.md](STATE_CONTRACT.md) defines strict typed bindings, per-instance ownership, command receipts, revision checks, explicit effect intents, commit faults, restart and immutable evidence. Machine and scenario schemas are 1; pure/data evaluation remains 0.5.0 and timed simulation remains 0.3.0. Scenario state is initialized per run; PostgreSQL stores complete experiment snapshots, not live modeled application sessions.
+
+## Typed delivery scenarios (v0.7)
+
+The independent `/api/delivery/*` model catalog and scenario API compose exact state-machine versions through typed effect-to-command routes. [DELIVERY_CONTRACT.md](DELIVERY_CONTRACT.md) defines immutable dispatch envelopes, explicit delivery attempts, recipient receipt replay, separate acknowledgements and business acceptance, downstream message references and aggregate limits. Model/scenario schemas are 1 and delivery engine is 0.7.0. State engine remains 0.6.0 with unchanged complete legacy results. PostgreSQL retains experimental evidence; no real broker or external message delivery occurs.

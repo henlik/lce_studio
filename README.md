@@ -2,7 +2,7 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.6.0** adds an **owned-state workspace**. Reuse pure components as command decisions, declare durable and volatile state, create explicit effect intents, and test retries, rollback, lost replies and restart recovery with independently specified final expectations. Pharmacy and school-library examples share one reservation machine. Application/deployment simulation remains engine 0.3.0; pure/data evaluation remains 0.5.0. The new state runner is 0.6.0.
+Version **0.7.0** adds a **Messages workspace**. Connect exact owned-state machines through typed routes, freeze message payloads and recipient revisions at dispatch, and test delivery drops, rollback, lost acknowledgements and safe receipt replay. Pharmacy and school-library experiments share one reservation-to-ledger model. The delivery runner is 0.7.0; state remains 0.6.0, pure/data remain 0.5.0 and application/deployment simulation remains 0.3.0.
 
 The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. The [recursive component architecture](docs/COMPOSITION_ARCHITECTURE.md) develops the full recommendation from UML, BPMN, C4, ERDs and flowcharts; [COMPOSITION_CONTRACT.md](docs/COMPOSITION_CONTRACT.md) defines the precise v0.4 subset. Healthcare is a reference use case, not a kernel dependency. The [component authoring guide](docs/COMPONENT_SDK.md) explains the implemented package subset and the future SDK; external executable plugins and application generation are not yet implemented.
 
@@ -53,7 +53,7 @@ The editable sample model is in `examples/retry-pipeline.json`.
 
 `DATABASE_URL` is required. On startup, the Go service connects with a bounded timeout and initializes its tables and indexes in a transaction. The configured database must already exist; its role needs permission to create tables and indexes in the selected schema. Startup initialization is serialized across processes. The connection pool allows up to 10 open connections per app process.
 
-Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Separate component, data and state-machine catalogs store immutable versions in the same database. Pure evaluations, fixture validations and state scenarios retain their exact inputs, definitions and results. State-scenario persistence saves experimental evidence; modeled instances do not become live application sessions. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
+Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Separate component, data, state-machine and delivery-model catalogs store immutable versions in the same database. Pure evaluations, fixture validations, state scenarios and message experiments retain their exact inputs, definitions and results. State-scenario persistence saves experimental evidence; modeled instances do not become live application sessions. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
 
 The old `STUDIO_DATA` setting and SQLite backend have been removed. Project JSON exports from the SQLite version can be imported into this version. Existing SQLite files and recorded history are not automatically migrated; retain the old database if you need that history.
 
@@ -156,6 +156,23 @@ go run ./cmd/statecheck --run path/to/scenario-example.json
 
 Scenario files have `{machine,scenario}`. See [STATE_AUTHORING.md](docs/STATE_AUTHORING.md) for the workflow and [STATE_CONTRACT.md](docs/STATE_CONTRACT.md) for exact ownership, commit, replay and recovery semantics.
 
+## Typed messages between state owners
+
+1. Open **Messages** and load a reference experiment. Inspect the exact reservation owner, ledger owner and typed route between them.
+2. Review initial values and the ordered command, dispatch, deliver and restart steps. Dispatch freezes a recipient request; delivery attempts it without changing its payload or expected revision.
+3. Run the experiment and compare the independent state and message expectations. Acknowledgement confirms a durable recipient response; its separate acceptance flag tells you whether the business request succeeded.
+4. Inspect a lost acknowledgement, restart the recipient and retry the same message. The original receipt replays without repeating its state change or effect intentions.
+5. Add instances of installed/imported machines, map effect payloads to command inputs, arrange the diagram and author another scenario. Downstream dispatch can reference an earlier message alias.
+6. Install an immutable model version, export its exact lock and scenario, or reopen a saved evidence snapshot. Draft edits never change previously recorded results.
+
+Messages are simulated within one bounded experiment. There is no live broker, automatic retry, hidden routing, external delivery, clock or infrastructure timing. See [DELIVERY_AUTHORING.md](docs/DELIVERY_AUTHORING.md) and [DELIVERY_CONTRACT.md](docs/DELIVERY_CONTRACT.md).
+
+```sh
+go run ./cmd/deliverycheck path/to/model.json
+go run ./cmd/deliverycheck --lock path/to/model-lock.json
+go run ./cmd/deliverycheck --run path/to/experiment.json
+```
+
 ## Included in this version
 
 - Requirement editing with no-duplicate-write, completion, and p95-latency assertions.
@@ -179,7 +196,9 @@ Scenario files have `{machine,scenario}`. See [STATE_AUTHORING.md](docs/STATE_AU
 - Exact record/collection ports and five structured operations in pure components.
 - Owned durable/volatile state, command decisions, revision checks, idempotent receipts, explicit effect intents and deterministic recovery scenarios.
 - Independent state expectations, exact machine catalog versions and immutable scenario evidence.
-- Go unit/integration tests, six API acceptance suites, and a GitHub Actions workflow.
+- Typed routes between independent state owners, frozen message envelopes, explicit delivery faults and separate acknowledgement/business outcomes.
+- Graphical delivery authoring, downstream message references, independent transport expectations and immutable model/run history.
+- Go unit/integration tests, seven API acceptance suites, and a GitHub Actions workflow.
 
 ## Supported models and limits
 
@@ -230,11 +249,12 @@ node scripts/acceptance-workflows.mjs
 node scripts/acceptance-composites.mjs
 node scripts/acceptance-data.mjs
 node scripts/acceptance-state.mjs
+node scripts/acceptance-delivery.mjs
 ```
 
-Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/state ./internal/simulation`.
+Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/state ./internal/delivery ./internal/simulation`.
 
-Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract/state-machine versions and evaluation/validation/scenario evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all six acceptance suites against the Compose stack.
+Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract/state-machine/delivery-model versions and evaluation/validation/scenario evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all seven acceptance suites against the Compose stack.
 
 ## Repository structure
 
@@ -252,10 +272,12 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `cmd/componentcheck/` | Offline profile/bundle validation and composite test execution |
 | `cmd/datacheck/` | Offline data-contract, complete-fixture and compatibility checks |
 | `cmd/statecheck/` | Offline state-machine validation and scenario execution |
+| `cmd/deliverycheck/` | Offline delivery-model validation and message experiments |
+| `internal/delivery/` | Typed dispatch, explicit delivery and acknowledgement simulation |
 | `scripts/` | Development launcher and API acceptance checks |
 
 ## Next increments
 
-Extend the documented composite foundation deliberately: typed message delivery, effect adapters, event workflows and bounded parallel fork/join; coupling owned-state transitions to resource/failure simulation; optional and nested data types; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
+Extend the documented composite foundation deliberately: couple owned-state and message transitions to resource/failure simulation under an explicit clock and scheduling contract; add event scheduling and bounded parallel fork/join; optional and nested data types; isolated external effect adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.

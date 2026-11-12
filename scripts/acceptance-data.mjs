@@ -70,7 +70,7 @@ function assertInvalid(result, needle) {
   if (needle) assert.ok(result.issues.some(i => `${i.path} ${i.message}`.toLowerCase().includes(needle.toLowerCase())), JSON.stringify(result));
 }
 
-assert.equal((await get('/api/health')).version, '0.6.0');
+assert.equal((await get('/api/health')).version, '0.7.0');
 assert.equal((await get('/api/components/primitives')).length, 11);
 const structuredPrimitives = await get('/api/components/structured-primitives');
 assert.equal(structuredPrimitives.length, 16);

@@ -40,6 +40,11 @@ type engine struct {
 	receiptCount int
 	effectCount  int
 	stepBytes    int
+	shared       *Budget
+	session      bool
+	admit        func(Projection) error
+	last         StepResult
+	beforeWork   work
 }
 
 func emptyValues() map[string]model.TypedValue { return map[string]model.TypedValue{} }
@@ -209,11 +214,15 @@ func (e *engine) step(index int, step model.StateStep) error {
 		return fmt.Errorf("%w: decision inputs at %s: %s", ErrLimit, issues[0].Path, issues[0].Message)
 	}
 	planned := e.work[command.Name]
-	if e.reserved.operations+planned.operations > MaxOperations || e.reserved.invocations+planned.invocations > MaxInvocations {
+	reserved := &e.reserved
+	if e.shared != nil {
+		reserved = &e.shared.reserved
+	}
+	if reserved.operations+planned.operations > MaxOperations || reserved.invocations+planned.invocations > MaxInvocations {
 		return fmt.Errorf("%w: global decision work exceeds %d operations or %d invocations", ErrLimit, MaxOperations, MaxInvocations)
 	}
-	e.reserved.operations += planned.operations
-	e.reserved.invocations += planned.invocations
+	reserved.operations += planned.operations
+	reserved.invocations += planned.invocations
 	if err := e.ctx.Err(); err != nil {
 		return err
 	}
@@ -275,7 +284,11 @@ func (e *engine) step(index int, step model.StateStep) error {
 		result.Status, result.FaultApplied = "rolled_back", true
 		return e.retain(result, nil, nil, nil)
 	}
-	if e.receiptCount >= MaxReceipts || e.effectCount+len(effects) > MaxEffects {
+	receiptCount, effectCount := e.receiptCount, e.effectCount
+	if e.shared != nil {
+		receiptCount, effectCount = e.shared.receipts, e.shared.effects
+	}
+	if receiptCount >= MaxReceipts || effectCount+len(effects) > MaxEffects {
 		return fmt.Errorf("%w: receipt or effect capacity exceeded", ErrLimit)
 	}
 	receipt := Receipt{CommandID: step.CommandID, RequestHash: requestHash, Command: step.Command, Accepted: accepted, Revision: next.revision, Outputs: outputs, EffectIDs: []string{}}
@@ -321,8 +334,33 @@ func (e *engine) retain(step StepResult, candidate *ownedInstance, receipt *Rece
 	if candidate != nil {
 		id = candidate.id
 	}
-	if err := e.checkResultBudget(id, candidate, n, 1); err != nil {
-		return err
+	if e.session && e.admit != nil {
+		projection := Projection{StepBytes: n, Status: step.Status, Message: step.Message, FaultApplied: step.FaultApplied,
+			Operations: e.result.Operations - e.beforeWork.operations, Invocations: e.result.Invocations - e.beforeWork.invocations}
+		for _, owner := range e.order {
+			instance := e.instances[owner]
+			if owner == id {
+				instance = candidate
+			}
+			bytes, err := instanceSize(instance)
+			if err != nil {
+				return err
+			}
+			projection.InstanceBytes += bytes
+		}
+		if step.Receipt != nil {
+			projection.ReceiptBytes, err = jsonSize(step.Receipt)
+			if err != nil {
+				return err
+			}
+		}
+		if err := e.admit(projection); err != nil {
+			return err
+		}
+	} else {
+		if err := e.checkResultBudget(id, candidate, n, 1); err != nil {
+			return err
+		}
 	}
 	snapshot := cloneStep(step)
 	if candidate != nil {
@@ -331,16 +369,26 @@ func (e *engine) retain(step StepResult, candidate *ownedInstance, receipt *Rece
 			candidate.receipts[len(candidate.receipts)-1] = cloneReceipt(*receipt)
 			candidate.receiptIndex[receipt.CommandID] = len(candidate.receipts) - 1
 			e.receiptCount++
+			if e.shared != nil {
+				e.shared.receipts++
+			}
 			for i := range effects {
 				position := len(candidate.effects) - len(effects) + i
 				candidate.effects[position] = cloneEffect(effects[i])
 			}
 			e.effectCount += len(effects)
+			if e.shared != nil {
+				e.shared.effects += len(effects)
+			}
 		}
 		e.instances[id] = candidate
 	}
-	e.result.Steps = append(e.result.Steps, snapshot)
-	e.stepBytes += n
+	if e.session {
+		e.last = snapshot
+	} else {
+		e.result.Steps = append(e.result.Steps, snapshot)
+		e.stepBytes += n
+	}
 	return e.ctx.Err()
 }
 

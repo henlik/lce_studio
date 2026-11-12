@@ -63,6 +63,12 @@ A separate State workspace defines owned durable/volatile slots, typed commands 
 
 The atomic commit and restart boundaries are modeled assumptions. Effects remain intentions; this release does not deliver them or mutate live business databases. Each scenario starts from its declared initialization. The pure/data engines stay at 0.5.0 and the timed application simulator stays at 0.3.0; the state runner is 0.6.0. See [STATE_CONTRACT.md](STATE_CONTRACT.md) and [STATE_AUTHORING.md](STATE_AUTHORING.md).
 
+### v0.7 — typed message delivery and acknowledgements
+
+A separate Messages workspace composes exact owned-state machines through typed routes. Explicit dispatch freezes the recipient request; delivery scenarios exercise drops, recipient rollback, lost acknowledgements, retries, restarts and downstream effects. Historical receipt replay is distinct from current owned state. Independently specified state and message expectations verify acknowledgement separately from business acceptance. Exact delivery models and complete evidence are retained in PostgreSQL.
+
+Transport durability is a modeled assumption. Steps are serial and explicitly ordered; there is no hidden routing, automatic retry, live broker, external I/O or clock. The delivery engine is 0.7.0; state/pure/data/timed engines remain at their prior versions. See [DELIVERY_CONTRACT.md](DELIVERY_CONTRACT.md) and [DELIVERY_AUTHORING.md](DELIVERY_AUTHORING.md).
+
 ## Development milestones and acceptance gates
 
 | Milestone | Deliverables | Acceptance evidence |
@@ -80,7 +86,7 @@ The atomic commit and restart boundaries are modeled assumptions. Effects remain
 
 Security, testing, documentation and usability progress throughout the milestones. No milestone claims that simulation alone proves correctness of arbitrary software or authorizes clinical deployment. Calendar estimates must be revisited once the required simulation fidelity, deployment targets and staffing are fixed.
 
-The next increment should define typed message/effect delivery, acknowledgements, recipient deduplication and ordered event workflows. Then couple owned-state execution to the continuum simulator under explicit scheduling, retry, cancellation, outage and resource-accounting rules; follow with bounded parallel fork/join and independent correctness cases. Expand data types only when use cases require them. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
+The next increment should couple owned-state execution and typed message delivery to the continuum simulator under explicit clock, scheduling, retry, cancellation, outage and resource-accounting rules. Follow with bounded parallel fork/join and independent correctness cases. Expand data types only when use cases require them. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
 
 ## Reference project strategy
 

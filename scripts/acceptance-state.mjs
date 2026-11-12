@@ -109,7 +109,7 @@ const stateOf = (total, ticks) => ({ total: int(total), ticks: int(ticks), note:
 const argumentsOf = (amount, allow = true, notify = false) => ({ amount: int(amount), allow: bool(allow), notify: bool(notify) });
 function expectRejected(result) { assert.equal(result.valid, false); assert.ok(result.issues.length > 0); }
 
-assert.equal((await get('/api/health')).version, '0.6.0');
+assert.equal((await get('/api/health')).version, '0.7.0');
 assert.equal((await get('/api/components/primitives')).length, 11);
 assert.equal((await get('/api/components/structured-primitives')).length, 16);
 const reducerPackage = packageDefinition('increment', {
