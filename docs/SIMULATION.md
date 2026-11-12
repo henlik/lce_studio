@@ -1,4 +1,6 @@
-# Simulation semantics, v0.1
+# Simulation semantics, v0.2
+
+The engine supports two explicitly selected project schemas. Schema 1 retains the original application-only pipeline semantics described first. Schema 2 adds the infrastructure-coupled execution described below. Neither schema executes imported application code. Engine version 0.2.0 records which implementation produced a run; persisted older runs retain their original version and snapshots.
 
 ## Reproducibility
 
@@ -38,3 +40,69 @@ Simulation runs on the Go backend and returns a recorded trace. Browser Play, Pa
 ## Validation and bounds
 
 Validation checks schema version, finite bounded fields, unique IDs, references, component roles, and the supported linear topology. The engine also enforces execution time/event bounds and checks context cancellation. Failed or cancelled executions are reported as errors rather than persisted as successful partial results.
+
+## Schema 2: placement and shared resources
+
+The application remains a single client → service(s) → database pipeline. Every application node has one host placement. Hosts belong to geographical sites and declare CPU cores, resident memory capacity, idle/active CPU power, and power-outage windows. The tier and geographic coordinates are annotations: they do not invent processor speed, propagation delay, mobility, or connectivity. All cross-host communication requires one explicitly defined direct physical link; multihop routing is not supported in this increment.
+
+Each service or database job occupies one CPU core for its configured processingMs. A node's capacity still limits the number of jobs that node can process simultaneously. Colocated nodes compete for the same host CPU cores. Work enters a host queue in arrival order; the scheduler selects the earliest waiting job whose node has an available slot. It repeats while a host core is free. This is work-conserving FIFO admission among eligible jobs; a node at capacity does not block unrelated eligible work.
+
+Each application node reserves its configured memoryMb, including the client. Omitted or zero memoryMb means 64 MiB. The validator rejects deployments whose summed reservations exceed host memory. There is no dynamic allocation, swapping, memory-bandwidth contention, operating-system overhead, CPU clock-speed model, or OOM simulator. Response forwarding and client orchestration consume no CPU slots in the current abstraction.
+
+## Schema 2: physical transfers
+
+A request or response crossing a physical link carries exactly infrastructure.messageBytes. Both directions share one FIFO transmission channel; its serialization time in integer milliseconds is:
+
+```text
+ceil(messageBytes × 8 / bandwidthKbps)
+```
+
+The channel becomes free after serialization. Propagation then adds the physical link latency, the corresponding application edge latency, and one seeded uniform jitter sample. Thus another message may start transmission while a previous one is still propagating. Application edges on the same host use only their application latency and jitter, without a physical transfer or serialization cost. The jitter sample is drawn when propagation begins; stable event ordering makes this deterministic.
+
+Every attempted crossing increments the physical link's transfers count, including an attempt immediately rejected because its link or an endpoint is down. bytesTransferred counts only complete payloads delivered successfully. droppedTransfers counts failed attempts, including messages waiting in the channel queue. Partial byte delivery, packet retransmission, protocol overhead, TCP behaviour, wireless interference, and link energy are not modelled. On a completed run, each link obeys:
+
+```text
+bytesTransferred = (transfers − droppedTransfers) × messageBytes
+```
+
+## Schema 2: outages, boundaries and recovery
+
+Outage intervals are half-open [startMs, endMs). Environmental transitions execute before application or transport events at the same timestamp. A host or link is available at the end of its outage and unavailable at the start. Touching outage windows form one continuous unavailable period even if their input ordering differs.
+
+Host power loss immediately discards both active and queued volatile processing on that host. interruptedJobs counts both categories. Cores and node slots are released; cancelled completion events do not later write data. Already committed database writes and request-ID deduplication state persist through a power cycle. The durability assumption covers a process/power cycle of intact persistent storage, not disk destruction or site loss.
+
+Host or link outages also drop queued and in-flight transfers, including messages in their propagation delay. The current conservative transfer model requires both endpoints and the physical link to remain available throughout a transfer's lifetime; it does not model packets already buffered elsewhere surviving an endpoint power cycle. Same-host delayed messages are also volatile and are discarded by host power loss.
+
+Power/network restoration makes new work eligible. It does not automatically replay interrupted jobs or dropped messages. The existing bounded client retry policy is responsible for new attempts, with their original logical request IDs. Timed-out server work continues unless an infrastructure failure interrupts it. A committed write can therefore exist even if the client ultimately reports failure; replay makes that distinction visible.
+
+The workload generator is external to the simulated client host and retains schedules, retry budgets and timers. An unavailable client host prevents its send/receive, but already scheduled timeouts still expire and can trigger retries. This is an explicit experiment abstraction, not a claim that an unpowered client device can execute timers. Zero boot and service-recovery delay is assumed at the end of an outage; boot delays, batteries and migration are future capabilities.
+
+## Schema 2: energy and observation horizon
+
+While powered, a host draws the following CPU-related power:
+
+```text
+idleWatts + (activeWatts − idleWatts) × busyCores / cpuCores
+```
+
+A down host draws zero. Between successive effective events the engine integrates this constant load, converting W·ms to Wh by dividing by 3,600,000. busyCoreMs is the sum of occupied core-time, and uptimeMs is the amount of powered time. Every declared host contributes its idle energy while up, including hosts without application placements. This estimates CPU-related host energy only; network equipment, storage devices, batteries, charging losses and cooling are excluded.
+
+The schema-2 observation horizon includes scheduled client timeout deadlines and all configured environmental transitions, even when a request has completed or an affected host is unused. Interrupted work and dropped packets have their obsolete completion events discarded; these cancelled events do not artificially prolong the horizon. Metrics.durationMs equals the final effective event time, and energy/uptime cover [0, durationMs]. Consequently, a request can finish at 27ms while a 1000ms timeout produces a 1000ms energy observation horizon. This deliberate difference from schema-1 trace-duration semantics is recorded in the schema.
+
+Comparing energy requires interpreting the horizon as well as the completed work. A failed deployment may use less energy simply because it performed less work; energy alone is not a success criterion. All timings and power profiles are uncalibrated model inputs until measured against actual hardware.
+
+## Schema 2 reference checks
+
+The automated simulator tests include independently calculated cases:
+
+| Case | Expected result |
+| --- | --- |
+| One 1000-byte request, 8000kbit/s, 5ms physical latency each way, 10+5ms processing | 27ms response latency |
+| Same application moved to a 50ms-latency host | 117ms response latency |
+| Two requests 1ms apart, zero processing, 1000 bytes on one shared 8kbit/s link | p95 3999ms, 4 transfers, 4000 delivered bytes |
+| Two 10+10ms jobs on one shared host core, requests 1ms apart | p95 39ms; adding a second core reduces p95 to 20ms |
+| Edge power outage [10,50), 60ms timeout, one retry in the first reference case | Completion at 87ms, one interrupted job, one durable write |
+| Outage begins exactly at the original 21ms database completion | No write; the environmental transition wins |
+| Outage begins exactly at 27ms response arrival after a 21ms write | Response lost; retry deduplicates the retained write |
+
+Additional tests cover interrupted queues, dropped transmission backlogs, half-open/touching boundaries, unavailable client hosts, unused-host power, energy and transfer conservation, deterministic jitter, input immutability, cancellation and time bounds. A bounded fuzz target combines CPU capacity, retries, host outages and network outages while checking repeatability and conservation.

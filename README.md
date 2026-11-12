@@ -1,8 +1,10 @@
-# Software Studio
+# LCE Studio
 
-A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, edit a service pipeline, simulate its behaviour, and inspect test verdicts and event traces together.
+A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, edit a service pipeline, place it on computing resources, simulate its behaviour, and inspect test verdicts and event traces together.
 
-Version **0.1.0** is a working model simulator. The backend performs the simulation in Go; the browser edits the model and replays the resulting trace. There is no Python dependency.
+Version **0.2.0** adds deployment models and coupled infrastructure simulation: sites, hosts, physical links, placements, scheduled power/network outages and estimated host energy. The backend performs the simulation in Go; the browser edits the model and replays the resulting trace. There is no Python dependency. Existing v1 projects retain their original pipeline semantics.
+
+The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. Healthcare is a reference use case, not a kernel dependency. The [component SDK proposal](docs/COMPONENT_SDK.md) defines the intended extension boundary; an external plugin runtime and application generation are not yet implemented.
 
 ## Start locally
 
@@ -61,6 +63,17 @@ The included project contains a client, an order service, and a ledger. Twelve r
 
 The demonstration is intentionally a model of request processing. It does not connect to a real order service or database, execute imported source code, or prove that a production implementation behaves the same way.
 
+## Deployment experiment: edge or cloud
+
+1. Load the **Continuum example** and open **Deployment**. The client runs on a device; the service and durable store run on an edge host. The remote host and three direct physical links are available for comparison.
+2. Inspect site coordinates, host cores/memory/power, physical-link bandwidth/latency, and application placements. Run the healthy baseline.
+3. Move the service and database placements to the cloud host and run again. Compare the recorded results; they retain their own model snapshots and metrics.
+4. Restore edge placements and add a power outage on the edge host, such as `[0,5000)` ms. Run again to see unavailable transfers, bounded retries and failed requirements.
+5. Change host cores, physical bandwidth or network outage windows and rerun. These inputs affect processing admission and communication rather than merely changing diagram labels.
+6. Save/export the project. `examples/continuum-placement.json` is also available for import.
+
+The topology and geographic views are schematics. Coordinates and host tiers do not infer latency or processor speed. Host energy is an uncalibrated estimate based on idle/active wattage and CPU occupancy. All defined powered hosts contribute energy, including unused hosts. Battery discharge, solar generation, migration and multihop routing are future milestones.
+
 ## Included in this version
 
 - Requirement editing with no-duplicate-write, completion, and p95-latency assertions.
@@ -70,19 +83,25 @@ The demonstration is intentionally a model of request processing. It does not co
 - Deterministic virtual-time execution with a bounded event queue.
 - Metrics, requirement verdicts, and recorded event replay.
 - PostgreSQL project persistence and run history, plus project JSON import/export.
+- Deployment editing with geographic sites, host resources, direct physical links and node placements.
+- Shared host CPU capacity, static resident-memory admission and FIFO physical-link bandwidth.
+- Scheduled power/network outages, interrupted processing, retry effects and durable completed writes.
+- Per-host estimated energy, uptime and busy core time; physical-link transfer/drop counters; recorded-run comparison.
 - Strict model validation, bounded input, same-origin browser writes, and local defaults.
-- Go unit/integration tests, an API acceptance script, and a GitHub Actions workflow.
+- Go unit/integration tests, two API acceptance suites, and a GitHub Actions workflow.
 
 ## Supported models and limits
 
-A valid executable topology is a **single directed linear pipeline** containing exactly one client, one or more services, and one terminal database. All nodes must belong to that path. Branching, cycles, fan-out, alternate routes, standalone queue nodes, arbitrary business logic, and runtime code execution are outside v0.1.
+A valid executable application topology is a **single directed linear pipeline** containing exactly one client, one or more services, and one terminal database. All nodes must belong to that path. Branching, cycles, fan-out, standalone queue nodes, arbitrary business logic, and runtime code execution are outside v0.2.
 
 Services and the database contain bounded processing resources and FIFO waiting queues. A service's capacity is its number of simultaneous processing slots. Responses traverse the reverse path using link delays, without additional service processing. These are explicit assumptions, not calibrated predictions for arbitrary real infrastructure.
+
+Schema v2 adds infrastructure without changing the application topology restriction. Every node must be placed on one host to execute. Each application edge must stay on one host or cross one explicit undirected physical link. Host cores are shared across colocated processing nodes; memory is checked as a static reservation. A physical link serializes transmissions from both directions on one channel. Complete semantics and supported limits are in [CONTINUUM_CONTRACT.md](docs/CONTINUUM_CONTRACT.md) and [SIMULATION.md](docs/SIMULATION.md).
 
 Projects may be saved as incomplete drafts, but simulation requires a complete valid pipeline. Limits include 30 nodes, 30 edges, 50 requirements, 200 logical requests, five retries per request, 100,000 trace events, and one hour of virtual time. Exceeding execution bounds returns an error; it never silently produces a passing partial result.
 
 See [the data and API contract](docs/CONTRACT.md) and [simulation semantics](docs/SIMULATION.md).
-The first-release verification record is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+The verification record is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Configuration
 
@@ -114,11 +133,12 @@ With a server running, execute the end-to-end API checks:
 
 ```sh
 node scripts/acceptance.mjs
+node scripts/acceptance-continuum.mjs
 ```
 
 Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model and simulation tests can run without a database using `go test ./internal/model ./internal/simulation`.
 
-Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance script creates a dedicated test project and deletes that project afterwards; recorded test runs remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` for clean acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs the same acceptance script against the Compose stack.
+Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts create dedicated test projects and delete those projects afterwards; recorded test runs remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` for clean acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs both acceptance suites against the Compose stack.
 
 ## Repository structure
 

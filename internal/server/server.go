@@ -69,12 +69,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.1.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.2.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return
 		}
-		respond(w, 200, model.ExampleProject())
+		switch r.URL.Query().Get("template") {
+		case "", "retry":
+			respond(w, 200, model.ExampleProject())
+		case "continuum":
+			respond(w, 200, model.ContinuumExampleProject())
+		default:
+			fail(w, http.StatusBadRequest, "Unknown example template.", nil)
+		}
 	case path == "/api/validate":
 		if !method(w, r, http.MethodPost) {
 			return

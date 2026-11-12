@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 2,
+  "id": "continuum-placement",
+  "name": "Edge and cloud placement",
+  "description": "Compare the same request pipeline on edge or cloud resources. Edit host power and network outages to test interruption and recovery; locations are descriptive and link delays are explicit.",
+  "nodes": [
+    {
+      "id": "client",
+      "type": "client",
+      "name": "Request client",
+      "position": {
+        "x": 60,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 0,
+        "capacity": 1,
+        "deduplicate": false,
+        "memoryMb": 64
+      }
+    },
+    {
+      "id": "service",
+      "type": "service",
+      "name": "Request service",
+      "position": {
+        "x": 360,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 20,
+        "capacity": 2,
+        "deduplicate": false,
+        "memoryMb": 128
+      }
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "name": "Durable store",
+      "position": {
+        "x": 660,
+        "y": 160
+      },
+      "config": {
+        "processingMs": 10,
+        "capacity": 1,
+        "deduplicate": true,
+        "memoryMb": 256
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-service",
+      "source": "client",
+      "target": "service",
+      "latencyMs": 2
+    },
+    {
+      "id": "service-database",
+      "source": "service",
+      "target": "database",
+      "latencyMs": 2
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "text": "A retried request must not create a duplicate operation.",
+      "rule": "no_duplicates",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-002",
+      "text": "Every request receives a successful response before retries are exhausted.",
+      "rule": "all_complete",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-003",
+      "text": "95% of requests complete within 500 ms.",
+      "rule": "latency_p95",
+      "targetMs": 500
+    }
+  ],
+  "scenario": {
+    "requestCount": 12,
+    "intervalMs": 250,
+    "timeoutMs": 500,
+    "maxRetries": 2,
+    "dropFirstResponse": false,
+    "jitterMs": 0,
+    "seed": 42
+  },
+  "infrastructure": {
+    "sites": [
+      {
+        "id": "field-site",
+        "name": "Field site",
+        "latitude": 2,
+        "longitude": 29
+      },
+      {
+        "id": "remote-site",
+        "name": "Remote site",
+        "latitude": 50.85,
+        "longitude": 4.35
+      }
+    ],
+    "hosts": [
+      {
+        "id": "device-host",
+        "name": "Client device",
+        "siteId": "field-site",
+        "tier": "device",
+        "cpuCores": 1,
+        "memoryMb": 512,
+        "idleWatts": 3,
+        "activeWatts": 8,
+        "outages": []
+      },
+      {
+        "id": "edge-host",
+        "name": "Edge server",
+        "siteId": "field-site",
+        "tier": "edge",
+        "cpuCores": 4,
+        "memoryMb": 4096,
+        "idleWatts": 12,
+        "activeWatts": 45,
+        "outages": []
+      },
+      {
+        "id": "cloud-host",
+        "name": "Remote server",
+        "siteId": "remote-site",
+        "tier": "cloud",
+        "cpuCores": 8,
+        "memoryMb": 16384,
+        "idleWatts": 40,
+        "activeWatts": 160,
+        "outages": []
+      }
+    ],
+    "links": [
+      {
+        "id": "local-link",
+        "sourceHostId": "device-host",
+        "targetHostId": "edge-host",
+        "latencyMs": 2,
+        "bandwidthKbps": 10000,
+        "outages": []
+      },
+      {
+        "id": "device-wan",
+        "sourceHostId": "device-host",
+        "targetHostId": "cloud-host",
+        "latencyMs": 80,
+        "bandwidthKbps": 256,
+        "outages": []
+      },
+      {
+        "id": "edge-wan",
+        "sourceHostId": "edge-host",
+        "targetHostId": "cloud-host",
+        "latencyMs": 80,
+        "bandwidthKbps": 256,
+        "outages": []
+      }
+    ],
+    "placements": [
+      {
+        "nodeId": "client",
+        "hostId": "device-host"
+      },
+      {
+        "nodeId": "service",
+        "hostId": "edge-host"
+      },
+      {
+        "nodeId": "database",
+        "hostId": "edge-host"
+      }
+    ],
+    "messageBytes": 1024
+  }
+}

@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Version              = "0.1.0"
+	Version              = "0.2.0"
 	MaxTraceEvents       = 100000
 	MaxTimeMs      int64 = 3600000
 )
@@ -83,6 +83,9 @@ func Run(ctx context.Context, project model.Project) (model.Run, error) {
 	}
 	if issues := model.Validate(project); len(issues) > 0 {
 		return model.Run{}, fmt.Errorf("invalid project: %s: %s", issues[0].Path, issues[0].Message)
+	}
+	if project.SchemaVersion == 2 {
+		return runContinuum(ctx, project)
 	}
 	encoded, err := json.Marshal(project)
 	if err != nil {

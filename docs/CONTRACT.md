@@ -1,10 +1,10 @@
-# Software Studio v0.1 integration contract
+# LCE Studio v0.2 integration contract
 
-This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and docs/SIMULATION.md for execution semantics.
+This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and SIMULATION.md for execution semantics. CONTINUUM_CONTRACT.md defines the additive schema v2 infrastructure model and result fields. Schema v1 remains supported.
 
 ## Scope
 
-Single-user local-first engineering studio. Editable requirements, topology, node/link properties and scenario; deterministic discrete-event simulation; requirements verdicts; event replay; persistent projects and run history; JSON import/export. This version models a single directed linear pipeline: exactly one client, one or more services, exactly one terminal database. Every node participates in the path. No branching/cycles. UI can freely edit but validator rejects unsupported topology with useful errors. Components model queues and bounded processing capacity. Data store can deduplicate writes by logical request ID. Responses traverse the reverse path using link latency only (no extra service processing). Drop-first-response applies once per logical request after a successful database write, exercising timeout/retry. A timed-out attempt may continue processing; no implicit cancellation.
+Single-user local-first engineering studio. Editable requirements, topology, node/link properties and scenario; deterministic discrete-event simulation; requirements verdicts; event replay; persistent projects and run history; JSON import/export. The application model is a single directed linear pipeline: exactly one client, one or more services, exactly one terminal database. Every node participates in the path. No branching/cycles. UI can freely edit but validator rejects unsupported topology with useful errors. Components model queues and bounded processing capacity. Data store can deduplicate writes by logical request ID. Responses traverse the reverse path without extra service processing. Drop-first-response applies once per logical request after a successful database write, exercising timeout/retry. A timed-out attempt may continue processing; no implicit cancellation. Schema v2 additionally binds nodes to geographic hosts and physical links, with shared CPU/bandwidth, static memory admission, power/network outages and estimated host energy; see CONTINUUM_CONTRACT.md.
 
 ## JSON model (camelCase)
 
@@ -30,8 +30,9 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.1.0'}
+GET /api/health -> {status:'ok',version:'0.2.0'}
 GET /api/example -> Project
+GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
 POST /api/validate body Project -> Validation (200 even invalid)
 POST /api/validate?draft=true body Project -> Validation of fields/references only, permitting incomplete topology for JSON import
 GET /api/projects -> Project[]

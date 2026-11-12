@@ -37,8 +37,14 @@ func ValidateDraft(p Project) []ValidationIssue {
 			add(path, "Use 1–128 letters, numbers, dots, underscores or dashes, starting with a letter or number.")
 		}
 	}
-	if p.SchemaVersion != 1 {
-		add("schemaVersion", "Only schema version 1 is supported.")
+	if p.SchemaVersion != 1 && p.SchemaVersion != 2 {
+		add("schemaVersion", "Supported schema versions are 1 (application only) and 2 (deployment simulation).")
+	}
+	if p.SchemaVersion == 1 && p.Infrastructure != nil {
+		add("infrastructure", "Infrastructure requires schema version 2.")
+	}
+	if p.SchemaVersion == 2 && p.Infrastructure == nil {
+		add("infrastructure", "Schema version 2 requires an infrastructure model.")
 	}
 	if p.ID != "" {
 		id("id", p.ID)
@@ -87,6 +93,10 @@ func ValidateDraft(p Project) []ValidationIssue {
 		}
 		bound(path+".config.processingMs", n.Config.ProcessingMs, 0, 60000)
 		bound(path+".config.capacity", int64(n.Config.Capacity), 1, 100)
+		bound(path+".config.memoryMb", n.Config.MemoryMB, 0, 1048576)
+		if p.SchemaVersion == 1 && n.Config.MemoryMB != 0 {
+			add(path+".config.memoryMb", "Memory reservations require schema version 2.")
+		}
 	}
 	edges := make(map[string]bool)
 	for i, e := range p.Edges {
@@ -125,10 +135,13 @@ func ValidateDraft(p Project) []ValidationIssue {
 	bound("scenario.maxRetries", int64(s.MaxRetries), 0, 5)
 	bound("scenario.jitterMs", s.JitterMs, 0, 1000)
 	bound("scenario.seed", s.Seed, 0, 2147483647)
+	if p.Infrastructure != nil {
+		issues = append(issues, validateInfrastructureDraft(p)...)
+	}
 	return issues
 }
 
-// Validate adds the executable v0.1 topology constraints to draft validation.
+// Validate adds executable topology and placement constraints to draft validation.
 func Validate(p Project) []ValidationIssue {
 	issues := ValidateDraft(p)
 	if len(issues) > 0 {
@@ -173,7 +186,7 @@ func Validate(p Project) []ValidationIssue {
 			wantOut = 0
 		}
 		if incoming[n.ID] != wantIn || outgoing[n.ID] != wantOut {
-			add(fmt.Sprintf("nodes[%d]", i), fmt.Sprintf("%s needs %d incoming and %d outgoing link(s). v0.1 supports one linear pipeline.", n.Name, wantIn, wantOut))
+			add(fmt.Sprintf("nodes[%d]", i), fmt.Sprintf("%s needs %d incoming and %d outgoing link(s). This simulator supports one linear pipeline.", n.Name, wantIn, wantOut))
 		}
 	}
 	if clients == 1 {
@@ -188,6 +201,9 @@ func Validate(p Project) []ValidationIssue {
 		if len(visited) != len(p.Nodes) {
 			add("edges", "Every node must be connected in the single client → service(s) → database pipeline.")
 		}
+	}
+	if p.Infrastructure != nil {
+		issues = append(issues, validateInfrastructureExecution(p)...)
 	}
 	return issues
 }

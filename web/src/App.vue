@@ -44,6 +44,8 @@ import {
   PanelLeftClose,
 } from "lucide-vue-next";
 import StudioNode from "./components/StudioNode.vue";
+import DeploymentEditor from "./components/DeploymentEditor.vue";
+import InfrastructureResults from "./components/InfrastructureResults.vue";
 import { api, APIError } from "./api";
 import type {
   ComponentNode,
@@ -59,7 +61,7 @@ const project = ref<Project | null>(null);
 const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
-const view = ref<"design" | "plan" | "results">("design");
+const view = ref<"design" | "plan" | "deployment" | "results">("design");
 const inspector = ref<"properties" | "scenario">("scenario");
 const selectedNodeId = ref("");
 const selectedEdgeId = ref("");
@@ -280,6 +282,22 @@ async function resetExample() {
     notify("Example loaded");
   });
 }
+async function loadContinuumExample() {
+  if (
+    dirty.value &&
+    !confirm("Discard unsaved changes and open the continuum example?")
+  )
+    return;
+  await action("example", async () => {
+    adopt(await api<Project>("/example?template=continuum"), false);
+    await refreshRuns();
+    showProjects.value = false;
+    view.value = "deployment";
+    notify(
+      "Continuum example loaded. Compare placements, network links, and power outages.",
+    );
+  });
+}
 async function validateModel() {
   if (!project.value) return;
   await action("validate", async () => {
@@ -418,6 +436,9 @@ function removeSelected() {
     project.value.edges = project.value.edges.filter(
       (e) => e.source !== id && e.target !== id,
     );
+    if (project.value.infrastructure)
+      project.value.infrastructure.placements =
+        project.value.infrastructure.placements.filter((p) => p.nodeId !== id);
   } else if (selectedEdge.value)
     project.value.edges = project.value.edges.filter(
       (e) => e.id !== selectedEdgeId.value,
@@ -461,7 +482,7 @@ async function importProject(e: Event) {
       throw new Error("Choose a valid project JSON file.");
     const candidate = p as Project;
     if (
-      candidate.schemaVersion !== 1 ||
+      ![1, 2].includes(candidate.schemaVersion) ||
       !Array.isArray(candidate.nodes) ||
       !Array.isArray(candidate.edges) ||
       !Array.isArray(candidate.requirements) ||
@@ -469,9 +490,13 @@ async function importProject(e: Event) {
       typeof candidate.name !== "string"
     )
       throw new Error(
-        "This file does not match the Software Studio v1 project format.",
+        "This file does not match a supported Software Studio project format (v1 or v2).",
       );
-    const checked = await api<Validation>("/validate?draft=true", "POST", candidate);
+    const checked = await api<Validation>(
+      "/validate?draft=true",
+      "POST",
+      candidate,
+    );
     if (!checked.valid)
       throw new APIError(
         "Import rejected. Fix the reported invalid fields before importing.",
@@ -483,6 +508,7 @@ async function importProject(e: Event) {
     )
       return;
     adopt(candidate, false);
+    error.value = "";
     view.value = "design";
     await refreshRuns();
     notify("Project imported; save to keep it");
@@ -565,26 +591,43 @@ onUnmounted(() => {
         ><span class="brand-mark"><Box :size="24" /></span
         ><span
           >software<span class="brand-sub"
-            >studio<span class="version"> / 0.1</span></span
+            >studio<span class="version"> / 0.2</span></span
           ></span
         ></a
       >
       <div class="rail-section">WORKSPACE</div>
       <nav class="main-nav" aria-label="Workspace">
-        <button :class="{ active: view === 'plan' }" @click="view = 'plan'">
+        <button
+          :class="{ active: view === 'plan' }"
+          @click="view = 'plan'"
+          aria-label="Plan workspace"
+        >
           <FileCheck2 :size="18" /><span>Plan</span
           ><span class="nav-number">01</span>
         </button>
-        <button :class="{ active: view === 'design' }" @click="view = 'design'">
+        <button
+          :class="{ active: view === 'design' }"
+          @click="view = 'design'"
+          aria-label="Design workspace"
+        >
           <GitBranch :size="18" /><span>Design</span
           ><span class="nav-number">02</span>
         </button>
         <button
+          :class="{ active: view === 'deployment' }"
+          @click="view = 'deployment'"
+          aria-label="Deployment workspace"
+        >
+          <Server :size="18" /><span>Deployment</span
+          ><span class="nav-number">03</span>
+        </button>
+        <button
           :class="{ active: view === 'results' }"
           @click="view = 'results'"
+          aria-label="Experiments workspace"
         >
           <FlaskConical :size="18" /><span>Experiments</span
-          ><span class="nav-number">03</span>
+          ><span class="nav-number">04</span>
         </button>
       </nav>
       <div class="rail-divider" />
@@ -603,7 +646,7 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.1</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.2</span>
       </div>
     </aside>
 
@@ -720,7 +763,9 @@ onUnmounted(() => {
                 ? "ARCHITECTURE"
                 : view === "plan"
                   ? "REQUIREMENTS"
-                  : "SIMULATION LAB"
+                  : view === "deployment"
+                    ? "COMPUTING CONTINUUM"
+                    : "SIMULATION LAB"
             }}</span>
             <h2>
               {{
@@ -728,7 +773,9 @@ onUnmounted(() => {
                   ? "Design your system"
                   : view === "plan"
                     ? "Define what success means"
-                    : "Test your assumptions"
+                    : view === "deployment"
+                      ? "Place your system in the real world"
+                      : "Test your assumptions"
               }}
             </h2>
           </div>
@@ -738,7 +785,7 @@ onUnmounted(() => {
               {{ project.edges.length }} connections</span
             ><button
               class="button quiet"
-              v-if="view === 'design'"
+              v-if="view === 'design' || view === 'deployment'"
               @click="validateModel"
               :disabled="!!busy"
             >
@@ -754,6 +801,16 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+
+        <DeploymentEditor
+          v-if="view === 'deployment'"
+          :project="project"
+          :busy="!!busy"
+          :active-host-id="!runStale ? currentEvent?.hostId : undefined"
+          :active-link-id="!runStale ? currentEvent?.linkId : undefined"
+          :replay-time-ms="!runStale ? currentEvent?.timeMs : undefined"
+          @load-example="loadContinuumExample"
+        />
 
         <section v-show="view === 'design'" class="design-workspace">
           <aside
@@ -1212,6 +1269,7 @@ onUnmounted(() => {
                 <p>{{ currentRun.metrics.attempts }} total attempts</p>
               </div>
             </div>
+            <InfrastructureResults :run="currentRun" :history="runs" />
             <div class="results-columns">
               <div class="verdict-panel">
                 <div class="section-title">
@@ -1391,6 +1449,10 @@ onUnmounted(() => {
                     {{
                       currentRun.project.nodes.find((n) => n.id === e.nodeId)
                         ?.name ||
+                      currentRun.project.infrastructure?.hosts.find(
+                        (h) => h.id === e.hostId,
+                      )?.name ||
+                      e.linkId ||
                       e.nodeId ||
                       "—"
                     }}
@@ -1430,7 +1492,7 @@ onUnmounted(() => {
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.1</span
+          <span class="footer-dot">·</span> v0.2</span
         >
       </footer>
     </main>
@@ -1511,6 +1573,13 @@ onUnmounted(() => {
             :disabled="!!busy"
           >
             <RotateCcw :size="16" /> Open example project
+          </button>
+          <button
+            class="button secondary full continuum-example-button"
+            @click="loadContinuumExample"
+            :disabled="!!busy"
+          >
+            <Server :size="16" /> Open continuum example
           </button></template
         ><template v-else
           ><p class="help-text">
@@ -1546,3 +1615,9 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.continuum-example-button {
+  margin-top: 10px;
+}
+</style>

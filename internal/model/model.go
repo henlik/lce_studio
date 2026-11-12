@@ -2,14 +2,15 @@
 package model
 
 type Project struct {
-	SchemaVersion int           `json:"schemaVersion"`
-	ID            string        `json:"id"`
-	Name          string        `json:"name"`
-	Description   string        `json:"description"`
-	Nodes         []Node        `json:"nodes"`
-	Edges         []Edge        `json:"edges"`
-	Requirements  []Requirement `json:"requirements"`
-	Scenario      Scenario      `json:"scenario"`
+	SchemaVersion  int             `json:"schemaVersion"`
+	ID             string          `json:"id"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	Nodes          []Node          `json:"nodes"`
+	Edges          []Edge          `json:"edges"`
+	Requirements   []Requirement   `json:"requirements"`
+	Scenario       Scenario        `json:"scenario"`
+	Infrastructure *Infrastructure `json:"infrastructure,omitempty"`
 }
 
 type Position struct {
@@ -29,6 +30,7 @@ type NodeConfig struct {
 	ProcessingMs int64 `json:"processingMs"`
 	Capacity     int   `json:"capacity"`
 	Deduplicate  bool  `json:"deduplicate"`
+	MemoryMB     int64 `json:"memoryMb,omitempty"`
 }
 
 type Edge struct {
@@ -73,6 +75,8 @@ type TraceEvent struct {
 	RequestID string `json:"requestId"`
 	Attempt   int    `json:"attempt"`
 	Message   string `json:"message"`
+	HostID    string `json:"hostId,omitempty"`
+	LinkID    string `json:"linkId,omitempty"`
 }
 
 type Verdict struct {
@@ -99,16 +103,17 @@ type Metrics struct {
 }
 
 type Run struct {
-	ID            string       `json:"id"`
-	ProjectID     string       `json:"projectId"`
-	CreatedAt     string       `json:"createdAt"`
-	ModelHash     string       `json:"modelHash"`
-	EngineVersion string       `json:"engineVersion"`
-	Seed          int64        `json:"seed"`
-	Metrics       Metrics      `json:"metrics"`
-	Verdicts      []Verdict    `json:"verdicts"`
-	Events        []TraceEvent `json:"events"`
-	Project       Project      `json:"project"`
+	ID             string                 `json:"id"`
+	ProjectID      string                 `json:"projectId"`
+	CreatedAt      string                 `json:"createdAt"`
+	ModelHash      string                 `json:"modelHash"`
+	EngineVersion  string                 `json:"engineVersion"`
+	Seed           int64                  `json:"seed"`
+	Metrics        Metrics                `json:"metrics"`
+	Verdicts       []Verdict              `json:"verdicts"`
+	Events         []TraceEvent           `json:"events"`
+	Project        Project                `json:"project"`
+	Infrastructure *InfrastructureMetrics `json:"infrastructure,omitempty"`
 }
 
 func ExampleProject() Project {
