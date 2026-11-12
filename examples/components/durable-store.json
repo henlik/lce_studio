@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "lce.durable-store",
+  "version": "1.0.0",
+  "name": "Durable store",
+  "description": "A terminal store with optional request-ID deduplication; committed writes survive the modelled host outage.",
+  "author": "LCE Studio contributors",
+  "license": "MIT",
+  "kernel": "database",
+  "capabilities": [
+    "design",
+    "simulate"
+  ],
+  "config": {
+    "processingMs": {
+      "default": 10,
+      "min": 0,
+      "max": 60000
+    },
+    "capacity": {
+      "default": 1,
+      "min": 1,
+      "max": 100
+    },
+    "memoryMb": {
+      "default": 256,
+      "min": 16,
+      "max": 8192
+    },
+    "deduplicate": true
+  }
+}

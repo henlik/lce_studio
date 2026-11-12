@@ -13,7 +13,13 @@ import {
   Zap,
 } from "lucide-vue-next";
 import OutageWindows from "./OutageWindows.vue";
-import type { Host, HostTier, NetworkLink, Project } from "../types";
+import type {
+  ComponentNode,
+  Host,
+  HostTier,
+  NetworkLink,
+  Project,
+} from "../types";
 
 const props = defineProps<{
   project: Project;
@@ -87,17 +93,21 @@ const physicalLines = computed(() =>
         ...Array.from(hostPositions.value.values()).map((p) => p.y + 92),
       );
       const bend = bottom + 28 + (span / 225) * 20;
-      return [{
-        link: l,
-        path: `M ${a.x + 95} ${a.y + 92} C ${a.x + 95} ${bend}, ${b.x + 95} ${bend}, ${b.x + 95} ${b.y + 92}`,
-        bottom: bend,
-      }];
+      return [
+        {
+          link: l,
+          path: `M ${a.x + 95} ${a.y + 92} C ${a.x + 95} ${bend}, ${b.x + 95} ${bend}, ${b.x + 95} ${b.y + 92}`,
+          bottom: bend,
+        },
+      ];
     }
-    return [{
-      link: l,
-      path: `M ${a.x + 95} ${a.y + 40} L ${b.x + 95} ${b.y + 40}`,
-      bottom: Math.max(a.y, b.y) + 92,
-    }];
+    return [
+      {
+        link: l,
+        path: `M ${a.x + 95} ${a.y + 40} L ${b.x + 95} ${b.y + 40}`,
+        bottom: Math.max(a.y, b.y) + 92,
+      },
+    ];
   }),
 );
 const topologyHeight = computed(() =>
@@ -157,7 +167,7 @@ watch(
 function enable() {
   const siteId = id("site"),
     hostId = id("host");
-  props.project.schemaVersion = 2;
+  if (props.project.schemaVersion !== 3) props.project.schemaVersion = 2;
   props.project.infrastructure = {
     sites: [{ id: siteId, name: "Local site", latitude: 0, longitude: 0 }],
     hosts: [
@@ -186,8 +196,21 @@ function disable() {
   )
     return;
   delete props.project.infrastructure;
-  props.project.schemaVersion = 1;
-  props.project.nodes.forEach((n) => delete n.config.memoryMb);
+  if (props.project.schemaVersion !== 3) {
+    props.project.schemaVersion = 1;
+    props.project.nodes.forEach((n) => delete n.config.memoryMb);
+  }
+}
+function memoryBounds(node: ComponentNode) {
+  const reference = node.component;
+  return reference
+    ? props.project.packages?.find(
+        (p) =>
+          p.package.id === reference.packageId &&
+          p.package.version === reference.version &&
+          p.digest === reference.digest,
+      )?.package.config.memoryMb
+    : undefined;
 }
 function addSite() {
   if (!infra.value || infra.value.sites.length >= 30) return;
@@ -689,8 +712,8 @@ function serialization(l: NetworkLink) {
                       <input
                         v-model.number="n.config.memoryMb"
                         type="number"
-                        min="0"
-                        max="1048576"
+                        :min="memoryBounds(n)?.min ?? 0"
+                        :max="memoryBounds(n)?.max ?? 1048576"
                         step="1"
                         placeholder="64"
                         :aria-label="`Memory MiB for ${n.name}`"
@@ -1011,7 +1034,7 @@ function serialization(l: NetworkLink) {
           <strong>Model assumptions.</strong> Power is estimated from CPU
           activity over the run horizon. Scheduled outages interrupt work;
           durable writes remain. Battery state, migration, storage-device
-          energy, and geographic latency inference are not modelled in v0.2.
+          energy, and geographic latency inference are not modelled in v0.3.
         </p>
         <button class="button quiet" @click="disable" :disabled="busy">
           Remove infrastructure

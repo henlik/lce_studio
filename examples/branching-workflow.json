@@ -1,0 +1,397 @@
+{
+  "schemaVersion": 3,
+  "id": "exclusive-branching",
+  "name": "Reusable components and exclusive routes",
+  "description": "One router selects an edge or cloud processing path per request. Both branches reuse the same worker and store packages. Retries keep their original route; weights are reproducible choices, not business rules.",
+  "nodes": [
+    {
+      "id": "client",
+      "type": "client",
+      "name": "Request client",
+      "position": {
+        "x": 60,
+        "y": 190
+      },
+      "config": {
+        "processingMs": 0,
+        "capacity": 1,
+        "deduplicate": false,
+        "memoryMb": 64
+      }
+    },
+    {
+      "id": "router",
+      "type": "router",
+      "name": "Exclusive route",
+      "position": {
+        "x": 300,
+        "y": 190
+      },
+      "config": {
+        "processingMs": 5,
+        "capacity": 2,
+        "deduplicate": false,
+        "memoryMb": 64
+      },
+      "component": {
+        "packageId": "lce.weighted-router",
+        "version": "1.0.0",
+        "digest": "d5ec35ee9032e054294650d98b5782544fec2a986506c037a47bc5d1c714c962"
+      }
+    },
+    {
+      "id": "worker-edge",
+      "type": "service",
+      "name": "Edge worker",
+      "position": {
+        "x": 540,
+        "y": 60
+      },
+      "config": {
+        "processingMs": 20,
+        "capacity": 2,
+        "deduplicate": false,
+        "memoryMb": 128
+      },
+      "component": {
+        "packageId": "lce.queued-worker",
+        "version": "1.0.0",
+        "digest": "feb920153cc02adf0cc4c242b5adc9f59dd7140389cf28cb04bdcf392efde8d4"
+      }
+    },
+    {
+      "id": "store-edge",
+      "type": "database",
+      "name": "Edge store",
+      "position": {
+        "x": 780,
+        "y": 60
+      },
+      "config": {
+        "processingMs": 10,
+        "capacity": 1,
+        "deduplicate": true,
+        "memoryMb": 256
+      },
+      "component": {
+        "packageId": "lce.durable-store",
+        "version": "1.0.0",
+        "digest": "684f3db4ca6399ebe427b800519c1f1b1ee06cfa22c9297126b90eb494aace59"
+      }
+    },
+    {
+      "id": "worker-cloud",
+      "type": "service",
+      "name": "Cloud worker",
+      "position": {
+        "x": 540,
+        "y": 320
+      },
+      "config": {
+        "processingMs": 20,
+        "capacity": 2,
+        "deduplicate": false,
+        "memoryMb": 128
+      },
+      "component": {
+        "packageId": "lce.queued-worker",
+        "version": "1.0.0",
+        "digest": "feb920153cc02adf0cc4c242b5adc9f59dd7140389cf28cb04bdcf392efde8d4"
+      }
+    },
+    {
+      "id": "store-cloud",
+      "type": "database",
+      "name": "Cloud store",
+      "position": {
+        "x": 780,
+        "y": 320
+      },
+      "config": {
+        "processingMs": 10,
+        "capacity": 1,
+        "deduplicate": true,
+        "memoryMb": 256
+      },
+      "component": {
+        "packageId": "lce.durable-store",
+        "version": "1.0.0",
+        "digest": "684f3db4ca6399ebe427b800519c1f1b1ee06cfa22c9297126b90eb494aace59"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-router",
+      "source": "client",
+      "target": "router",
+      "latencyMs": 2
+    },
+    {
+      "id": "router-edge",
+      "source": "router",
+      "target": "worker-edge",
+      "latencyMs": 2,
+      "routeWeight": 3
+    },
+    {
+      "id": "router-cloud",
+      "source": "router",
+      "target": "worker-cloud",
+      "latencyMs": 2,
+      "routeWeight": 1
+    },
+    {
+      "id": "edge-store",
+      "source": "worker-edge",
+      "target": "store-edge",
+      "latencyMs": 2
+    },
+    {
+      "id": "cloud-store",
+      "source": "worker-cloud",
+      "target": "store-cloud",
+      "latencyMs": 2
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "text": "A retried request must not create a duplicate operation.",
+      "rule": "no_duplicates",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-002",
+      "text": "Every request receives a successful response before retries are exhausted.",
+      "rule": "all_complete",
+      "targetMs": 0
+    },
+    {
+      "id": "REQ-003",
+      "text": "95% of requests complete within 600 ms.",
+      "rule": "latency_p95",
+      "targetMs": 600
+    }
+  ],
+  "scenario": {
+    "requestCount": 12,
+    "intervalMs": 250,
+    "timeoutMs": 600,
+    "maxRetries": 2,
+    "dropFirstResponse": false,
+    "jitterMs": 0,
+    "seed": 42
+  },
+  "infrastructure": {
+    "sites": [
+      {
+        "id": "field-site",
+        "name": "Field site",
+        "latitude": 2,
+        "longitude": 29
+      },
+      {
+        "id": "remote-site",
+        "name": "Remote site",
+        "latitude": 50.85,
+        "longitude": 4.35
+      }
+    ],
+    "hosts": [
+      {
+        "id": "device-host",
+        "name": "Client device",
+        "siteId": "field-site",
+        "tier": "device",
+        "cpuCores": 1,
+        "memoryMb": 512,
+        "idleWatts": 3,
+        "activeWatts": 8,
+        "outages": []
+      },
+      {
+        "id": "edge-host",
+        "name": "Edge server",
+        "siteId": "field-site",
+        "tier": "edge",
+        "cpuCores": 4,
+        "memoryMb": 4096,
+        "idleWatts": 12,
+        "activeWatts": 45,
+        "outages": []
+      },
+      {
+        "id": "cloud-host",
+        "name": "Remote server",
+        "siteId": "remote-site",
+        "tier": "cloud",
+        "cpuCores": 8,
+        "memoryMb": 16384,
+        "idleWatts": 40,
+        "activeWatts": 160,
+        "outages": []
+      }
+    ],
+    "links": [
+      {
+        "id": "local-link",
+        "sourceHostId": "device-host",
+        "targetHostId": "edge-host",
+        "latencyMs": 2,
+        "bandwidthKbps": 10000,
+        "outages": []
+      },
+      {
+        "id": "device-wan",
+        "sourceHostId": "device-host",
+        "targetHostId": "cloud-host",
+        "latencyMs": 80,
+        "bandwidthKbps": 256,
+        "outages": []
+      },
+      {
+        "id": "edge-wan",
+        "sourceHostId": "edge-host",
+        "targetHostId": "cloud-host",
+        "latencyMs": 80,
+        "bandwidthKbps": 256,
+        "outages": []
+      }
+    ],
+    "placements": [
+      {
+        "nodeId": "client",
+        "hostId": "device-host"
+      },
+      {
+        "nodeId": "router",
+        "hostId": "edge-host"
+      },
+      {
+        "nodeId": "worker-edge",
+        "hostId": "edge-host"
+      },
+      {
+        "nodeId": "store-edge",
+        "hostId": "edge-host"
+      },
+      {
+        "nodeId": "worker-cloud",
+        "hostId": "cloud-host"
+      },
+      {
+        "nodeId": "store-cloud",
+        "hostId": "cloud-host"
+      }
+    ],
+    "messageBytes": 1024
+  },
+  "packages": [
+    {
+      "package": {
+        "schemaVersion": 1,
+        "id": "lce.queued-worker",
+        "version": "1.0.0",
+        "name": "Queued worker",
+        "description": "A bounded FIFO processing stage with configurable concurrency and resident memory.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "service",
+        "capabilities": [
+          "design",
+          "simulate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 20,
+            "min": 0,
+            "max": 60000
+          },
+          "capacity": {
+            "default": 2,
+            "min": 1,
+            "max": 100
+          },
+          "memoryMb": {
+            "default": 128,
+            "min": 16,
+            "max": 8192
+          },
+          "deduplicate": false
+        }
+      },
+      "digest": "feb920153cc02adf0cc4c242b5adc9f59dd7140389cf28cb04bdcf392efde8d4"
+    },
+    {
+      "package": {
+        "schemaVersion": 1,
+        "id": "lce.durable-store",
+        "version": "1.0.0",
+        "name": "Durable store",
+        "description": "A terminal store with optional request-ID deduplication; committed writes survive the modelled host outage.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "database",
+        "capabilities": [
+          "design",
+          "simulate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 10,
+            "min": 0,
+            "max": 60000
+          },
+          "capacity": {
+            "default": 1,
+            "min": 1,
+            "max": 100
+          },
+          "memoryMb": {
+            "default": 256,
+            "min": 16,
+            "max": 8192
+          },
+          "deduplicate": true
+        }
+      },
+      "digest": "684f3db4ca6399ebe427b800519c1f1b1ee06cfa22c9297126b90eb494aace59"
+    },
+    {
+      "package": {
+        "schemaVersion": 1,
+        "id": "lce.weighted-router",
+        "version": "1.0.0",
+        "name": "Weighted router",
+        "description": "An exclusive weighted choice that follows one stable route per logical request across retries.",
+        "author": "LCE Studio contributors",
+        "license": "MIT",
+        "kernel": "router",
+        "capabilities": [
+          "design",
+          "simulate"
+        ],
+        "config": {
+          "processingMs": {
+            "default": 5,
+            "min": 0,
+            "max": 60000
+          },
+          "capacity": {
+            "default": 2,
+            "min": 1,
+            "max": 100
+          },
+          "memoryMb": {
+            "default": 64,
+            "min": 16,
+            "max": 8192
+          },
+          "deduplicate": false
+        }
+      },
+      "digest": "d5ec35ee9032e054294650d98b5782544fec2a986506c037a47bc5d1c714c962"
+    }
+  ]
+}

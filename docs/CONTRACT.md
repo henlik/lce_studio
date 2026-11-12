@@ -1,12 +1,14 @@
-# LCE Studio v0.2 integration contract
+# LCE Studio v0.3 integration contract
 
-This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and SIMULATION.md for execution semantics. CONTINUUM_CONTRACT.md defines the additive schema v2 infrastructure model and result fields. Schema v1 remains supported.
+This document defines the shared contract between the Vue 3 + TypeScript editor and the Go API/simulator. See README.md for setup and SIMULATION.md for execution semantics. CONTINUUM_CONTRACT.md defines the additive schema v2 infrastructure model and result fields. WORKFLOW_CONTRACT.md defines schema3 exclusive branching, declarative packages, portable locks and catalog APIs. Schema1 and schema2 remain supported.
 
 ## Scope
 
-Single-user local-first engineering studio. Editable requirements, topology, node/link properties and scenario; deterministic discrete-event simulation; requirements verdicts; event replay; persistent projects and run history; JSON import/export. The application model is a single directed linear pipeline: exactly one client, one or more services, exactly one terminal database. Every node participates in the path. No branching/cycles. UI can freely edit but validator rejects unsupported topology with useful errors. Components model queues and bounded processing capacity. Data store can deduplicate writes by logical request ID. Responses traverse the reverse path without extra service processing. Drop-first-response applies once per logical request after a successful database write, exercising timeout/retry. A timed-out attempt may continue processing; no implicit cancellation. Schema v2 additionally binds nodes to geographic hosts and physical links, with shared CPU/bandwidth, static memory admission, power/network outages and estimated host energy; see CONTINUUM_CONTRACT.md.
+Single-user local-first engineering studio. Editable requirements, topology, node/link properties and scenario; deterministic discrete-event simulation; requirements verdicts; event replay; persistent projects and run history; JSON import/export. Schema1/2 application models use one directed linear pipeline: exactly one client, one or more services, one terminal database. Schema3 additionally permits routers that select one branch, converging paths and multiple terminal stores in an acyclic graph. It does not implement parallel fan-out or synchronization. UI can freely edit but validation rejects unsupported topology with useful errors. Components model queues and bounded processing capacity. Stores can deduplicate writes by logical request ID (scoped to each store in schema3). Responses traverse the selected reverse path without extra processing. Drop-first-response applies once per logical request after a successful database write, exercising timeout/retry. A timed-out attempt may continue processing; no implicit cancellation. Schema2 requires infrastructure; schema3 permits it optionally. It binds nodes to geographic hosts and physical links, with shared CPU/bandwidth, static memory admission, power/network outages and estimated host energy; see CONTINUUM_CONTRACT.md.
 
-## JSON model (camelCase)
+## Base schema1 JSON model (camelCase)
+
+The additive schema2 and schema3 fields are specified in CONTINUUM_CONTRACT.md and WORKFLOW_CONTRACT.md. They use optional fields so legacy serialized projects retain their shape.
 
 Project {schemaVersion:1,id:string,name:string,description:string,nodes:Node[],edges:Edge[],requirements:Requirement[],scenario:Scenario}
 Node {id:string,type:'client'|'service'|'database',name:string,position:{x:number,y:number},config:{processingMs:number,capacity:number,deduplicate:boolean}}
@@ -30,9 +32,13 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.2.0'}
+GET /api/health -> {status:'ok',version:'0.3.0'}
 GET /api/example -> Project
 GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
+GET /api/example?template=branching -> schema3 Project with embedded component locks
+GET /api/components -> installed immutable component records
+GET /api/components/examples -> bundled portable package locks
+POST /api/components body ComponentPackage -> installed record (201 new, 200 identical reinstall, 409 conflict/capacity, 422 invalid)
 POST /api/validate body Project -> Validation (200 even invalid)
 POST /api/validate?draft=true body Project -> Validation of fields/references only, permitting incomplete topology for JSON import
 GET /api/projects -> Project[]

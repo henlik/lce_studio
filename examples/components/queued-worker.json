@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "lce.queued-worker",
+  "version": "1.0.0",
+  "name": "Queued worker",
+  "description": "A bounded FIFO processing stage with configurable concurrency and resident memory.",
+  "author": "LCE Studio contributors",
+  "license": "MIT",
+  "kernel": "service",
+  "capabilities": [
+    "design",
+    "simulate"
+  ],
+  "config": {
+    "processingMs": {
+      "default": 20,
+      "min": 0,
+      "max": 60000
+    },
+    "capacity": {
+      "default": 2,
+      "min": 1,
+      "max": 100
+    },
+    "memoryMb": {
+      "default": 128,
+      "min": 16,
+      "max": 8192
+    },
+    "deduplicate": false
+  }
+}

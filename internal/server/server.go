@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.2.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.3.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return
@@ -79,6 +79,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			respond(w, 200, model.ExampleProject())
 		case "continuum":
 			respond(w, 200, model.ContinuumExampleProject())
+		case "branching":
+			respond(w, 200, model.BranchingExampleProject())
 		default:
 			fail(w, http.StatusBadRequest, "Unknown example template.", nil)
 		}
@@ -101,6 +103,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Valid  bool                    `json:"valid"`
 			Issues []model.ValidationIssue `json:"issues"`
 		}{len(issues) == 0, issues})
+	case path == "/api/components/examples":
+		s.componentExamples(w, r)
+	case path == "/api/components":
+		s.components(w, r)
 	case path == "/api/projects":
 		s.projects(w, r)
 	case strings.HasPrefix(path, "/api/projects/"):

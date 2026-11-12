@@ -1,10 +1,10 @@
 # LCE Studio
 
-A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, edit a service pipeline, place it on computing resources, simulate its behaviour, and inspect test verdicts and event traces together.
+A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.2.0** adds deployment models and coupled infrastructure simulation: sites, hosts, physical links, placements, scheduled power/network outages and estimated host energy. The backend performs the simulation in Go; the browser edits the model and replays the resulting trace. There is no Python dependency. Existing v1 projects retain their original pipeline semantics.
+Version **0.3.0** adds reusable declarative component packages and exclusive branching workflows. Install parameter profiles, pin their exact definitions in projects, and route each logical request through one weighted branch. Existing deployment models still simulate shared CPU/bandwidth, scheduled outages and estimated host energy. The backend performs the simulation in Go; the browser edits models and replays traces. There is no Python dependency. Existing schema1/2 projects retain their pipeline semantics.
 
-The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. Healthcare is a reference use case, not a kernel dependency. The [component SDK proposal](docs/COMPONENT_SDK.md) defines the intended extension boundary; an external plugin runtime and application generation are not yet implemented.
+The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. Healthcare is a reference use case, not a kernel dependency. The [component authoring guide](docs/COMPONENT_SDK.md) explains the implemented package subset and the future SDK; external executable plugins and application generation are not yet implemented.
 
 ## Start locally
 
@@ -45,7 +45,7 @@ The editable sample model is in `examples/retry-pipeline.json`.
 
 `DATABASE_URL` is required. On startup, the Go service connects with a bounded timeout and initializes its tables and indexes in a transaction. The configured database must already exist; its role needs permission to create tables and indexes in the selected schema. Startup initialization is serialized across processes. The connection pool allows up to 10 open connections per app process.
 
-Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
+Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. The component catalog stores immutable package versions in the same database. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
 
 The old `STUDIO_DATA` setting and SQLite backend have been removed. Project JSON exports from the SQLite version can be imported into this version. Existing SQLite files and recorded history are not automatically migrated; retain the old database if you need that history.
 
@@ -74,6 +74,18 @@ The demonstration is intentionally a model of request processing. It does not co
 
 The topology and geographic views are schematics. Coordinates and host tiers do not infer latency or processor speed. Host energy is an uncalibrated estimate based on idle/active wattage and CPU occupancy. All defined powered hosts contribute energy, including unused hosts. Battery discharge, solar generation, migration and multihop routing are future milestones.
 
+## Reusable components and exclusive workflows
+
+1. Open the **Branching example** from Projects. Both processing branches reuse the same worker and store packages, with complete definitions embedded in the project.
+2. Run the example and inspect `route_selected` events. Each request follows one branch; retries keep that branch. This is weighted dispatch, not simultaneous execution of every outgoing connection.
+3. Select a router's outgoing connection and change its weight. Repeat with the same seed to compare the resulting request choices and resource effects.
+4. Open the component catalog in Design. Install a bundled profile or import a raw component package JSON, then add it to a design. Its defaults and allowed ranges appear in the inspector.
+5. Export the project. Its exact component definitions travel with it, so a different studio can simulate it without installing those versions in its catalog first.
+
+Engineers can start with the raw manifests in `examples/components/`. Validate a new profile offline using `go run ./cmd/componentcheck path/to/package.json`. Installation rejects unsupported kernels/capabilities and conflicts with an existing ID/version; changing a package requires a new version. See [the authoring guide](docs/COMPONENT_SDK.md).
+
+These profiles describe bounded processing, storage or routing behavior. They do not run a real hospital, logistics or finance application's business logic. Typed data contracts, arbitrary component behavior and application construction are future milestones.
+
 ## Included in this version
 
 - Requirement editing with no-duplicate-write, completion, and p95-latency assertions.
@@ -87,18 +99,21 @@ The topology and geographic views are schematics. Coordinates and host tiers do 
 - Shared host CPU capacity, static resident-memory admission and FIFO physical-link bandwidth.
 - Scheduled power/network outages, interrupted processing, retry effects and durable completed writes.
 - Per-host estimated energy, uptime and busy core time; physical-link transfer/drop counters; recorded-run comparison.
+- Reusable declarative service/store/router profiles with versioned catalog installation and offline author validation.
+- Portable component definitions and exact content locks in project exports and run evidence.
+- Exclusive weighted routers, multiple terminal stores and converging paths, with deterministic retry routing.
 - Strict model validation, bounded input, same-origin browser writes, and local defaults.
-- Go unit/integration tests, two API acceptance suites, and a GitHub Actions workflow.
+- Go unit/integration tests, three API acceptance suites, and a GitHub Actions workflow.
 
 ## Supported models and limits
 
-A valid executable application topology is a **single directed linear pipeline** containing exactly one client, one or more services, and one terminal database. All nodes must belong to that path. Branching, cycles, fan-out, standalone queue nodes, arbitrary business logic, and runtime code execution are outside v0.2.
+Schema1/2 executable topologies remain **single directed linear pipelines** containing one client, one or more services and one terminal database. Schema3 supports an **acyclic exclusive workflow** with one client, services, routers and one or more terminal databases. All nodes must be reachable. Services forward to one successor; routers select one weighted successor. Paths may converge without a synchronization barrier. Cycles, parallel fan-out/join, arbitrary business logic and runtime code execution are outside v0.3.
 
 Services and the database contain bounded processing resources and FIFO waiting queues. A service's capacity is its number of simultaneous processing slots. Responses traverse the reverse path using link delays, without additional service processing. These are explicit assumptions, not calibrated predictions for arbitrary real infrastructure.
 
-Schema v2 adds infrastructure without changing the application topology restriction. Every node must be placed on one host to execute. Each application edge must stay on one host or cross one explicit undirected physical link. Host cores are shared across colocated processing nodes; memory is checked as a static reservation. A physical link serializes transmissions from both directions on one channel. Complete semantics and supported limits are in [CONTINUUM_CONTRACT.md](docs/CONTINUUM_CONTRACT.md) and [SIMULATION.md](docs/SIMULATION.md).
+Schema2 requires infrastructure; schema3 supports it optionally. When infrastructure is present, every node must be placed on one host to execute. Each application edge must stay on one host or cross one explicit undirected physical link. Host cores are shared across colocated processing nodes; memory is checked as a static reservation. A physical link serializes transmissions from both directions on one channel. Without infrastructure, schema3 uses node processing capacity and logical links without inventing hardware energy or physical network measurements. See [CONTINUUM_CONTRACT.md](docs/CONTINUUM_CONTRACT.md), [WORKFLOW_CONTRACT.md](docs/WORKFLOW_CONTRACT.md) and [SIMULATION.md](docs/SIMULATION.md).
 
-Projects may be saved as incomplete drafts, but simulation requires a complete valid pipeline. Limits include 30 nodes, 30 edges, 50 requirements, 200 logical requests, five retries per request, 100,000 trace events, and one hour of virtual time. Exceeding execution bounds returns an error; it never silently produces a passing partial result.
+Projects may be saved as incomplete drafts, but simulation requires a valid executable graph. Limits include 30 nodes, 30 edges, 50 requirements, 50 embedded component definitions, 200 logical requests, five retries per request, 100,000 trace events, and one hour of virtual time. The catalog holds up to 200 installed versions. Exceeding execution bounds returns an error; it never silently produces a passing partial result.
 
 See [the data and API contract](docs/CONTRACT.md) and [simulation semantics](docs/SIMULATION.md).
 The verification record is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
@@ -134,6 +149,7 @@ With a server running, execute the end-to-end API checks:
 ```sh
 node scripts/acceptance.mjs
 node scripts/acceptance-continuum.mjs
+node scripts/acceptance-workflows.mjs
 ```
 
 Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model and simulation tests can run without a database using `go test ./internal/model ./internal/simulation`.
@@ -151,10 +167,11 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `internal/testutil/` | Isolated PostgreSQL test schemas |
 | `internal/server/` | HTTP API and frontend serving |
 | `cmd/studio/` | Application entry point and graceful shutdown |
+| `cmd/componentcheck/` | Offline package validation and portable lock generation |
 | `scripts/` | Development launcher and API acceptance checks |
 
 ## Next increments
 
-Extend the modelling semantics deliberately: explicit message contracts and state machines; branching and routing; failure/recovery schedules; run comparison; external implementation test adapters; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome.
+Extend the modelling semantics deliberately: typed message contracts and state machines; bounded parallel fork/join; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.

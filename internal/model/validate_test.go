@@ -26,7 +26,7 @@ func TestValidateRejectsMalformedFields(t *testing.T) {
 		name, path string
 		mutate     func(*Project)
 	}{
-		{"version", "schemaVersion", func(p *Project) { p.SchemaVersion = 3 }},
+		{"version", "schemaVersion", func(p *Project) { p.SchemaVersion = 4 }},
 		{"identifier", "nodes[0].id", func(p *Project) { p.Nodes[0].ID = "../bad" }},
 		{"duplicate node", "nodes[1].id", func(p *Project) { p.Nodes[1].ID = p.Nodes[0].ID }},
 		{"duplicate edge", "edges[1].id", func(p *Project) { p.Edges[1].ID = p.Edges[0].ID }},

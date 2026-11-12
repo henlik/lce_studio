@@ -37,7 +37,13 @@ Vue graphical application editor, Go deterministic linear-pipeline simulator, re
 
 The current increment adds optional infrastructure to the supported pipeline: sites with coordinates; device/edge/regional/cloud hosts; CPU cores, static memory reservations and estimated host power; direct physical links with bandwidth/latency; scheduled host/link outages; application placements; infrastructure metrics; recorded-run comparison. Legacy projects remain usable. See CONTINUUM_CONTRACT.md, MODEL.md and SIMULATION.md for exact implemented semantics.
 
-This is a bounded first implementation, not a general distributed-system builder. Application branching, arbitrary third-party component execution, application generation, batteries, solar, mobility, multihop routing, placement optimization and real infrastructure orchestration remain future work. Component SDK documentation is a proposed extension contract, not an installed plugin runtime.
+This increment introduced a bounded resource/deployment model. Application generation, batteries, solar, mobility, multihop routing, placement optimization and real infrastructure orchestration remain future work.
+
+### v0.3 — declarative components and exclusive workflows
+
+Versioned component profiles can be installed in a PostgreSQL catalog, reused as parameterized service/store/router nodes, and embedded with exact content locks in portable projects and run snapshots. The design editor supports exclusive weighted routing, multiple terminal stores and convergence without a synchronization barrier. Routing is deterministic per logical request, including retries. Infrastructure remains optional, and existing CPU/network/outage/energy models apply when it is present.
+
+This is the first implemented subset of the extension system. Profiles reuse supported execution primitives; external code, new primitive definitions, typed arbitrary data contracts, state machines and parallel fork/join semantics remain future work. See COMPONENT_SDK.md and WORKFLOW_CONTRACT.md for the implemented boundary.
 
 ## Development milestones and acceptance gates
 
@@ -55,6 +61,8 @@ This is a bounded first implementation, not a general distributed-system builder
 | 10. Supported product | Installation, guided onboarding, documentation, extension publishing, migration and upgrade procedures, operational support tooling | An independent engineering team builds, tests and maintains a new supported system using the product documentation |
 
 Security, testing, documentation and usability progress throughout the milestones. No milestone claims that simulation alone proves correctness of arbitrary software or authorizes clinical deployment. Calendar estimates must be revisited once the required simulation fidelity, deployment targets and staffing are fixed.
+
+The next increment should connect component ports to typed data contracts and explicit workflow state, then add bounded parallel fork/join with independent correctness cases. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
 
 ## Reference project strategy
 

@@ -1,6 +1,52 @@
-# Component SDK contract proposal
+# Component authoring and SDK direction
 
-Status: design proposal for the next milestones. v0.2 implements built-in application and infrastructure models. It does not load arbitrary component packages, execute external simulation plugins, generate applications or deploy infrastructure. This document defines the boundary to build toward; it must not be read as a list of available APIs.
+v0.3 implements **declarative component profiles** for the service, database and exclusive-router simulation kernels. An engineer can install, reuse and share a new profile without modifying studio source. A profile defines a name, exact version, parameter defaults and permitted ranges. It cannot introduce a new execution primitive or execute arbitrary code. The general executable SDK described later in this document is still a proposal.
+
+## Author a usable component
+
+1. Copy `examples/components/queued-worker.json`, `durable-store.json` or `weighted-router.json`. Choose the kernel whose stated semantics fit the component you intend to model.
+2. Give it a namespaced ID such as `example.validation-worker`, an exact version such as `1.0.0`, a meaningful name, author and licence. Document assumptions in its description.
+3. Set `processingMs`, `capacity` and `memoryMb` default/min/max values. These are modelling inputs, not measurements inferred from the component's name. A database profile can set its initial `deduplicate` option.
+4. Validate locally without installing or contacting a server:
+
+   ```sh
+   go run ./cmd/componentcheck path/to/my-component.json
+   ```
+
+   The command prints a portable `{package,digest}` lock. It accepts `-` for standard input, rejects malformed/unknown fields and unsupported capabilities, and returns a nonzero exit status on failure.
+
+5. Import the raw package JSON through the studio's component catalog. Installation validates it and stores its exact ID, version and content digest in PostgreSQL. Alternatively:
+
+   ```sh
+   curl -X POST http://localhost:8080/api/components \
+     -H 'Content-Type: application/json' \
+     --data-binary @path/to/my-component.json
+   ```
+
+6. Insert the installed profile into a project. Its defaults initialize editable node values; its profile bounds remain enforced. Connect it, place it if using infrastructure, and run a small scenario with a known outcome.
+7. Export the project or share the raw package. Project exports include the full pinned definitions, so another studio can validate and simulate the project without installing the same catalog first.
+
+Use a new package version when changing its contents. Reinstalling identical content is safe; installing different content under an existing ID/version returns a conflict. Existing project nodes keep their previous definitions and parameters. No automatic package upgrades or silent replacements occur.
+
+## Implemented capabilities
+
+| Capability | v0.3 behavior |
+| --- | --- |
+| Design | Display metadata; insert nodes; edit processing/capacity/memory within package bounds |
+| Simulation | Use the declared bounded `service`, `database` or `router` kernel |
+| Routing | A router chooses one weighted branch per logical request; retries keep that route |
+| Portable locks | Exact manifest, ID, version and SHA-256 digest embedded in projects and run snapshots |
+| Catalog | Install, list, export and reuse immutable versions; up to 200 installed versions |
+| Compatibility | Older v1/v2 projects remain usable; package-backed projects use schema3 |
+| Generation, deployment and executable plugins | Not implemented |
+
+The accepted capabilities array is exactly `["design","simulate"]`. Unsupported declarations are rejected. A digest identifies package content; it does not certify the publisher or validate a performance claim. The full JSON schema, canonical hash rules, resource semantics and API responses are defined in [WORKFLOW_CONTRACT.md](WORKFLOW_CONTRACT.md).
+
+For example, a validation worker profile could be reused for a logistics order or an administrative request by giving its instances different names and processing parameters. That reuse models queueing and processing demand; the studio does not execute the real validation business logic.
+
+## Future executable SDK proposal
+
+The remaining sections describe the broader extension boundary. They are design goals rather than available runtime APIs.
 
 ## Extension principle
 

@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   VueFlow,
   MarkerType,
+  useVueFlow,
   type Connection,
   type NodeDragEvent,
   type NodeMouseEvent,
   type EdgeMouseEvent,
 } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
-import { Controls } from "@vue-flow/controls";
+import { ControlButton, Controls } from "@vue-flow/controls";
 import {
   Activity,
   ArrowDownToLine,
@@ -29,6 +30,8 @@ import {
   Layers3,
   LoaderCircle,
   Monitor,
+  Minus,
+  Maximize2,
   Pause,
   Play,
   Plus,
@@ -46,11 +49,14 @@ import {
 import StudioNode from "./components/StudioNode.vue";
 import DeploymentEditor from "./components/DeploymentEditor.vue";
 import InfrastructureResults from "./components/InfrastructureResults.vue";
+import ComponentCatalog from "./components/ComponentCatalog.vue";
+import RoutingResults from "./components/RoutingResults.vue";
 import { api, APIError } from "./api";
 import type {
   ComponentNode,
   Link,
   NodeKind,
+  PackageLock,
   Project,
   Requirement,
   Run,
@@ -74,10 +80,73 @@ const saved = ref("");
 const showProjects = ref(false);
 const showRunHistory = ref(false);
 const showMobilePalette = ref(false);
+const showCatalog = ref(false);
 const importInput = ref<HTMLInputElement | null>(null);
 const replayIndex = ref(-1);
 const playing = ref(false);
 const replaySpeed = ref(120);
+const {
+  fitView,
+  zoomIn,
+  zoomOut,
+  viewport,
+  minZoom,
+  maxZoom,
+  dimensions,
+  getNodes,
+} = useVueFlow("studio-model");
+let pendingProjectFit = false;
+let projectFitRevision = 0;
+let projectFitFrame: number | undefined;
+function requestProjectFit() {
+  pendingProjectFit = true;
+  projectFitRevision++;
+  void fitAdoptedProject();
+}
+async function fitAdoptedProject() {
+  if (!pendingProjectFit || view.value !== "design") return;
+  const revision = projectFitRevision;
+  await nextTick();
+  if (revision !== projectFitRevision) return;
+  if (projectFitFrame !== undefined) cancelAnimationFrame(projectFitFrame);
+  projectFitFrame = requestAnimationFrame(async () => {
+    projectFitFrame = undefined;
+    if (
+      revision !== projectFitRevision ||
+      !pendingProjectFit ||
+      view.value !== "design" ||
+      !project.value
+    )
+      return;
+    const nodes = getNodes.value;
+    if (
+      !dimensions.value.width ||
+      !dimensions.value.height ||
+      nodes.length !== project.value.nodes.length ||
+      project.value.nodes.some(
+        (n) =>
+          !nodes.some(
+            (rendered) =>
+              rendered.id === n.id &&
+              rendered.dimensions.width > 0 &&
+              rendered.dimensions.height > 0,
+          ),
+      )
+    )
+      return;
+    const fitted = await fitView({
+      padding: 0.16,
+      maxZoom: 1,
+      nodes: project.value.nodes.map((n) => n.id),
+    });
+    if (fitted && revision === projectFitRevision) pendingProjectFit = false;
+  });
+}
+watch(
+  () => [view.value, dimensions.value.width, dimensions.value.height],
+  fitAdoptedProject,
+  { flush: "post" },
+);
 let replayTimer: ReturnType<typeof setInterval> | undefined;
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -99,6 +168,29 @@ const selectedNode = computed(() =>
 const selectedEdge = computed(() =>
   project.value?.edges.find((e) => e.id === selectedEdgeId.value),
 );
+const selectedProfile = computed(() => {
+  const reference = selectedNode.value?.component;
+  return reference
+    ? project.value?.packages?.find(
+        (p) =>
+          p.package.id === reference.packageId &&
+          p.package.version === reference.version &&
+          p.digest === reference.digest,
+      )
+    : undefined;
+});
+const selectedEdgeFromRouter = computed(
+  () =>
+    project.value?.nodes.find((n) => n.id === selectedEdge.value?.source)
+      ?.type === "router",
+);
+const routeShare = computed(() => {
+  if (!selectedEdge.value || !selectedEdgeFromRouter.value) return 0;
+  const total = project
+    .value!.edges.filter((e) => e.source === selectedEdge.value!.source)
+    .reduce((sum, e) => sum + (Number(e.routeWeight) || 1), 0);
+  return (100 * (Number(selectedEdge.value.routeWeight) || 1)) / total;
+});
 const runStale = computed(
   () =>
     !!currentRun.value &&
@@ -131,12 +223,20 @@ const flowEdges = computed(
       source: e.source,
       target: e.target,
       type: "smoothstep",
-      label: `${e.latencyMs} ms`,
+      label: `${project.value?.nodes.find((n) => n.id === e.source)?.type === "router" ? `w${e.routeWeight || 1} · ` : ""}${e.latencyMs} ms`,
       markerEnd: MarkerType.ArrowClosed,
       selected: e.id === selectedEdgeId.value,
       style: {
-        stroke: e.id === selectedEdgeId.value ? "#0d9488" : "#718399",
-        strokeWidth: e.id === selectedEdgeId.value ? 2.5 : 1.6,
+        stroke:
+          e.id === selectedEdgeId.value ||
+          (!runStale.value && currentEvent.value?.edgeId === e.id)
+            ? "#0d9488"
+            : "#718399",
+        strokeWidth:
+          e.id === selectedEdgeId.value ||
+          (!runStale.value && currentEvent.value?.edgeId === e.id)
+            ? 2.5
+            : 1.6,
       },
       labelStyle: { fill: "#4b6075", fontSize: 11 },
       labelBgStyle: { fill: "#f2f6fa", fillOpacity: 0.95 },
@@ -193,6 +293,7 @@ async function action(name: string, work: () => Promise<void>) {
 }
 function adopt(p: Project, isSaved = true) {
   project.value = clone(p);
+  requestProjectFit();
   saved.value = isSaved ? stableJSON(project.value) : "";
   clearSelection();
   validation.value = null;
@@ -298,6 +399,22 @@ async function loadContinuumExample() {
     );
   });
 }
+async function loadBranchingExample() {
+  if (
+    dirty.value &&
+    !confirm("Discard unsaved changes and open the branching example?")
+  )
+    return;
+  await action("example", async () => {
+    adopt(await api<Project>("/example?template=branching"), false);
+    await refreshRuns();
+    showProjects.value = false;
+    view.value = "design";
+    notify(
+      "Branching example loaded. Each request follows one weighted route; retries reuse it.",
+    );
+  });
+}
 async function validateModel() {
   if (!project.value) return;
   await action("validate", async () => {
@@ -343,6 +460,7 @@ function openRunModel() {
   )
     return;
   project.value = clone(currentRun.value.project);
+  requestProjectFit();
   saved.value = "";
   clearSelection();
   validation.value = null;
@@ -372,6 +490,9 @@ function onConnect(c: Connection) {
     source: c.source,
     target: c.target,
     latencyMs: 10,
+    ...(project.value.nodes.find((n) => n.id === c.source)?.type === "router"
+      ? { routeWeight: 1 }
+      : {}),
   });
   validation.value = null;
 }
@@ -395,30 +516,68 @@ function onDrag(e: NodeDragEvent) {
       };
   }
 }
-function addNode(type: NodeKind) {
+function addNode(type: NodeKind, profile?: PackageLock) {
   if (!project.value) return;
   if (project.value.nodes.length >= 30) {
     notify("A project supports up to 30 components");
     return;
   }
+  if (profile) {
+    const existing = project.value.packages?.find(
+      (p) =>
+        p.package.id === profile.package.id &&
+        p.package.version === profile.package.version,
+    );
+    if (existing && existing.digest !== profile.digest) {
+      error.value =
+        "This project already locks different content at the same package ID and version.";
+      return;
+    }
+    if (!existing && (project.value.packages?.length || 0) >= 50) {
+      notify("A project supports up to 50 embedded package versions");
+      return;
+    }
+    if (!existing)
+      (project.value.packages ||= []).push(
+        clone({ package: profile.package, digest: profile.digest }),
+      );
+  }
+  const upgraded =
+    (type === "router" || !!profile) && project.value.schemaVersion < 3;
+  if (type === "router" || profile) project.value.schemaVersion = 3;
   const n: ComponentNode = {
     id: uid(type),
     type,
     name:
-      type === "client"
+      profile?.package.name ||
+      (type === "client"
         ? "Client"
         : type === "service"
           ? "New service"
-          : "Database",
+          : type === "router"
+            ? "Exclusive router"
+            : "Database"),
     position: {
       x: 150 + (project.value.nodes.length % 3) * 260,
       y: 80 + Math.floor(project.value.nodes.length / 3) * 180,
     },
     config: {
-      processingMs: type === "client" ? 0 : 10,
-      capacity: 1,
-      deduplicate: type === "database",
+      processingMs:
+        profile?.package.config.processingMs.default ??
+        (type === "client" ? 0 : 10),
+      capacity: profile?.package.config.capacity.default ?? 1,
+      deduplicate: profile?.package.config.deduplicate ?? type === "database",
+      ...(profile ? { memoryMb: profile.package.config.memoryMb.default } : {}),
     },
+    ...(profile
+      ? {
+          component: {
+            packageId: profile.package.id,
+            version: profile.package.version,
+            digest: profile.digest,
+          },
+        }
+      : {}),
   };
   project.value.nodes.push(n);
   selectedNodeId.value = n.id;
@@ -426,7 +585,16 @@ function addNode(type: NodeKind) {
   inspector.value = "properties";
   view.value = "design";
   showMobilePalette.value = false;
+  showCatalog.value = false;
   validation.value = null;
+  if (upgraded)
+    notify(
+      "Upgraded to schema 3, preserving your design. Exclusive routing and embedded component profiles are now available.",
+    );
+  else if (profile)
+    notify(
+      `${profile.package.name} added from ${profile.package.id} @ ${profile.package.version}`,
+    );
 }
 function removeSelected() {
   if (!project.value) return;
@@ -482,7 +650,7 @@ async function importProject(e: Event) {
       throw new Error("Choose a valid project JSON file.");
     const candidate = p as Project;
     if (
-      ![1, 2].includes(candidate.schemaVersion) ||
+      ![1, 2, 3].includes(candidate.schemaVersion) ||
       !Array.isArray(candidate.nodes) ||
       !Array.isArray(candidate.edges) ||
       !Array.isArray(candidate.requirements) ||
@@ -490,7 +658,7 @@ async function importProject(e: Event) {
       typeof candidate.name !== "string"
     )
       throw new Error(
-        "This file does not match a supported Software Studio project format (v1 or v2).",
+        "This file does not match a supported Software Studio project format (v1, v2 or v3).",
       );
     const checked = await api<Validation>(
       "/validate?draft=true",
@@ -575,6 +743,7 @@ onMounted(() => {
 });
 onUnmounted(() => {
   pause();
+  if (projectFitFrame !== undefined) cancelAnimationFrame(projectFitFrame);
   clearTimeout(noticeTimer);
   window.removeEventListener("beforeunload", beforeUnload);
 });
@@ -591,7 +760,7 @@ onUnmounted(() => {
         ><span class="brand-mark"><Box :size="24" /></span
         ><span
           >software<span class="brand-sub"
-            >studio<span class="version"> / 0.2</span></span
+            >studio<span class="version"> / 0.3</span></span
           ></span
         ></a
       >
@@ -646,7 +815,7 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.2</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.3</span>
       </div>
     </aside>
 
@@ -841,12 +1010,42 @@ onUnmounted(() => {
                 ><small>Persist & deduplicate</small></span
               ><Plus :size="15" />
             </button>
+            <button
+              class="palette-card"
+              @click="addNode('router')"
+              aria-label="Add exclusive router"
+            >
+              <span class="palette-icon router"><GitBranch :size="19" /></span
+              ><span
+                ><strong>Router</strong><small>Choose one output</small></span
+              ><Plus :size="15" />
+            </button>
+            <button
+              class="button secondary full catalog-open-button"
+              @click="showCatalog = true"
+            >
+              <Box :size="14" /> Component catalog
+            </button>
             <div class="palette-note">
-              <GitBranch :size="17" /><strong>One connected pipeline</strong>
+              <GitBranch :size="17" /><strong>{{
+                project.schemaVersion === 3
+                  ? "One selected path per request"
+                  : "Pipelines & exclusive branches"
+              }}</strong>
               <p>
-                Client → services → database.<br />Connect from right to left
-                ports.
+                {{
+                  project.schemaVersion === 3
+                    ? "Routers choose one weighted output. Paths may converge; no parallel fan-out or join."
+                    : "Client → services → database. Adding a router or profile upgrades this design to schema 3."
+                }}
               </p>
+              <button
+                class="palette-example-link"
+                @click="loadBranchingExample"
+                :disabled="!!busy"
+              >
+                Open branching example <ArrowRight :size="12" />
+              </button>
             </div>
             <div class="panel-heading model-heading">
               <span>MODEL TREE</span><span>{{ project.nodes.length }}</span>
@@ -865,12 +1064,19 @@ onUnmounted(() => {
               <Monitor v-if="n.type === 'client'" :size="14" /><Database
                 v-else-if="n.type === 'database'"
                 :size="14"
-              /><Server v-else :size="14" /><span>{{ n.name }}</span>
+              /><GitBranch v-else-if="n.type === 'router'" :size="14" /><Server
+                v-else
+                :size="14"
+              /><span>{{ n.name }}</span>
             </button>
           </aside>
           <div class="canvas-area">
             <div class="canvas-ribbon">
-              <span><CircleDot :size="13" /> SYSTEM MODEL</span
+              <span
+                ><CircleDot :size="13" /> SYSTEM MODEL
+                <small class="schema-label"
+                  >v{{ project.schemaVersion }}</small
+                ></span
               ><button
                 @click="showMobilePalette = !showMobilePalette"
                 class="mobile-palette-toggle"
@@ -888,7 +1094,8 @@ onUnmounted(() => {
               :max-zoom="2"
               :default-viewport="{ x: 10, y: 30, zoom: 0.8 }"
               :delete-key-code="null"
-              fit-view-on-init
+              @init="fitAdoptedProject"
+              @nodes-initialized="fitAdoptedProject"
               @connect="onConnect"
               @node-click="onNodeClick"
               @edge-click="onEdgeClick"
@@ -900,17 +1107,44 @@ onUnmounted(() => {
                 ><StudioNode v-bind="props" /></template
               ><template #node-database="props"
                 ><StudioNode v-bind="props" /></template
+              ><template #node-router="props"
+                ><StudioNode v-bind="props" /></template
               ><Background
                 pattern-color="#c7d3df"
                 :gap="20"
                 :size="1" /><Controls
                 position="bottom-left"
                 :show-interactive="false"
-            /></VueFlow>
+                ><template #control-zoom-in
+                  ><ControlButton
+                    class="vue-flow__controls-zoomin"
+                    aria-label="Zoom in application canvas"
+                    title="Zoom in"
+                    :disabled="viewport.zoom >= maxZoom"
+                    @click="zoomIn()"
+                    ><Plus :size="16" /></ControlButton></template
+                ><template #control-zoom-out
+                  ><ControlButton
+                    class="vue-flow__controls-zoomout"
+                    aria-label="Zoom out application canvas"
+                    title="Zoom out"
+                    :disabled="viewport.zoom <= minZoom"
+                    @click="zoomOut()"
+                    ><Minus :size="16" /></ControlButton></template
+                ><template #control-fit-view
+                  ><ControlButton
+                    class="vue-flow__controls-fitview"
+                    aria-label="Fit application model to canvas"
+                    title="Fit model"
+                    @click="fitView({ padding: 0.16, maxZoom: 1 })"
+                    ><Maximize2
+                      :size="16" /></ControlButton></template></Controls
+            ></VueFlow>
             <div class="canvas-legend">
               <span><i class="legend-client" />Client</span
               ><span><i class="legend-service" />Service</span
               ><span><i class="legend-db" />Database</span>
+              <span><i class="legend-router" />Router</span>
             </div>
             <div class="canvas-empty" v-if="!project.nodes.length">
               <Box :size="30" />
@@ -939,8 +1173,29 @@ onUnmounted(() => {
                 <Settings2 :size="16" /><strong>{{ selectedLabel }}</strong>
               </div>
               <template v-if="selectedNode"
-                ><span class="type-chip">{{ selectedNode.type }}</span
-                ><label class="field"
+                ><span class="type-chip">{{ selectedNode.type }}</span>
+                <div v-if="selectedNode.component" class="profile-inspector">
+                  <span>PINNED COMPONENT PROFILE</span>
+                  <strong>{{ selectedNode.component.packageId }}</strong>
+                  <small
+                    >Version {{ selectedNode.component.version }} ·
+                    {{ selectedProfile?.package.kernel || selectedNode.type }}
+                    kernel</small
+                  >
+                  <code :title="selectedNode.component.digest"
+                    >SHA-256
+                    {{ selectedNode.component.digest.slice(0, 12) }}…</code
+                  >
+                  <p v-if="selectedProfile">
+                    Property bounds come from this embedded profile. Exported
+                    projects preserve the full definition.
+                  </p>
+                  <p v-else class="profile-missing">
+                    The embedded definition is missing or mismatched. Validation
+                    will reject this component.
+                  </p>
+                </div>
+                <label class="field"
                   >Name<input
                     v-model="selectedNode.name"
                     maxlength="120" /></label
@@ -950,22 +1205,71 @@ onUnmounted(() => {
                     ><input
                       type="number"
                       v-model.number="selectedNode.config.processingMs"
-                      min="0"
-                      max="60000"
-                      step="1" /></label
-                  ><label class="field"
+                      :min="
+                        selectedProfile?.package.config.processingMs.min ?? 0
+                      "
+                      :max="
+                        selectedProfile?.package.config.processingMs.max ??
+                        60000
+                      "
+                      aria-label="Processing time milliseconds"
+                      step="1"
+                  /></label>
+                  <p v-if="selectedProfile" class="property-bound">
+                    Profile range:
+                    {{ selectedProfile.package.config.processingMs.min }}–{{
+                      selectedProfile.package.config.processingMs.max
+                    }}
+                    ms
+                  </p>
+                  <label class="field"
                     >Concurrent capacity<input
                       type="number"
                       v-model.number="selectedNode.config.capacity"
-                      min="1"
-                      max="100"
+                      :min="selectedProfile?.package.config.capacity.min ?? 1"
+                      :max="selectedProfile?.package.config.capacity.max ?? 100"
+                      aria-label="Concurrent capacity"
                       step="1"
                   /></label>
+                  <p v-if="selectedProfile" class="property-bound">
+                    Profile range:
+                    {{ selectedProfile.package.config.capacity.min }}–{{
+                      selectedProfile.package.config.capacity.max
+                    }}
+                    slots
+                  </p>
                   <p class="help-text">
                     Requests wait in a FIFO queue when all processing slots are
                     busy.
+                  </p>
+                  <p v-if="selectedNode.type === 'router'" class="router-help">
+                    Chooses one output by relative weight. Connect at least two
+                    outputs, then select each link to edit its weight. Retries
+                    reuse the same route.
                   </p></template
                 ><label
+                  v-if="selectedProfile || project.infrastructure"
+                  class="field"
+                  >Memory reservation <span>MiB</span
+                  ><input
+                    type="number"
+                    v-model.number="selectedNode.config.memoryMb"
+                    :min="selectedProfile?.package.config.memoryMb.min ?? 0"
+                    :max="
+                      selectedProfile?.package.config.memoryMb.max ?? 1048576
+                    "
+                    placeholder="64"
+                    step="1"
+                    aria-label="Component memory MiB"
+                /></label>
+                <p v-if="selectedProfile" class="property-bound">
+                  Profile range:
+                  {{ selectedProfile.package.config.memoryMb.min }}–{{
+                    selectedProfile.package.config.memoryMb.max
+                  }}
+                  MiB. Reservation applies when infrastructure is modelled.
+                </p>
+                <label
                   v-if="selectedNode.type === 'database'"
                   class="toggle-card"
                   ><input
@@ -992,6 +1296,24 @@ onUnmounted(() => {
                     max="60000"
                     step="1"
                 /></label>
+                <template v-if="selectedEdgeFromRouter">
+                  <label class="field"
+                    >Route weight<input
+                      type="number"
+                      v-model.number="selectedEdge.routeWeight"
+                      min="1"
+                      max="100"
+                      step="1"
+                      placeholder="1"
+                      aria-label="Route weight"
+                  /></label>
+                  <p class="router-help">
+                    Relative weight {{ selectedEdge.routeWeight || 1 }} ·
+                    {{ numberFormat(routeShare) }}% of this router’s total.
+                    Exactly one output is selected per request; small samples
+                    may differ from this share. Retries keep the same route.
+                  </p>
+                </template>
                 <div class="connection-detail">
                   <span>{{
                     project.nodes.find((n) => n.id === selectedEdge?.source)
@@ -1269,6 +1591,7 @@ onUnmounted(() => {
                 <p>{{ currentRun.metrics.attempts }} total attempts</p>
               </div>
             </div>
+            <RoutingResults :run="currentRun" />
             <InfrastructureResults :run="currentRun" :history="runs" />
             <div class="results-columns">
               <div class="verdict-panel">
@@ -1472,7 +1795,7 @@ onUnmounted(() => {
           <div>
             <strong>Your design is ready for an experiment.</strong>
             <p>
-              Validate the pipeline, configure a scenario, and run your first
+              Validate the model, configure a scenario, and run your first
               simulation.
             </p>
           </div>
@@ -1492,7 +1815,7 @@ onUnmounted(() => {
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.2</span
+          <span class="footer-dot">·</span> v0.3</span
         >
       </footer>
     </main>
@@ -1580,6 +1903,13 @@ onUnmounted(() => {
             :disabled="!!busy"
           >
             <Server :size="16" /> Open continuum example
+          </button>
+          <button
+            class="button secondary full continuum-example-button"
+            @click="loadBranchingExample"
+            :disabled="!!busy"
+          >
+            <GitBranch :size="16" /> Open branching example
           </button></template
         ><template v-else
           ><p class="help-text">
@@ -1613,11 +1943,98 @@ onUnmounted(() => {
         >
       </section>
     </div>
+    <ComponentCatalog
+      v-if="showCatalog && project"
+      :project="project"
+      @close="showCatalog = false"
+      @add="(profile) => addNode(profile.package.kernel, profile)"
+    />
   </div>
 </template>
 
 <style scoped>
 .continuum-example-button {
   margin-top: 10px;
+}
+.catalog-open-button {
+  padding: 10px 6px;
+  font-size: 10px;
+  gap: 6px;
+}
+.palette-example-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #3a9585;
+  font-size: 9px;
+  padding: 0;
+  margin-top: 12px;
+  background: transparent;
+  text-align: left;
+  line-height: 1.6;
+}
+.schema-label {
+  font-size: 8px;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: #eaf3f1;
+  color: #519c8e;
+  margin-left: 4px;
+}
+.profile-inspector {
+  border: 1px solid #dcebe6;
+  background: #f7fbf9;
+  border-radius: 6px;
+  padding: 11px;
+  margin: 13px 0 17px;
+  overflow-wrap: anywhere;
+}
+.profile-inspector > span {
+  font-size: 8px;
+  letter-spacing: 0.6px;
+  color: #7f9c91;
+  display: block;
+}
+.profile-inspector strong {
+  color: #467d70;
+  font-size: 11px;
+  display: block;
+  margin-top: 7px;
+}
+.profile-inspector small {
+  display: block;
+  font-size: 10px;
+  color: #7e958c;
+  margin-top: 6px;
+}
+.profile-inspector code {
+  display: block;
+  font-size: 8px;
+  color: #91a59d;
+  margin-top: 7px;
+}
+.profile-inspector p {
+  font-size: 9px;
+  color: #8ca096;
+  line-height: 1.7;
+  margin: 8px 0 0;
+}
+.profile-inspector .profile-missing {
+  color: #b66e56;
+}
+.property-bound {
+  font-size: 9px;
+  color: #869b92;
+  margin: -7px 0 16px;
+  line-height: 1.6;
+}
+.router-help {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #9a824f;
+  background: #fcf8ed;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0 18px;
 }
 </style>

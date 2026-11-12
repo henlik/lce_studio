@@ -1,6 +1,6 @@
-# Simulation semantics, v0.2
+# Simulation semantics, v0.3
 
-The engine supports two explicitly selected project schemas. Schema 1 retains the original application-only pipeline semantics described first. Schema 2 adds the infrastructure-coupled execution described below. Neither schema executes imported application code. Engine version 0.2.0 records which implementation produced a run; persisted older runs retain their original version and snapshots.
+The engine supports three explicitly selected project schemas. Schema 1 retains the original application-only pipeline semantics described first. Schema 2 adds the infrastructure-coupled execution described below. Schema 3 adds exclusive branching, convergence and reusable declarative component profiles, with optional infrastructure. None of these schemas executes imported application code. Engine version 0.3.0 records which implementation produced a run; persisted older runs retain their original version and snapshots. Schema-1 and schema-2 execution semantics are unchanged.
 
 ## Reproducibility
 
@@ -39,7 +39,7 @@ Simulation runs on the Go backend and returns a recorded trace. Browser Play, Pa
 
 ## Validation and bounds
 
-Validation checks schema version, finite bounded fields, unique IDs, references, component roles, and the supported linear topology. The engine also enforces execution time/event bounds and checks context cancellation. Failed or cancelled executions are reported as errors rather than persisted as successful partial results.
+Validation checks schema version, finite bounded fields, unique IDs, references, component roles, package locks, and the topology supported by the selected schema. The engine also enforces execution time/event bounds and checks context cancellation. Failed or cancelled executions are reported as errors rather than persisted as successful partial results.
 
 ## Schema 2: placement and shared resources
 
@@ -106,3 +106,47 @@ The automated simulator tests include independently calculated cases:
 | Outage begins exactly at 27ms response arrival after a 21ms write | Response lost; retry deduplicates the retained write |
 
 Additional tests cover interrupted queues, dropped transmission backlogs, half-open/touching boundaries, unavailable client hosts, unused-host power, energy and transfer conservation, deterministic jitter, input immutability, cancellation and time bounds. A bounded fuzz target combines CPU capacity, retries, host outages and network outages while checking repeatability and conservation.
+
+## Schema 3: exclusive workflows
+
+A schema-3 application is a directed acyclic graph with one client, service and/or router processing nodes, and one or more terminal databases. All nodes must be reachable from the client and lead to a database. A client or service has exactly one outgoing edge; a router has at least two and selects exactly one for each logical request. Databases have no outgoing edges. Cycles, parallel fan-out, joins that synchronize multiple branches, and duplicate source/target edge pairs are rejected. Graph convergence is allowed: a shared downstream node receives whichever single branch was selected for that request.
+
+A router first consumes its configured processing time and capacity, including a host CPU core when infrastructure exists. It then emits a `route_selected` trace identifying the router, logical request, attempt and selected application `edgeId`. Only the selected branch receives the request. A router is a weighted workload selector, not an interpreter for business rules or arbitrary predicates. There are no payload-dependent conditions in this version.
+
+Routing is independent of simulation timing and network jitter. The exact selection algorithm is:
+
+1. Sort outgoing edges lexicographically by their edge IDs. An omitted or zero `routeWeight` means 1; explicit weights range from 1 to 100.
+2. Hash the UTF-8 string `decimalSeed + "\n" + requestID + "\n" + routerID` with SHA-256. Request IDs have the form `request-001`.
+3. Interpret the first eight hash bytes as an unsigned big-endian integer. Take its remainder modulo the sum of the effective outgoing weights and select the corresponding cumulative-weight interval.
+
+This gives reproducible weighted choices, without promising exact proportions for a small request count. Edge array ordering, graphical positions, placement changes, processing times, and jitter do not alter a request's routing choice. Changes to routing identities, the seed or weights may do so. Selection uses no samples from the jitter generator.
+
+Each logical request keeps the same full route across all retries. A response retraces the selected edges in reverse, so a convergence point returns to the branch used by that attempt. Response forwarding consumes no additional CPU. Different requests may take different branches and compete for the same nodes, hosts and physical links. A router interrupted before finishing does not emit a selection event or forward work; a later retry still uses that logical request's fixed choice.
+
+Deduplication state and duplicate-write accounting are scoped to the pair `(database node ID, logical request ID)`. Only databases can enable deduplication. A request attempts one terminal database, and retrying never chooses a different store. An unprotected store can commit duplicates while a protected store in another branch suppresses them. Committed state survives the previously described power-loss model. `dropFirstResponse` still loses the first successful store response per logical request after committing the write. Timed-out work is not cancelled; overlapping attempts and late responses retain the existing semantics.
+
+## Schema 3: resources and portable profiles
+
+With infrastructure present, every node has a placement and every application edge must have the required direct physical connectivity. The schema-2 CPU admission, memory reservation, bandwidth serialization, power/network interruption, durable writes and energy integration rules apply unchanged across branches and convergence points. A failure of one branch's host need not interrupt requests that use another branch, although shared links, hosts or nodes can still couple their performance.
+
+Without infrastructure, each processing node has an independent FIFO resource limited by its `capacity`. Transfers use only application edge latency and seeded jitter. Memory is not admitted against fabricated hardware, no physical identities appear in the trace, and the run has no infrastructure metrics or energy estimate. Declared memory remains part of the component configuration and its profile validation, ready for a future placement.
+
+Both schema-3 modes use the schema-2 observation horizon: scheduled client timeout deadlines and configured environmental transitions contribute to `durationMs`, while obsolete completions of cancelled work do not. An application-only request that completes before its deadline therefore still has a duration extending to that deadline. This differs intentionally from schema 1.
+
+Reusable component packages declare bounded parameter profiles over the existing service, database and router kernels. Instantiation copies defaults into concrete node configuration. Simulation validates those values and the embedded package locks; it never silently replaces node values with package defaults. The full manifest, version, digest and node reference are included in portable project/run snapshots, so replay and validation need no catalog lookup or network download. The digest identifies the typed manifest content, not publisher trust. Packages add neither executable code nor new simulation primitives; arbitrary executable plugins, application generation and real deployment remain future work.
+
+## Schema 3 reference checks
+
+For the reference weighted router `router`, seed 42 and weights A=1/B=3, the first twelve requests select `BBBABABBABBA`. Four use A and eight use B. The following checks use exact integer timing with no jitter unless stated otherwise:
+
+| Case | Expected result |
+| --- | --- |
+| Router 2ms; worker/store A 10/3ms with logical edges 1/2/3ms; B 20/5ms with edges 1/4/6ms | A 27ms, B 49ms; 12 writes from 12 requests |
+| Both branches converge into one 5ms database | A 29ms, B 49ms; one write per request and no synchronization barrier |
+| First response lost; 100ms timeout and one retry | Same selected store; A 127ms, B 149ms; 12 writes and 12 deduplicated attempts |
+| Same loss/retry, only B's deduplication disabled | 20 writes, 8 duplicates, 4 deduplicated attempts |
+| Three requests at 0/1/2ms select B/B/A; workers 10ms, other processing and links zero; one shared core | Completions at 10/30/30ms; p95 29ms; 30 busy core-ms |
+| Same workload on two shared cores | Completions at 10/11/20ms; p95 18ms; 30 busy core-ms |
+| B's host down during [0,50), 100ms timeout, one retry, 1ms physical serialization each way | A completes at 12ms; B at 112/113ms; six physical transfers, two drops |
+
+Additional checks freeze complete v1/v2 run snapshots from v0.2, validate boundary-seed vectors, reverse response paths, edge-order independence, timing-independent retry choices, package portability, input immutability, cancellation and experiment bounds. Bounded workflow fuzzing combines weighted routes, convergence, per-node/shared CPU, response loss, retries and physical failures while checking determinism, exclusive paths, return-path integrity, durable-write evidence and resource conservation.

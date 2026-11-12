@@ -69,9 +69,9 @@ type continuumWork struct {
 }
 
 type continuumPacket struct {
-	from, to, link, request, attempt int
-	response                         bool
-	state                            string // queued, transmitting, propagating, delivered, dropped
+	from, to, edge, link, request, attempt int
+	response                               bool
+	state                                  string // queued, transmitting, propagating, delivered, dropped
 }
 
 type continuumEngine struct {
@@ -79,6 +79,8 @@ type continuumEngine struct {
 	out        model.Run
 	path       []model.Node
 	appLinks   []model.Edge
+	routes     []workflowRoute // schema 3 only: one stable exclusive route per request
+	dbWrites   [][]int         // schema 3 only: durable writes by node and request
 	nodeHosts  []int
 	pathLinks  []int // physical link per application edge; -1 for same host
 	nodeActive []int
@@ -137,20 +139,63 @@ func runContinuum(ctx context.Context, project model.Project) (model.Run, error)
 		e.out.Metrics.AverageLatencyMs = float64(sum) / float64(len(e.latencies))
 	}
 	e.out.Verdicts = verdicts(project.Requirements, e.out.Metrics)
-	metrics := &model.InfrastructureMetrics{Hosts: []model.HostMetrics{}, Links: []model.LinkMetrics{}}
-	for _, h := range e.hosts {
-		h.metrics.EnergyWh = h.wattMs / 3600000
-		metrics.Hosts = append(metrics.Hosts, h.metrics)
-		metrics.EnergyWh += h.metrics.EnergyWh
+	if project.Infrastructure != nil {
+		metrics := &model.InfrastructureMetrics{Hosts: []model.HostMetrics{}, Links: []model.LinkMetrics{}}
+		for _, h := range e.hosts {
+			h.metrics.EnergyWh = h.wattMs / 3600000
+			metrics.Hosts = append(metrics.Hosts, h.metrics)
+			metrics.EnergyWh += h.metrics.EnergyWh
+		}
+		for _, l := range e.links {
+			metrics.Links = append(metrics.Links, l.metrics)
+		}
+		e.out.Infrastructure = metrics
 	}
-	for _, l := range e.links {
-		metrics.Links = append(metrics.Links, l.metrics)
-	}
-	e.out.Infrastructure = metrics
 	return e.out, nil
 }
 
 func (e *continuumEngine) initialize() {
+	e.initializeApplication()
+	if e.project.Infrastructure == nil {
+		// Schema 3 without infrastructure has independent per-node resources.
+		// These private scheduler slots have no physical identity or estimates.
+		for i, n := range e.path {
+			e.nodeHosts = append(e.nodeHosts, i)
+			e.hosts = append(e.hosts, continuumHost{model: model.Host{CPUCores: n.Config.Capacity}, up: true})
+		}
+		for range e.appLinks {
+			e.pathLinks = append(e.pathLinks, -1)
+		}
+	} else {
+		e.initializeInfrastructure()
+	}
+	e.nodeActive = make([]int, len(e.path))
+	e.requests = make([]requestState, e.project.Scenario.RequestCount)
+	for i := range e.requests {
+		e.requests[i] = requestState{id: fmt.Sprintf("request-%03d", i+1), startedAt: int64(i) * e.project.Scenario.IntervalMs}
+		e.schedule(e.requests[i].startedAt, "send", 0, i, 1)
+	}
+	if e.project.SchemaVersion == 3 {
+		e.initializeRoutes()
+	}
+}
+
+func (e *continuumEngine) initializeApplication() {
+	if e.project.SchemaVersion == 3 {
+		// Keep the client at index zero; other graph nodes need not be in path order.
+		for _, n := range e.project.Nodes {
+			if n.Type == "client" {
+				e.path = append(e.path, n)
+			}
+		}
+		for _, n := range e.project.Nodes {
+			if n.Type != "client" {
+				e.path = append(e.path, n)
+			}
+		}
+		e.appLinks = append(e.appLinks, e.project.Edges...)
+		return
+	}
 	byID := make(map[string]model.Node)
 	bySource := make(map[string]model.Edge)
 	client := ""
@@ -172,6 +217,9 @@ func (e *continuumEngine) initialize() {
 		e.appLinks = append(e.appLinks, l)
 		id = l.Target
 	}
+}
+
+func (e *continuumEngine) initializeInfrastructure() {
 	infra := e.project.Infrastructure
 	hostIDs := make(map[string]int)
 	for i, h := range infra.Hosts {
@@ -196,10 +244,15 @@ func (e *continuumEngine) initialize() {
 	for _, n := range e.path {
 		e.nodeHosts = append(e.nodeHosts, placements[n.ID])
 	}
-	for i := range e.appLinks {
+	nodeIDs := make(map[string]int, len(e.path))
+	for i, n := range e.path {
+		nodeIDs[n.ID] = i
+	}
+	for _, appLink := range e.appLinks {
+		from, to := nodeIDs[appLink.Source], nodeIDs[appLink.Target]
 		physical := -1
-		if e.nodeHosts[i] != e.nodeHosts[i+1] {
-			a, b := e.hosts[e.nodeHosts[i]].model.ID, e.hosts[e.nodeHosts[i+1]].model.ID
+		if e.nodeHosts[from] != e.nodeHosts[to] {
+			a, b := e.hosts[e.nodeHosts[from]].model.ID, e.hosts[e.nodeHosts[to]].model.ID
 			for j, l := range e.links {
 				if (l.model.SourceHostID == a && l.model.TargetHostID == b) || (l.model.SourceHostID == b && l.model.TargetHostID == a) {
 					physical = j
@@ -208,12 +261,6 @@ func (e *continuumEngine) initialize() {
 			}
 		}
 		e.pathLinks = append(e.pathLinks, physical)
-	}
-	e.nodeActive = make([]int, len(e.path))
-	e.requests = make([]requestState, e.project.Scenario.RequestCount)
-	for i := range e.requests {
-		e.requests[i] = requestState{id: fmt.Sprintf("request-%03d", i+1), startedAt: int64(i) * e.project.Scenario.IntervalMs}
-		e.schedule(e.requests[i].startedAt, "send", 0, i, 1)
 	}
 }
 
@@ -242,6 +289,10 @@ func (e *continuumEngine) obsolete(v continuumEvent) bool {
 }
 
 func (e *continuumEngine) advance(at int64) {
+	if e.project.Infrastructure == nil {
+		e.now = at
+		return
+	}
 	dt := at - e.now
 	for i := range e.hosts {
 		h := &e.hosts[i]
@@ -270,7 +321,7 @@ func (e *continuumEngine) trace(kind string, node, request, attempt, host, link 
 	if request >= 0 {
 		v.RequestID = e.requests[request].id
 	}
-	if host >= 0 {
+	if host >= 0 && e.project.Infrastructure != nil {
 		v.HostID = e.hosts[host].model.ID
 	}
 	if link >= 0 {
@@ -307,7 +358,7 @@ func (e *continuumEngine) handle(v continuumEvent) {
 		}
 		e.trace(kind, 0, v.request, v.attempt, e.nodeHosts[0], -1, fmt.Sprintf("Send attempt %d of %d.", v.attempt, e.project.Scenario.MaxRetries+1))
 		e.schedule(e.now+e.project.Scenario.TimeoutMs, "timeout", 0, v.request, v.attempt)
-		e.transfer(0, 1, v.request, v.attempt, false)
+		e.forward(0, v.request, v.attempt)
 	case "timeout":
 		r := &e.requests[v.request]
 		if r.terminal || r.latestAttempt != v.attempt {
@@ -327,7 +378,7 @@ func (e *continuumEngine) handle(v continuumEvent) {
 		l := &e.links[p.link]
 		l.active = -1
 		p.state = "propagating"
-		delay := l.model.LatencyMs + e.applicationDelay(p.from, p.to)
+		delay := l.model.LatencyMs + e.applicationDelay(p.edge)
 		e.schedule(e.now+delay, "deliver", v.ref, p.request, p.attempt)
 		e.pumpLink(p.link)
 	case "deliver":
@@ -391,11 +442,7 @@ func (e *continuumEngine) linkTransition(link int) {
 	l.waiting = nil
 }
 
-func (e *continuumEngine) applicationDelay(from, to int) int64 {
-	edge := from
-	if to < from {
-		edge = to
-	}
+func (e *continuumEngine) applicationDelay(edge int) int64 {
 	delay := e.appLinks[edge].LatencyMs
 	if jitter := e.project.Scenario.JitterMs; jitter > 0 {
 		delay += e.rng.Int63n(jitter + 1)
@@ -403,14 +450,10 @@ func (e *continuumEngine) applicationDelay(from, to int) int64 {
 	return delay
 }
 
-func (e *continuumEngine) transfer(from, to, request, attempt int, response bool) {
-	edge := from
-	if to < from {
-		edge = to
-	}
+func (e *continuumEngine) transfer(from, to, edge, request, attempt int, response bool) {
 	link := e.pathLinks[edge]
 	id := len(e.packets)
-	e.packets = append(e.packets, continuumPacket{from: from, to: to, link: link, request: request, attempt: attempt, response: response, state: "queued"})
+	e.packets = append(e.packets, continuumPacket{from: from, to: to, edge: edge, link: link, request: request, attempt: attempt, response: response, state: "queued"})
 	if link >= 0 {
 		e.links[link].metrics.Transfers++
 	}
@@ -420,7 +463,7 @@ func (e *continuumEngine) transfer(from, to, request, attempt int, response bool
 	}
 	if link < 0 {
 		e.packets[id].state = "propagating"
-		e.schedule(e.now+e.applicationDelay(from, to), "deliver", id, request, attempt)
+		e.schedule(e.now+e.applicationDelay(edge), "deliver", id, request, attempt)
 		return
 	}
 	e.links[link].waiting = append(e.links[link].waiting, id)
@@ -489,14 +532,18 @@ func (e *continuumEngine) deliver(id int) {
 		e.hosts[host].waiting = append(e.hosts[host].waiting, workID)
 		e.pumpHost(host)
 		if e.work[workID].state == "queued" {
-			e.trace("queued", node, request, attempt, host, -1, "Waiting for node capacity or a shared host CPU core.")
+			message := "Waiting for node capacity or a shared host CPU core."
+			if e.project.Infrastructure == nil {
+				message = "Waiting for node processing capacity."
+			}
+			e.trace("queued", node, request, attempt, host, -1, message)
 		}
 		return
 	}
 	r := &e.requests[request]
 	if node > 0 {
 		e.trace("response_forwarded", node, request, attempt, host, p.link, "Forwarding response without additional CPU processing.")
-		e.transfer(node, node-1, request, attempt, true)
+		e.backward(node, request, attempt)
 	} else if r.terminal {
 		e.trace("response_ignored", 0, request, attempt, host, p.link, "Late response ignored because the client already completed or exhausted retries.")
 	} else {
@@ -529,7 +576,11 @@ func (e *continuumEngine) pumpHost(host int) {
 		w.state = "active"
 		h.active++
 		e.nodeActive[w.node]++
-		e.trace("processing", w.node, w.request, w.attempt, host, -1, fmt.Sprintf("Processing for %d ms; host CPU %d/%d, node slots %d/%d.", e.path[w.node].Config.ProcessingMs, h.active, h.model.CPUCores, e.nodeActive[w.node], e.path[w.node].Config.Capacity))
+		message := fmt.Sprintf("Processing for %d ms; host CPU %d/%d, node slots %d/%d.", e.path[w.node].Config.ProcessingMs, h.active, h.model.CPUCores, e.nodeActive[w.node], e.path[w.node].Config.Capacity)
+		if e.project.Infrastructure == nil {
+			message = fmt.Sprintf("Processing for %d ms; node slots %d/%d.", e.path[w.node].Config.ProcessingMs, e.nodeActive[w.node], e.path[w.node].Config.Capacity)
+		}
+		e.trace("processing", w.node, w.request, w.attempt, host, -1, message)
 		e.schedule(e.now+e.path[w.node].Config.ProcessingMs, "finish", id, w.request, w.attempt)
 	}
 }
@@ -542,14 +593,23 @@ func (e *continuumEngine) finish(id int) {
 	e.nodeActive[node]--
 	e.hosts[host].active--
 	r := &e.requests[request]
-	if node == len(e.path)-1 {
-		if e.path[node].Config.Deduplicate && r.writes > 0 {
+	if e.path[node].Type == "database" {
+		writes := r.writes
+		if e.project.SchemaVersion == 3 {
+			writes = e.dbWrites[node][request]
+		}
+		if e.path[node].Config.Deduplicate && writes > 0 {
 			e.out.Metrics.Deduplicated++
 			e.trace("deduplicated", node, request, attempt, host, -1, "Durable request ID found; no additional write.")
 		} else {
-			r.writes++
+			writes++
+			if e.project.SchemaVersion == 3 {
+				e.dbWrites[node][request] = writes
+			} else {
+				r.writes = writes
+			}
 			e.out.Metrics.Writes++
-			if r.writes > 1 {
+			if writes > 1 {
 				e.out.Metrics.DuplicateWrites++
 				e.trace("duplicate_write", node, request, attempt, host, -1, "Duplicate operation committed for this request ID.")
 			} else {
@@ -561,11 +621,11 @@ func (e *continuumEngine) finish(id int) {
 			e.trace("response_dropped", node, request, attempt, host, -1, "First successful response lost; committed work remains.")
 		} else {
 			e.trace("response_sent", node, request, attempt, host, -1, "Successful response starts its return path.")
-			e.transfer(node, node-1, request, attempt, true)
+			e.backward(node, request, attempt)
 		}
 	} else {
 		e.trace("processed", node, request, attempt, host, -1, "Processing finished; forwarding request.")
-		e.transfer(node, node+1, request, attempt, false)
+		e.forward(node, request, attempt)
 	}
 	e.pumpHost(host)
 }

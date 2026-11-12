@@ -1,9 +1,44 @@
-export type NodeKind = "client" | "service" | "database";
+export type NodeKind = "client" | "service" | "database" | "router";
+export interface IntegerParameter {
+  default: number;
+  min: number;
+  max: number;
+}
+export interface ComponentPackage {
+  schemaVersion: 1;
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  author: string;
+  license: string;
+  kernel: Exclude<NodeKind, "client">;
+  capabilities: ["design", "simulate"];
+  config: {
+    processingMs: IntegerParameter;
+    capacity: IntegerParameter;
+    memoryMb: IntegerParameter;
+    deduplicate: boolean;
+  };
+}
+export interface PackageLock {
+  package: ComponentPackage;
+  digest: string;
+}
+export interface InstalledComponent extends PackageLock {
+  installedAt: string;
+}
+export interface ComponentRef {
+  packageId: string;
+  version: string;
+  digest: string;
+}
 export interface ComponentNode {
   id: string;
   type: NodeKind;
   name: string;
   position: { x: number; y: number };
+  component?: ComponentRef;
   config: {
     processingMs: number;
     capacity: number;
@@ -16,6 +51,7 @@ export interface Link {
   source: string;
   target: string;
   latencyMs: number;
+  routeWeight?: number;
 }
 export type Rule = "no_duplicates" | "all_complete" | "latency_p95";
 export interface Requirement {
@@ -34,7 +70,7 @@ export interface Scenario {
   seed: number;
 }
 export interface Project {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   id: string;
   name: string;
   description: string;
@@ -43,6 +79,7 @@ export interface Project {
   requirements: Requirement[];
   scenario: Scenario;
   infrastructure?: Infrastructure;
+  packages?: PackageLock[];
 }
 export interface Outage {
   startMs: number;
@@ -121,6 +158,7 @@ export interface TraceEvent {
   message: string;
   hostId?: string;
   linkId?: string;
+  edgeId?: string;
 }
 export interface Verdict {
   requirementId: string;

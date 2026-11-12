@@ -1,5 +1,45 @@
 # Verification
 
+## v0.3 components and exclusive workflows — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1, npm 11.9.0 and the production Vue build.
+
+- `go test -race -count=1 ./...`, `go vet ./...`, the Go build and Vue TypeScript/production build passed.
+- All three live API suites passed: 13 legacy, 11 continuum and 12 workflow acceptance groups (36 total).
+- PostgreSQL tests exercise concurrent identical/conflicting installs, version coexistence, transactional catalog capacity and reopening persisted definitions. No catalog entry can be silently overwritten through the API.
+- Simulator tests include full-run schema 1/2 golden snapshots (only engine version excluded), route vectors, nested/converging workflows, retry identity, independent node resources, shared physical resources and branch-specific faults.
+- The schema 3 fuzz target completed 46,212 executions in ten seconds without failure. All 30 simulator tests and three fuzz seed suites passed with race detection.
+- The offline `componentcheck` command produced a digest independently checked against Python SHA-256 and rejected unknown fields, trailing JSON, null, unsupported capabilities and oversized input. This independent test is tooling evidence, not a Python runtime dependency.
+
+### Numerical reference cases
+
+| Controlled fixture | Result |
+| --- | --- |
+| Two exclusive processing paths | 27 / 49 ms latency |
+| Paths converging into one store | 29 / 49 ms; one commit per request |
+| Lost first response and route-stable retry | 127 / 149 ms |
+| Two routers with converging intermediate paths | 41 / 47 / 61 / 67 ms |
+| Mixed terminal-store deduplication policies | 20 writes, 8 duplicates, 4 deduplicated retries |
+| Shared CPU contention, one then two cores | 29 ms then 18 ms p95 |
+
+### Production browser workflow
+
+- The bundled branching model completed 12/12 requests at 277 ms p95. Its recorded routing table showed eight edge-path requests and four cloud-path requests for weights 3:1 and seed 42.
+- Editing the edge branch weight to 1 produced six requests on each branch. Routing evidence distinguishes unique requests from retry selection events and from successful completion.
+- Installed and exported the bundled worker profile. Importing changed content with the same ID/version displayed a conflict; changing to version 1.0.1 installed it. A new node used its 35 ms default and rejected 41 ms outside the 30–40 ms profile interval.
+- Inspected embedded profile identity, version, digest and processing/capacity/memory bounds. Removing the test node left its valid unused package lock intact.
+- Removed infrastructure and ran the portable workflow: 12/12 completions, 47 ms p95, and no invented physical-resource or energy metrics. Export retained schema 3, four package locks, six nodes and the 128 MiB worker reservation.
+- Reimported that JSON, enabled infrastructure again and completed 12/12 requests. Saved/reloaded projects kept their embedded versions and placements.
+- Added a profile to a fresh legacy design: schema 3 was selected while preserving its original client/service/database and adding the new profile-backed node.
+- Compared earlier and later saved runs: the UI reported changes in embedded profiles, application, infrastructure and placement and retained both original model hashes and results.
+- Stepped recorded replay, verified the version footer and inspected automatic canvas fitting after opening a project. All six example nodes remained visible. Ordinary property changes do not reset user zoom.
+
+No application-origin browser console errors were observed. Mobile-specific visual verification remains incomplete because the available browser API does not expose viewport resizing. Container behavior is checked by the separate GitHub Actions Compose job, which runs all three acceptance suites.
+
+### Implemented boundary
+
+Packages are declarative profiles of three supported kernels, not external executable plugins. Router weights choose one path per logical request; there is no parallel fan-out/join, payload-dependent business predicate, general state machine or application generation. Resource/energy predictions remain subject to the assumptions in SIMULATION.md. The hospital remains a future reference application rather than a dependency of the kernel.
+
 ## v0.2 continuum increment — 12 November 2026
 
 Verified with PostgreSQL 17.11, Go 1.25.5, Node.js 24.22.1, npm 11.9.0, and the production Vue build on Linux amd64.

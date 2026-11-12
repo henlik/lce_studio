@@ -31,7 +31,12 @@ const stable = (v: unknown) =>
       : value,
   );
 const application = (p: Project) => ({
-  nodes: p.nodes.map((n) => ({ id: n.id, type: n.type, config: n.config })),
+  nodes: p.nodes.map((n) => ({
+    id: n.id,
+    type: n.type,
+    config: n.config,
+    component: n.component,
+  })),
   edges: p.edges,
   requirements: p.requirements,
 });
@@ -51,6 +56,10 @@ const differences = computed(() => {
     changes: string[] = [];
   if (before.engineVersion !== after.engineVersion)
     changes.push("engine version");
+  if (before.project.schemaVersion !== after.project.schemaVersion)
+    changes.push("project schema");
+  if (stable(before.project.packages) !== stable(after.project.packages))
+    changes.push("embedded component profiles");
   if (stable(before.project.scenario) !== stable(after.project.scenario))
     changes.push("workload / retry settings");
   if (

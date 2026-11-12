@@ -585,6 +585,10 @@ code,
   color: #8e76ba;
   background: #f1edf9;
 }
+.palette-icon.router {
+  color: #b58b46;
+  background: #fbf3e2;
+}
 .palette-card strong {
   font-size: 11px;
   color: #3b4c60;
@@ -808,6 +812,27 @@ code,
 .database .node-icon {
   background: #f3eefb;
   color: #9476bc;
+}
+.router .node-icon {
+  color: #b58b46;
+  background: #fbf3e2;
+}
+.node-profile {
+  color: #8aa297;
+  font-size: 9px;
+  margin-top: 7px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.node-route-hint {
+  font-size: 7px;
+  letter-spacing: 0.8px;
+  color: #b39355;
+  margin-top: 10px;
+}
+.legend-router {
+  background: #c5a466;
 }
 .node-type {
   text-transform: uppercase;

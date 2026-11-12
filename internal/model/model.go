@@ -11,6 +11,7 @@ type Project struct {
 	Requirements   []Requirement   `json:"requirements"`
 	Scenario       Scenario        `json:"scenario"`
 	Infrastructure *Infrastructure `json:"infrastructure,omitempty"`
+	Packages       []PackageLock   `json:"packages,omitempty"`
 }
 
 type Position struct {
@@ -19,11 +20,12 @@ type Position struct {
 }
 
 type Node struct {
-	ID       string     `json:"id"`
-	Type     string     `json:"type"`
-	Name     string     `json:"name"`
-	Position Position   `json:"position"`
-	Config   NodeConfig `json:"config"`
+	ID        string        `json:"id"`
+	Type      string        `json:"type"`
+	Name      string        `json:"name"`
+	Position  Position      `json:"position"`
+	Config    NodeConfig    `json:"config"`
+	Component *ComponentRef `json:"component,omitempty"`
 }
 
 type NodeConfig struct {
@@ -34,10 +36,11 @@ type NodeConfig struct {
 }
 
 type Edge struct {
-	ID        string `json:"id"`
-	Source    string `json:"source"`
-	Target    string `json:"target"`
-	LatencyMs int64  `json:"latencyMs"`
+	ID          string `json:"id"`
+	Source      string `json:"source"`
+	Target      string `json:"target"`
+	LatencyMs   int64  `json:"latencyMs"`
+	RouteWeight int    `json:"routeWeight,omitempty"`
 }
 
 type Requirement struct {
@@ -77,6 +80,7 @@ type TraceEvent struct {
 	Message   string `json:"message"`
 	HostID    string `json:"hostId,omitempty"`
 	LinkID    string `json:"linkId,omitempty"`
+	EdgeID    string `json:"edgeId,omitempty"`
 }
 
 type Verdict struct {

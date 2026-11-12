@@ -88,6 +88,14 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 CREATE INDEX IF NOT EXISTS runs_project_created ON runs(project_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS runs_created ON runs(created_at DESC, id DESC);
+CREATE TABLE IF NOT EXISTS component_packages (
+ id TEXT NOT NULL,
+ version TEXT NOT NULL,
+ digest TEXT NOT NULL,
+ body JSON NOT NULL,
+ installed_at TIMESTAMPTZ NOT NULL,
+ PRIMARY KEY(id, version)
+);
 `)
 	if err != nil {
 		return err

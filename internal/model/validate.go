@@ -37,11 +37,11 @@ func ValidateDraft(p Project) []ValidationIssue {
 			add(path, "Use 1–128 letters, numbers, dots, underscores or dashes, starting with a letter or number.")
 		}
 	}
-	if p.SchemaVersion != 1 && p.SchemaVersion != 2 {
-		add("schemaVersion", "Supported schema versions are 1 (application only) and 2 (deployment simulation).")
+	if p.SchemaVersion != 1 && p.SchemaVersion != 2 && p.SchemaVersion != 3 {
+		add("schemaVersion", "Supported schema versions are 1 (linear application), 2 (linear deployment) and 3 (exclusive workflows and packages).")
 	}
 	if p.SchemaVersion == 1 && p.Infrastructure != nil {
-		add("infrastructure", "Infrastructure requires schema version 2.")
+		add("infrastructure", "Infrastructure requires schema version 2 or 3.")
 	}
 	if p.SchemaVersion == 2 && p.Infrastructure == nil {
 		add("infrastructure", "Schema version 2 requires an infrastructure model.")
@@ -69,11 +69,18 @@ func ValidateDraft(p Project) []ValidationIssue {
 	if len(p.Requirements) > 50 {
 		add("requirements", "At most 50 requirements are supported.")
 	}
+	if len(p.Packages) > 50 {
+		add("packages", "At most 50 embedded package versions are supported.")
+	}
+	if p.SchemaVersion != 3 && len(p.Packages) != 0 {
+		add("packages", "Component packages require schema version 3.")
+	}
 	// Bound work even for direct callers that bypass the HTTP body limit.
-	if len(p.Nodes) > 30 || len(p.Edges) > 30 || len(p.Requirements) > 50 {
+	if len(p.Nodes) > 30 || len(p.Edges) > 30 || len(p.Requirements) > 50 || len(p.Packages) > 50 {
 		return issues
 	}
 	nodes := make(map[string]bool)
+	nodeTypes := make(map[string]string)
 	for i, n := range p.Nodes {
 		path := fmt.Sprintf("nodes[%d]", i)
 		id(path+".id", n.ID)
@@ -81,9 +88,16 @@ func ValidateDraft(p Project) []ValidationIssue {
 			add(path+".id", "Node ID must be unique.")
 		}
 		nodes[n.ID] = true
+		nodeTypes[n.ID] = n.Type
 		text(path+".name", n.Name, 200, true)
-		if n.Type != "client" && n.Type != "service" && n.Type != "database" {
-			add(path+".type", "Supported node types are client, service and database.")
+		if n.Type != "client" && n.Type != "service" && n.Type != "database" && !(p.SchemaVersion == 3 && n.Type == "router") {
+			add(path+".type", "Supported node types are client, service and database; routers require schema version 3.")
+		}
+		if p.SchemaVersion != 3 && n.Component != nil {
+			add(path+".component", "Component references require schema version 3.")
+		}
+		if p.SchemaVersion == 3 && (n.Type == "service" || n.Type == "router") && n.Config.Deduplicate {
+			add(path+".config.deduplicate", "Deduplication is supported only by database processing nodes.")
 		}
 		if math.IsNaN(n.Position.X) || math.IsInf(n.Position.X, 0) || math.Abs(n.Position.X) > 1e6 {
 			add(path+".position.x", "Position must be finite and between -1000000 and 1000000.")
@@ -95,7 +109,7 @@ func ValidateDraft(p Project) []ValidationIssue {
 		bound(path+".config.capacity", int64(n.Config.Capacity), 1, 100)
 		bound(path+".config.memoryMb", n.Config.MemoryMB, 0, 1048576)
 		if p.SchemaVersion == 1 && n.Config.MemoryMB != 0 {
-			add(path+".config.memoryMb", "Memory reservations require schema version 2.")
+			add(path+".config.memoryMb", "Memory reservations require schema version 2 or 3.")
 		}
 	}
 	edges := make(map[string]bool)
@@ -113,6 +127,13 @@ func ValidateDraft(p Project) []ValidationIssue {
 			add(path+".target", "Target must refer to an existing node.")
 		}
 		bound(path+".latencyMs", e.LatencyMs, 0, 60000)
+		if p.SchemaVersion != 3 && e.RouteWeight != 0 {
+			add(path+".routeWeight", "Routing weights require schema version 3.")
+		} else if e.RouteWeight < 0 || e.RouteWeight > 100 {
+			add(path+".routeWeight", "Routing weights must be from 0 to 100; zero uses the default weight of 1.")
+		} else if e.RouteWeight != 0 && nodeTypes[e.Source] != "router" {
+			add(path+".routeWeight", "Routing weights are supported only on edges from routers.")
+		}
 	}
 	requirements := make(map[string]bool)
 	for i, r := range p.Requirements {
@@ -138,6 +159,10 @@ func ValidateDraft(p Project) []ValidationIssue {
 	if p.Infrastructure != nil {
 		issues = append(issues, validateInfrastructureDraft(p)...)
 	}
+	if p.SchemaVersion == 3 {
+		issues = append(issues, validateProjectPackages(p)...)
+		issues = append(issues, validateWorkflowDraft(p)...)
+	}
 	return issues
 }
 
@@ -145,6 +170,13 @@ func ValidateDraft(p Project) []ValidationIssue {
 func Validate(p Project) []ValidationIssue {
 	issues := ValidateDraft(p)
 	if len(issues) > 0 {
+		return issues
+	}
+	if p.SchemaVersion == 3 {
+		issues = append(issues, validateWorkflowExecution(p)...)
+		if p.Infrastructure != nil {
+			issues = append(issues, validateInfrastructureExecution(p)...)
+		}
 		return issues
 	}
 	add := func(path, message string) { issues = append(issues, ValidationIssue{path, message}) }
