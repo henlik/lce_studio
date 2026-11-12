@@ -27,5 +27,12 @@ services:
       retries: 15
     restart: unless-stopped
 
+networks:
+  default:
+    ipam:
+      config:
+        # Avoid exhausting Docker's automatic address pools on busy dev hosts.
+        - subnet: "${STUDIO_DOCKER_SUBNET:-10.203.0.0/24}"
+
 volumes:
   postgres-data:

@@ -16,6 +16,14 @@ docker compose up --build
 
 Open `http://127.0.0.1:8080`. Compose waits for PostgreSQL to become healthy and retains its data in the `postgres-data` volume. Both published ports bind to localhost. The example database credentials are for local development.
 
+Compose uses the explicit subnet `10.203.0.0/24` to avoid Docker's `all predefined address pools have been fully subnetted` error on hosts with many networks. If this range overlaps another Docker network, your LAN, or a VPN, choose an unused private subnet and set `STUDIO_DOCKER_SUBNET` in your shell or Compose's `.env` file. For example, after checking that `10.204.0.0/24` is available:
+
+```sh
+STUDIO_DOCKER_SUBNET=10.204.0.0/24 docker compose up --build
+```
+
+If this project's network already exists, run `docker compose down` before changing its subnet, then start it again. This preserves the database volume. See Docker's [Compose IPAM configuration](https://docs.docker.com/reference/compose-file/networks/#ipam).
+
 For development with live Vue reload, install Go 1.25 or newer, Node.js 22 or newer, and npm. Start just the database, then configure the app:
 
 ```sh
@@ -128,6 +136,7 @@ The verification record is in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 | `STUDIO_WEB_DIR` | `web/dist` | Built Vue assets |
 | `STUDIO_GO_BINARY` | `go` | Optional Go executable path for `npm run dev` |
 | `PORT` | `5173` | Vite port for `npm run dev` |
+| `STUDIO_DOCKER_SUBNET` | `10.203.0.0/24` | Compose network subnet; set via the shell or Compose's `.env`, rather than `.env.local` |
 
 The development launcher optionally reads an untracked `.env.local`. Production reads environment variables directly. Run history shows the most recent 50 matching runs. Database files and local credentials are not committed to Git.
 
