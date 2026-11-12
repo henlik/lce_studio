@@ -32,7 +32,7 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.5.0'}
+GET /api/health -> {status:'ok',version:'0.6.0'}
 GET /api/example -> Project
 GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
 GET /api/example?template=branching -> schema3 Project with embedded component locks
@@ -67,3 +67,7 @@ Use actual Go API only, no mock simulation. Vite proxy /api to http://127.0.0.1:
 ## Structured data increment
 
 The data-contract catalog, complete-fixture validation, immutable validation history, directional compatibility and structured component APIs are specified in [DATA_CONTRACT.md](DATA_CONTRACT.md). Data definitions are separate immutable artifacts; component schema3 embeds their exact locks. Existing scalar endpoints/examples remain available. `/components/structured-primitives` exposes all16 operations while `/components/primitives` retains the11 scalar operations for older clients.
+
+## Owned-state scenarios (v0.6)
+
+The app adds an independent `/api/state/*` machine catalog and deterministic scenario API. [STATE_CONTRACT.md](STATE_CONTRACT.md) defines strict typed bindings, per-instance ownership, command receipts, revision checks, explicit effect intents, commit faults, restart and immutable evidence. Machine and scenario schemas are 1; pure/data evaluation remains 0.5.0 and timed simulation remains 0.3.0. Scenario state is initialized per run; PostgreSQL stores complete experiment snapshots, not live modeled application sessions.

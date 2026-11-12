@@ -118,6 +118,21 @@ CREATE TABLE IF NOT EXISTS data_validations (
  summary JSON NOT NULL
 );
 CREATE INDEX IF NOT EXISTS data_validations_created ON data_validations(created_at DESC, id DESC);
+CREATE TABLE IF NOT EXISTS state_machines (
+ id TEXT NOT NULL,
+ version TEXT NOT NULL,
+ digest TEXT NOT NULL,
+ body JSON NOT NULL,
+ installed_at TIMESTAMPTZ NOT NULL,
+ PRIMARY KEY(id, version)
+);
+CREATE TABLE IF NOT EXISTS state_runs (
+ id TEXT PRIMARY KEY,
+ created_at TIMESTAMPTZ NOT NULL,
+ body JSON NOT NULL,
+ summary JSON NOT NULL
+);
+CREATE INDEX IF NOT EXISTS state_runs_created ON state_runs(created_at DESC, id DESC);
 `)
 	if err != nil {
 		return err

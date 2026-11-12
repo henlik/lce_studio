@@ -76,6 +76,12 @@ Five additional operations are available: `record_make`, `record_get`, `collecti
 
 The structured healthcare and school examples extract attributes from the same organization-registry contract and call the exact existing scalar access-policy and tenant-checker definitions. This demonstrates data-type reuse without duplicating the policy kernel. Use [DATA_AUTHORING.md](DATA_AUTHORING.md) for the authoring workflow and [DATA_CONTRACT.md](DATA_CONTRACT.md) for exact syntax and bounds.
 
+## Stateful owners available in v0.6
+
+State machines are separate immutable artifacts that embed existing pure component bundles as command decisions. A machine declares owned typed slots, durable/volatile behavior, public command contracts, input bindings, an acceptance output, proposed state writes and typed effect intentions. Commands execute through revision checks and durable receipts, so the same committed request can be replayed without another decision or effect intent.
+
+The State workspace tests this protocol with explicit rollback, reply-loss and restart scenarios. Pure packages retain their earlier schemas and exact digests; no mutable state is hidden inside a pure node. Installing a machine does not install its embedded dependencies into other catalogs. See [STATE_AUTHORING.md](STATE_AUTHORING.md) for authoring and [STATE_CONTRACT.md](STATE_CONTRACT.md) for the exact protocol. External delivery, live stateful application execution and coupling these transitions to timed infrastructure remain later increments.
+
 ## Future executable SDK proposal
 
 The remaining sections describe the broader extension boundary. They are design goals rather than available runtime APIs.

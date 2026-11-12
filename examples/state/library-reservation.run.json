@@ -1,0 +1,2022 @@
+{
+  "machine": {
+    "machine": {
+      "schemaVersion": 1,
+      "id": "lce.resource-reservation",
+      "version": "1.0.0",
+      "name": "Owned resource reservation",
+      "description": "One serialized resource owner with durable availability and a volatile accepted-command counter. Accepted commands commit a reservation notice intent; no external delivery, pharmacy-specific rules or authorization enforcement is implied.",
+      "author": "LCE Studio contributors",
+      "license": "MIT",
+      "dataContracts": [
+        {
+          "contract": {
+            "schemaVersion": 1,
+            "id": "lce.reservation-data",
+            "version": "1.0.0",
+            "name": "Resource reservation values",
+            "description": "Required scalar command and notice records shared by resource-reservation examples. Command identity belongs to the state protocol envelope.",
+            "author": "LCE Studio contributors",
+            "license": "MIT",
+            "records": [
+              {
+                "name": "ReservationCommand",
+                "fields": [
+                  {
+                    "name": "tenantId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "resourceId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "quantity",
+                    "type": "integer"
+                  }
+                ]
+              },
+              {
+                "name": "ReservationNotice",
+                "fields": [
+                  {
+                    "name": "tenantId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "resourceId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "quantity",
+                    "type": "integer"
+                  },
+                  {
+                    "name": "remaining",
+                    "type": "integer"
+                  }
+                ]
+              }
+            ],
+            "entities": [],
+            "relationships": []
+          },
+          "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd"
+        }
+      ],
+      "state": [
+        {
+          "name": "tenantId",
+          "type": "string",
+          "durability": "durable",
+          "initial": {
+            "type": "string",
+            "string": "tenantDefault"
+          }
+        },
+        {
+          "name": "resourceId",
+          "type": "string",
+          "durability": "durable",
+          "initial": {
+            "type": "string",
+            "string": "resourceDefault"
+          }
+        },
+        {
+          "name": "available",
+          "type": "integer",
+          "durability": "durable",
+          "initial": {
+            "type": "integer",
+            "integer": 0
+          }
+        },
+        {
+          "name": "acceptedSinceRestart",
+          "type": "integer",
+          "durability": "volatile",
+          "initial": {
+            "type": "integer",
+            "integer": 0
+          }
+        }
+      ],
+      "effects": [
+        {
+          "name": "reservation",
+          "payload": [
+            {
+              "name": "notice",
+              "type": "record",
+              "recordRef": {
+                "contractId": "lce.reservation-data",
+                "version": "1.0.0",
+                "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                "record": "ReservationNotice"
+              }
+            }
+          ]
+        }
+      ],
+      "commands": [
+        {
+          "name": "reserve",
+          "inputs": [
+            {
+              "name": "request",
+              "type": "record",
+              "recordRef": {
+                "contractId": "lce.reservation-data",
+                "version": "1.0.0",
+                "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                "record": "ReservationCommand"
+              }
+            }
+          ],
+          "outputs": [
+            {
+              "name": "accepted",
+              "type": "boolean"
+            },
+            {
+              "name": "remaining",
+              "type": "integer"
+            },
+            {
+              "name": "acceptedSinceRestart",
+              "type": "integer"
+            },
+            {
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "decision": {
+            "schemaVersion": 1,
+            "root": {
+              "packageId": "lce.reserve-available",
+              "version": "1.0.0",
+              "digest": "fcc031fbeac056d50c05856c1720c35b228aafe59ab8849714c377d41be37a7b"
+            },
+            "packages": [
+              {
+                "package": {
+                  "schemaVersion": 3,
+                  "id": "lce.reserve-available",
+                  "version": "1.0.0",
+                  "name": "Reserve available resource",
+                  "description": "Pure bounded decision for one owned resource. Matching target, positive quantity and sufficient nonnegative availability permit a reservation. Returns proposed values and a notice; the state host controls commits and effect intents.",
+                  "author": "LCE Studio contributors",
+                  "license": "MIT",
+                  "kernel": "composite",
+                  "capabilities": [
+                    "design",
+                    "evaluate"
+                  ],
+                  "config": {
+                    "processingMs": {
+                      "default": 0,
+                      "min": 0,
+                      "max": 0
+                    },
+                    "capacity": {
+                      "default": 0,
+                      "min": 0,
+                      "max": 0
+                    },
+                    "memoryMb": {
+                      "default": 0,
+                      "min": 0,
+                      "max": 0
+                    },
+                    "deduplicate": false
+                  },
+                  "behavior": {
+                    "inputs": [
+                      {
+                        "name": "tenantId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "resourceId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "available",
+                        "type": "integer"
+                      },
+                      {
+                        "name": "acceptedSinceRestart",
+                        "type": "integer"
+                      },
+                      {
+                        "name": "request",
+                        "type": "record",
+                        "recordRef": {
+                          "contractId": "lce.reservation-data",
+                          "version": "1.0.0",
+                          "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                          "record": "ReservationCommand"
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      {
+                        "name": "accepted",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "remaining",
+                        "type": "integer"
+                      },
+                      {
+                        "name": "acceptedSinceRestart",
+                        "type": "integer"
+                      },
+                      {
+                        "name": "reason",
+                        "type": "string"
+                      },
+                      {
+                        "name": "notice",
+                        "type": "record",
+                        "recordRef": {
+                          "contractId": "lce.reservation-data",
+                          "version": "1.0.0",
+                          "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                          "record": "ReservationNotice"
+                        }
+                      }
+                    ],
+                    "nodes": [
+                      {
+                        "id": "requesttenantId",
+                        "op": "record_get",
+                        "inputs": {
+                          "value": {
+                            "input": "request"
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 0
+                        },
+                        "field": "tenantId"
+                      },
+                      {
+                        "id": "requestresourceId",
+                        "op": "record_get",
+                        "inputs": {
+                          "value": {
+                            "input": "request"
+                          }
+                        },
+                        "position": {
+                          "x": 320,
+                          "y": 0
+                        },
+                        "field": "resourceId"
+                      },
+                      {
+                        "id": "requestquantity",
+                        "op": "record_get",
+                        "inputs": {
+                          "value": {
+                            "input": "request"
+                          }
+                        },
+                        "position": {
+                          "x": 640,
+                          "y": 0
+                        },
+                        "field": "quantity"
+                      },
+                      {
+                        "id": "sameTenant",
+                        "op": "equal",
+                        "inputs": {
+                          "left": {
+                            "input": "tenantId"
+                          },
+                          "right": {
+                            "node": "requesttenantId",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 960,
+                          "y": 0
+                        }
+                      },
+                      {
+                        "id": "sameResource",
+                        "op": "equal",
+                        "inputs": {
+                          "left": {
+                            "input": "resourceId"
+                          },
+                          "right": {
+                            "node": "requestresourceId",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 160
+                        }
+                      },
+                      {
+                        "id": "sameTarget",
+                        "op": "and",
+                        "inputs": {
+                          "left": {
+                            "node": "sameTenant",
+                            "port": "result"
+                          },
+                          "right": {
+                            "node": "sameResource",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 320,
+                          "y": 160
+                        }
+                      },
+                      {
+                        "id": "positive",
+                        "op": "less_than",
+                        "inputs": {
+                          "left": {
+                            "literal": {
+                              "type": "integer",
+                              "integer": 0
+                            }
+                          },
+                          "right": {
+                            "node": "requestquantity",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 640,
+                          "y": 160
+                        }
+                      },
+                      {
+                        "id": "validAvailable",
+                        "op": "less_or_equal",
+                        "inputs": {
+                          "left": {
+                            "literal": {
+                              "type": "integer",
+                              "integer": 0
+                            }
+                          },
+                          "right": {
+                            "input": "available"
+                          }
+                        },
+                        "position": {
+                          "x": 960,
+                          "y": 160
+                        }
+                      },
+                      {
+                        "id": "enough",
+                        "op": "less_or_equal",
+                        "inputs": {
+                          "left": {
+                            "node": "requestquantity",
+                            "port": "result"
+                          },
+                          "right": {
+                            "input": "available"
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 320
+                        }
+                      },
+                      {
+                        "id": "validQuantity",
+                        "op": "and",
+                        "inputs": {
+                          "left": {
+                            "node": "positive",
+                            "port": "result"
+                          },
+                          "right": {
+                            "node": "enough",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 320,
+                          "y": 320
+                        }
+                      },
+                      {
+                        "id": "validStock",
+                        "op": "and",
+                        "inputs": {
+                          "left": {
+                            "node": "validAvailable",
+                            "port": "result"
+                          },
+                          "right": {
+                            "node": "validQuantity",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 640,
+                          "y": 320
+                        }
+                      },
+                      {
+                        "id": "accepted",
+                        "op": "and",
+                        "inputs": {
+                          "left": {
+                            "node": "sameTarget",
+                            "port": "result"
+                          },
+                          "right": {
+                            "node": "validStock",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 960,
+                          "y": 320
+                        }
+                      },
+                      {
+                        "id": "delta",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "accepted",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "literal": {
+                              "type": "integer",
+                              "integer": 0
+                            }
+                          },
+                          "trueValue": {
+                            "node": "requestquantity",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 480
+                        }
+                      },
+                      {
+                        "id": "remaining",
+                        "op": "subtract",
+                        "inputs": {
+                          "left": {
+                            "input": "available"
+                          },
+                          "right": {
+                            "node": "delta",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 320,
+                          "y": 480
+                        }
+                      },
+                      {
+                        "id": "counterDelta",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "accepted",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "literal": {
+                              "type": "integer",
+                              "integer": 0
+                            }
+                          },
+                          "trueValue": {
+                            "literal": {
+                              "type": "integer",
+                              "integer": 1
+                            }
+                          }
+                        },
+                        "position": {
+                          "x": 640,
+                          "y": 480
+                        }
+                      },
+                      {
+                        "id": "nextCounter",
+                        "op": "add",
+                        "inputs": {
+                          "left": {
+                            "input": "acceptedSinceRestart"
+                          },
+                          "right": {
+                            "node": "counterDelta",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 960,
+                          "y": 480
+                        }
+                      },
+                      {
+                        "id": "quantityReason",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "positive",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "literal": {
+                              "type": "string",
+                              "string": "invalid_quantity"
+                            }
+                          },
+                          "trueValue": {
+                            "literal": {
+                              "type": "string",
+                              "string": "insufficient"
+                            }
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 640
+                        }
+                      },
+                      {
+                        "id": "stockReason",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "validAvailable",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "literal": {
+                              "type": "string",
+                              "string": "invalid_state"
+                            }
+                          },
+                          "trueValue": {
+                            "node": "quantityReason",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 320,
+                          "y": 640
+                        }
+                      },
+                      {
+                        "id": "acceptedReason",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "accepted",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "node": "stockReason",
+                            "port": "result"
+                          },
+                          "trueValue": {
+                            "literal": {
+                              "type": "string",
+                              "string": "reserved"
+                            }
+                          }
+                        },
+                        "position": {
+                          "x": 640,
+                          "y": 640
+                        }
+                      },
+                      {
+                        "id": "reason",
+                        "op": "select",
+                        "inputs": {
+                          "condition": {
+                            "node": "sameTarget",
+                            "port": "result"
+                          },
+                          "falseValue": {
+                            "literal": {
+                              "type": "string",
+                              "string": "wrong_target"
+                            }
+                          },
+                          "trueValue": {
+                            "node": "acceptedReason",
+                            "port": "result"
+                          }
+                        },
+                        "position": {
+                          "x": 960,
+                          "y": 640
+                        }
+                      },
+                      {
+                        "id": "notice",
+                        "op": "record_make",
+                        "inputs": {
+                          "quantity": {
+                            "node": "delta",
+                            "port": "result"
+                          },
+                          "remaining": {
+                            "node": "remaining",
+                            "port": "result"
+                          },
+                          "resourceId": {
+                            "input": "resourceId"
+                          },
+                          "tenantId": {
+                            "input": "tenantId"
+                          }
+                        },
+                        "position": {
+                          "x": 0,
+                          "y": 800
+                        },
+                        "recordRef": {
+                          "contractId": "lce.reservation-data",
+                          "version": "1.0.0",
+                          "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                          "record": "ReservationNotice"
+                        }
+                      }
+                    ],
+                    "bindings": {
+                      "accepted": {
+                        "node": "accepted",
+                        "port": "result"
+                      },
+                      "acceptedSinceRestart": {
+                        "node": "nextCounter",
+                        "port": "result"
+                      },
+                      "notice": {
+                        "node": "notice",
+                        "port": "result"
+                      },
+                      "reason": {
+                        "node": "reason",
+                        "port": "result"
+                      },
+                      "remaining": {
+                        "node": "remaining",
+                        "port": "result"
+                      }
+                    }
+                  },
+                  "tests": [
+                    {
+                      "name": "Reserve two units",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 5
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 2
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": true
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 1
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 2
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 3
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "reserved"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 3
+                        }
+                      }
+                    },
+                    {
+                      "name": "Insufficient quantity",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 3
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 4
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 3
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "insufficient"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 3
+                        }
+                      }
+                    },
+                    {
+                      "name": "Wrong tenant",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 5
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 1
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantB"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 5
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "wrong_target"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 5
+                        }
+                      }
+                    },
+                    {
+                      "name": "Wrong resource",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 5
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 1
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceB"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 5
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "wrong_target"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 5
+                        }
+                      }
+                    },
+                    {
+                      "name": "Zero quantity",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 5
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 5
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "invalid_quantity"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 5
+                        }
+                      }
+                    },
+                    {
+                      "name": "Negative quantity at integer boundary",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": 9007199254740991
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": -9007199254740991
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": 9007199254740991
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "invalid_quantity"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": 9007199254740991
+                        }
+                      }
+                    },
+                    {
+                      "name": "Invalid initial stock",
+                      "inputs": {
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "available": {
+                          "type": "integer",
+                          "integer": -1
+                        },
+                        "request": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationCommand"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 1
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "resourceId": {
+                          "type": "string",
+                          "string": "resourceA"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "string": "tenantA"
+                        }
+                      },
+                      "expected": {
+                        "accepted": {
+                          "type": "boolean",
+                          "boolean": false
+                        },
+                        "acceptedSinceRestart": {
+                          "type": "integer",
+                          "integer": 0
+                        },
+                        "notice": {
+                          "type": "record",
+                          "recordRef": {
+                            "contractId": "lce.reservation-data",
+                            "version": "1.0.0",
+                            "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+                            "record": "ReservationNotice"
+                          },
+                          "record": {
+                            "quantity": {
+                              "type": "integer",
+                              "integer": 0
+                            },
+                            "remaining": {
+                              "type": "integer",
+                              "integer": -1
+                            },
+                            "resourceId": {
+                              "type": "string",
+                              "string": "resourceA"
+                            },
+                            "tenantId": {
+                              "type": "string",
+                              "string": "tenantA"
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "string": "invalid_state"
+                        },
+                        "remaining": {
+                          "type": "integer",
+                          "integer": -1
+                        }
+                      }
+                    }
+                  ],
+                  "dataContracts": [
+                    {
+                      "contract": {
+                        "schemaVersion": 1,
+                        "id": "lce.reservation-data",
+                        "version": "1.0.0",
+                        "name": "Resource reservation values",
+                        "description": "Required scalar command and notice records shared by resource-reservation examples. Command identity belongs to the state protocol envelope.",
+                        "author": "LCE Studio contributors",
+                        "license": "MIT",
+                        "records": [
+                          {
+                            "name": "ReservationCommand",
+                            "fields": [
+                              {
+                                "name": "tenantId",
+                                "type": "string"
+                              },
+                              {
+                                "name": "resourceId",
+                                "type": "string"
+                              },
+                              {
+                                "name": "quantity",
+                                "type": "integer"
+                              }
+                            ]
+                          },
+                          {
+                            "name": "ReservationNotice",
+                            "fields": [
+                              {
+                                "name": "tenantId",
+                                "type": "string"
+                              },
+                              {
+                                "name": "resourceId",
+                                "type": "string"
+                              },
+                              {
+                                "name": "quantity",
+                                "type": "integer"
+                              },
+                              {
+                                "name": "remaining",
+                                "type": "integer"
+                              }
+                            ]
+                          }
+                        ],
+                        "entities": [],
+                        "relationships": []
+                      },
+                      "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd"
+                    }
+                  ]
+                },
+                "digest": "fcc031fbeac056d50c05856c1720c35b228aafe59ab8849714c377d41be37a7b"
+              }
+            ]
+          },
+          "bindings": {
+            "acceptedSinceRestart": {
+              "state": "acceptedSinceRestart"
+            },
+            "available": {
+              "state": "available"
+            },
+            "request": {
+              "input": "request"
+            },
+            "resourceId": {
+              "state": "resourceId"
+            },
+            "tenantId": {
+              "state": "tenantId"
+            }
+          },
+          "acceptedOutput": "accepted",
+          "writes": {
+            "acceptedSinceRestart": "acceptedSinceRestart",
+            "available": "remaining"
+          },
+          "results": {
+            "accepted": "accepted",
+            "acceptedSinceRestart": "acceptedSinceRestart",
+            "reason": "reason",
+            "remaining": "remaining"
+          },
+          "effects": [
+            {
+              "effect": "reservation",
+              "whenOutput": "accepted",
+              "payload": {
+                "notice": "notice"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "digest": "5f180141fc9d1f9040a8a548482f3c0ae67cafb1f482703854ae461bc3fabc6b"
+  },
+  "scenario": {
+    "schemaVersion": 1,
+    "name": "School library reservation",
+    "instances": [
+      {
+        "id": "primary",
+        "name": "Primary resource",
+        "initial": {
+          "acceptedSinceRestart": {
+            "type": "integer",
+            "integer": 0
+          },
+          "available": {
+            "type": "integer",
+            "integer": 4
+          },
+          "resourceId": {
+            "type": "string",
+            "string": "titleA"
+          },
+          "tenantId": {
+            "type": "string",
+            "string": "schoolAlpha"
+          }
+        }
+      },
+      {
+        "id": "partner",
+        "name": "Independent partner resource",
+        "initial": {
+          "acceptedSinceRestart": {
+            "type": "integer",
+            "integer": 10
+          },
+          "available": {
+            "type": "integer",
+            "integer": 2
+          },
+          "resourceId": {
+            "type": "string",
+            "string": "titleB"
+          },
+          "tenantId": {
+            "type": "string",
+            "string": "libraryBeta"
+          }
+        }
+      }
+    ],
+    "steps": [
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveA",
+        "command": "reserve",
+        "expectedRevision": 0,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "partner",
+        "commandId": "reserveA",
+        "command": "reserve",
+        "expectedRevision": 0,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleB"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "libraryBeta"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveA",
+        "command": "reserve",
+        "expectedRevision": 0,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        },
+        "fault": "before_commit"
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveB",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 4
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveC",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        },
+        "fault": "before_commit"
+      },
+      {
+        "kind": "restart",
+        "instanceId": "primary",
+        "inputs": null
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveC",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        },
+        "fault": "after_commit_before_reply"
+      },
+      {
+        "kind": "restart",
+        "instanceId": "primary",
+        "inputs": null
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveC",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        },
+        "fault": "after_commit_before_reply"
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveD",
+        "command": "reserve",
+        "expectedRevision": 2,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 2
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveE",
+        "command": "reserve",
+        "expectedRevision": 3,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveB",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 4
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveA",
+        "command": "reserve",
+        "expectedRevision": 0,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 2
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "primary",
+        "commandId": "reserveF",
+        "command": "reserve",
+        "expectedRevision": 2,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleA"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "restart",
+        "instanceId": "partner",
+        "inputs": null
+      },
+      {
+        "kind": "command",
+        "instanceId": "partner",
+        "commandId": "reserveA",
+        "command": "reserve",
+        "expectedRevision": 0,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleB"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "libraryBeta"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "partner",
+        "commandId": "reserveB",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleB"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "schoolAlpha"
+              }
+            }
+          }
+        }
+      },
+      {
+        "kind": "command",
+        "instanceId": "partner",
+        "commandId": "reserveC",
+        "command": "reserve",
+        "expectedRevision": 1,
+        "inputs": {
+          "request": {
+            "type": "record",
+            "recordRef": {
+              "contractId": "lce.reservation-data",
+              "version": "1.0.0",
+              "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd",
+              "record": "ReservationCommand"
+            },
+            "record": {
+              "quantity": {
+                "type": "integer",
+                "integer": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "string": "titleB"
+              },
+              "tenantId": {
+                "type": "string",
+                "string": "libraryBeta"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "expected": [
+      {
+        "instanceId": "primary",
+        "state": {
+          "acceptedSinceRestart": {
+            "type": "integer",
+            "integer": 1
+          },
+          "available": {
+            "type": "integer",
+            "integer": 0
+          },
+          "resourceId": {
+            "type": "string",
+            "string": "titleA"
+          },
+          "tenantId": {
+            "type": "string",
+            "string": "schoolAlpha"
+          }
+        },
+        "revision": 3,
+        "receipts": 5,
+        "effects": 3
+      },
+      {
+        "instanceId": "partner",
+        "state": {
+          "acceptedSinceRestart": {
+            "type": "integer",
+            "integer": 11
+          },
+          "available": {
+            "type": "integer",
+            "integer": 0
+          },
+          "resourceId": {
+            "type": "string",
+            "string": "titleB"
+          },
+          "tenantId": {
+            "type": "string",
+            "string": "libraryBeta"
+          }
+        },
+        "revision": 2,
+        "receipts": 3,
+        "effects": 2
+      }
+    ]
+  }
+}

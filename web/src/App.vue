@@ -53,6 +53,7 @@ import ComponentCatalog from "./components/ComponentCatalog.vue";
 import RoutingResults from "./components/RoutingResults.vue";
 import BehaviorWorkbench from "./components/BehaviorWorkbench.vue";
 import DataWorkbench from "./components/DataWorkbench.vue";
+import StateWorkbench from "./components/StateWorkbench.vue";
 import { api, APIError } from "./api";
 import type {
   ComponentNode,
@@ -70,16 +71,21 @@ const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
 const view = ref<
-  "design" | "plan" | "deployment" | "results" | "components" | "data"
+  "design" | "plan" | "deployment" | "results" | "components" | "data" | "state"
 >("design");
 const workbenchOpened = ref(false);
 const dataOpened = ref(false);
+const stateOpened = ref(false);
 const definitionView = computed(
-  () => view.value === "components" || view.value === "data",
+  () =>
+    view.value === "components" ||
+    view.value === "data" ||
+    view.value === "state",
 );
 watch(view, (next) => {
   if (next === "components") workbenchOpened.value = true;
   if (next === "data") dataOpened.value = true;
+  if (next === "state") stateOpened.value = true;
 });
 const inspector = ref<"properties" | "scenario">("scenario");
 const selectedNodeId = ref("");
@@ -773,7 +779,7 @@ onUnmounted(() => {
         ><span class="brand-mark"><Box :size="24" /></span
         ><span
           >software<span class="brand-sub"
-            >studio<span class="version"> / 0.5</span></span
+            >studio<span class="version"> / 0.6</span></span
           ></span
         ></a
       >
@@ -827,6 +833,14 @@ onUnmounted(() => {
           <Database :size="18" /><span>Data</span
           ><span class="nav-number">06</span>
         </button>
+        <button
+          :class="{ active: view === 'state' }"
+          @click="view = 'state'"
+          aria-label="State workspace"
+        >
+          <RotateCcw :size="18" /><span>State</span
+          ><span class="nav-number">07</span>
+        </button>
       </nav>
       <div class="rail-divider" />
       <button class="rail-action" @click="showProjects = true">
@@ -844,7 +858,7 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.5</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.6</span>
       </div>
     </aside>
 
@@ -853,19 +867,23 @@ onUnmounted(() => {
         <div class="project-heading">
           <span class="breadcrumb"
             >{{
-              view === "data"
-                ? "Data"
-                : view === "components"
-                  ? "Components"
-                  : "Projects"
+              view === "state"
+                ? "State"
+                : view === "data"
+                  ? "Data"
+                  : view === "components"
+                    ? "Components"
+                    : "Projects"
             }}
             <span>/</span>
             {{
-              view === "data"
-                ? "Data contracts"
-                : view === "components"
-                  ? "Behavior definitions"
-                  : "Engineering workspace"
+              view === "state"
+                ? "Owned state & transitions"
+                : view === "data"
+                  ? "Data contracts"
+                  : view === "components"
+                    ? "Behavior definitions"
+                    : "Engineering workspace"
             }}</span
           >
           <div class="project-title">
@@ -877,11 +895,13 @@ onUnmounted(() => {
             />
             <h1 v-else>
               {{
-                view === "data"
-                  ? "Data workbench"
-                  : view === "components"
-                    ? "Component workbench"
-                    : "Software Studio"
+                view === "state"
+                  ? "State workbench"
+                  : view === "data"
+                    ? "Data workbench"
+                    : view === "components"
+                      ? "Component workbench"
+                      : "Software Studio"
               }}
             </h1>
             <span
@@ -962,7 +982,13 @@ onUnmounted(() => {
         </ul>
       </div>
 
-      <div v-if="!project" class="welcome-state">
+      <StateWorkbench v-if="stateOpened" v-show="view === 'state'" />
+      <DataWorkbench v-if="dataOpened" v-show="view === 'data'" />
+      <BehaviorWorkbench
+        v-if="workbenchOpened"
+        v-show="view === 'components'"
+      />
+      <div v-if="!project && !definitionView" class="welcome-state">
         <span class="welcome-icon"><GitBranch :size="36" /></span>
         <h2>
           {{
@@ -981,7 +1007,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <template v-else>
+      <template v-if="project">
         <div v-if="!definitionView" class="workspace-bar">
           <div class="workspace-label">
             <span class="section-eyebrow">{{
@@ -1028,11 +1054,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <DataWorkbench v-if="dataOpened" v-show="view === 'data'" />
-        <BehaviorWorkbench
-          v-if="workbenchOpened"
-          v-show="view === 'components'"
-        />
         <DeploymentEditor
           v-if="view === 'deployment'"
           :project="project"
@@ -1877,7 +1898,7 @@ onUnmounted(() => {
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.5</span
+          <span class="footer-dot">·</span> v0.6</span
         >
       </footer>
     </main>

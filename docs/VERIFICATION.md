@@ -1,5 +1,32 @@
 # Verification
 
+## v0.6 owned state, receipts and recovery — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.
+
+- Full Go race tests, vet and production backend build passed. The Vue TypeScript and production build passed without new dependencies. Vite reports its advisory for the approximately 531 kB uncompressed JavaScript chunk.
+- Six live API suites pass 83 acceptance groups: 13 legacy, 11 continuum, 12 workflow, 12 scalar composite, 16 data/structured and 19 state groups. The state suite includes 20 independently calculated pharmacy/library reservation cases.
+- Independent protocol checks distinguish accepted commits, denied receipts, pre-commit rollback, committed reply loss, identical replay, command-ID conflicts, revision conflicts, ordinary decision errors and explicit restart. Historical replies never restore their old values into current state. Same command IDs remain independent across instances.
+- SHA-256 receipt fingerprints and effect identities match independently constructed references. Structured snapshots, receipts and effect payloads remain isolated from later writes and caller mutations. Volatile restart values use each instance's effective initialization, including overrides.
+- Boundaries include 64 distinct component locks, 32 distinct data locks, 64 receipts, 128 intents, 4,096 operation/invocation work budgets, 64 KiB public value maps, 512 KiB machine/scenario artifacts and 2 MiB complete evidence. Failed pure evaluations consume conservative global work reservations while public counters include only completed decision traces. Amplified snapshots and mapped values reject before successful evidence is saved.
+- PostgreSQL tests cover independent immutable machine versions, concurrent installs, catalog capacity, complete run snapshots and reopening persisted evidence. Repeated HTTP submissions start fresh simulations. Machine installation does not populate the separate component/data catalogs.
+- Raw decoding rejects absent/null expectation counts, unsafe or fractional integers, unknown fields and trailing JSON. Mixed-case supported field names return canonical values. Both check/run endpoints apply the shared admission limit and deadline to semantic validation and execution; rejected work creates no evidence.
+- The offline state checker validates raw machines and exact locks, executes both portable examples without PostgreSQL, reports failed independent expectations with complete evidence, and labels an empty expectation list unverified.
+
+### Production browser workflow
+
+- Ran both 18-step reference scenarios. Each passed both instance expectations with 189 primitive operations and 9 component invocations. Inspected rollback snapshots, nested pure traces, restart outcomes and replay after restart, distinguishing current volatile state from the historical receipt.
+- Added a duplicate command through the scenario editor: the resulting 19-step scenario still passed with unchanged work and effect counts. Reordering a step preserved invalid local revision text; duplicating that invalid revision remained disabled. Fractional expected counts were rejected before submission.
+- Changed initial availability and observed earlier evidence become stale, followed by an independently failing verdict. Removing all final expectations produced an explicitly unverified result.
+- Pending JSON survived hide/reopen. Applying it after a newer graphical edit prompted before replacement; cancelling retained both drafts. Opening earlier immutable history preserved the graphical scenario name and pending JSON.
+- Installed and exported a machine, rejected changed content under its existing version, installed the edit as 1.0.1, and imported the original 1.0.0 export. Exported/reimported its scenario and reproduced the passing 189-operation result through the canonical server representation.
+- Authored a new integer pass-through decision with Boolean acceptance in Components, installed it, and selected its exact version in a newly created State machine. Graphically bound its result to an owned quantity and a typed effect payload. An injected lost reply followed by restart passed an independently entered quantity 7 / revision 1 / receipt 1 / effect 1 expectation. Changing the slot to volatile and the expected quantity to 0 also passed; the retained effect payload remained 7.
+- Inspected the ownership diagram, read/write directions, typed controls and production layout. No application-origin browser warnings or errors were observed. Mobile-specific visual verification remains incomplete because viewport resizing is not exposed by the available browser API.
+
+### Implemented boundary
+
+The runner models serialized ownership and atomic commit under explicit assumptions. Effects are retained intentions with no delivery or acknowledgement. PostgreSQL stores definitions and experiment evidence, not live business instances. State execution is not yet coupled to simulated hosts, network links or power outages and does not generate or deploy applications. State/app version is 0.6.0; pure/data engines remain 0.5.0, timed application simulation remains 0.3.0, and existing schemas/digests are preserved. GitHub Actions checks native and Docker Compose execution with all six acceptance suites.
+
 ## v0.5 data contracts and structured components — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.

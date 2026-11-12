@@ -2,7 +2,7 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.5.0** adds reusable data contracts and a **Data** workspace: define records, entity keys and relationships, check complete sample datasets, compare contract versions and keep immutable validation evidence. Components can consume exact record types and ordered collections through five new pure operations. Healthcare and education examples reuse the same organization registry and scalar access policy. The stack remains Vue, Go and PostgreSQL; application/deployment simulation retains engine 0.3.0 and schemas 1–3.
+Version **0.6.0** adds an **owned-state workspace**. Reuse pure components as command decisions, declare durable and volatile state, create explicit effect intents, and test retries, rollback, lost replies and restart recovery with independently specified final expectations. Pharmacy and school-library examples share one reservation machine. Application/deployment simulation remains engine 0.3.0; pure/data evaluation remains 0.5.0. The new state runner is 0.6.0.
 
 The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. The [recursive component architecture](docs/COMPOSITION_ARCHITECTURE.md) develops the full recommendation from UML, BPMN, C4, ERDs and flowcharts; [COMPOSITION_CONTRACT.md](docs/COMPOSITION_CONTRACT.md) defines the precise v0.4 subset. Healthcare is a reference use case, not a kernel dependency. The [component authoring guide](docs/COMPONENT_SDK.md) explains the implemented package subset and the future SDK; external executable plugins and application generation are not yet implemented.
 
@@ -53,7 +53,7 @@ The editable sample model is in `examples/retry-pipeline.json`.
 
 `DATABASE_URL` is required. On startup, the Go service connects with a bounded timeout and initializes its tables and indexes in a transaction. The configured database must already exist; its role needs permission to create tables and indexes in the selected schema. Startup initialization is serialized across processes. The connection pool allows up to 10 open connections per app process.
 
-Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Separate component and data catalogs store immutable versions in the same database. Pure evaluations and fixture validations retain their exact inputs, definitions and results. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
+Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Separate component, data and state-machine catalogs store immutable versions in the same database. Pure evaluations, fixture validations and state scenarios retain their exact inputs, definitions and results. State-scenario persistence saves experimental evidence; modeled instances do not become live application sessions. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
 
 The old `STUDIO_DATA` setting and SQLite backend have been removed. Project JSON exports from the SQLite version can be imported into this version. Existing SQLite files and recorded history are not automatically migrated; retain the old database if you need that history.
 
@@ -92,7 +92,7 @@ The topology and geographic views are schematics. Coordinates and host tiers do 
 
 Engineers can start with the raw manifests in `examples/components/`. Validate a new profile offline using `go run ./cmd/componentcheck path/to/package.json`. Installation rejects unsupported kernels/capabilities and conflicts with an existing ID/version; changing a package requires a new version. See [the authoring guide](docs/COMPONENT_SDK.md).
 
-These profiles describe bounded processing, storage or routing behavior. They do not run a real hospital, logistics or finance application's business logic. The separate Components workspace adds typed pure logic; data contracts are available in Data; stateful behavior and application construction are future milestones.
+These profiles describe bounded processing, storage or routing behavior. They do not run a real hospital, logistics or finance application's business logic. The separate Components workspace adds typed pure logic; data contracts are available in Data and bounded owned-state scenarios in State. Application construction remains a future milestone.
 
 ## Typed recursive components
 
@@ -137,6 +137,25 @@ go run ./cmd/datacheck --compare path/to/old-new-locks.json
 
 Fixture files have `{contract,fixture}`; comparison files have `{old,new}` locked contracts. Invalid fixtures and potentially breaking comparisons print their verdict and exit unsuccessfully. See [DATA_AUTHORING.md](docs/DATA_AUTHORING.md) for the workflow and [DATA_CONTRACT.md](docs/DATA_CONTRACT.md) for exact semantics and limits.
 
+## Owned state, commands and recovery
+
+1. Open **State** and choose the pharmacy or school-library scenario. Both use the same locked reservation machine with independently owned instances.
+2. Inspect durable available quantity and the volatile accepted-command counter. Bindings connect state and command inputs to an existing pure decision bundle.
+3. Read the ordered commands, explicit restarts and named failure points. Run the scenario and compare the independent expected final states with the result.
+4. Inspect rollback before commit, a lost reply after commit, and identical retries. Replays return the original receipt without changing current state or creating another effect intent.
+5. Add or change an instance, command input, expected revision or failure point. Edit expected final values independently; empty expectations remain unverified.
+6. Install/export the exact machine, export the scenario, and reopen recorded evidence. Earlier evidence retains its original definition, initialization, steps and expectations.
+
+Effects are typed committed intentions. They do not send messages or perform external writes. Durable slots and receipts survive simulated restarts within a run; every separate run starts from its own initialization. This state model has no clock or infrastructure resource costs yet.
+
+```sh
+go run ./cmd/statecheck path/to/machine.json
+go run ./cmd/statecheck --lock path/to/machine-lock.json
+go run ./cmd/statecheck --run path/to/scenario-example.json
+```
+
+Scenario files have `{machine,scenario}`. See [STATE_AUTHORING.md](docs/STATE_AUTHORING.md) for the workflow and [STATE_CONTRACT.md](docs/STATE_CONTRACT.md) for exact ownership, commit, replay and recovery semantics.
+
 ## Included in this version
 
 - Requirement editing with no-duplicate-write, completion, and p95-latency assertions.
@@ -158,7 +177,9 @@ Fixture files have `{contract,fixture}`; comparison files have `{old,new}` locke
 - Atomic multi-package installation in the shared versioned catalog.
 - Reusable data contracts, entity/relationship editing, complete-fixture checks and directional compatibility comparison.
 - Exact record/collection ports and five structured operations in pure components.
-- Go unit/integration tests, five API acceptance suites, and a GitHub Actions workflow.
+- Owned durable/volatile state, command decisions, revision checks, idempotent receipts, explicit effect intents and deterministic recovery scenarios.
+- Independent state expectations, exact machine catalog versions and immutable scenario evidence.
+- Go unit/integration tests, six API acceptance suites, and a GitHub Actions workflow.
 
 ## Supported models and limits
 
@@ -208,11 +229,12 @@ node scripts/acceptance-continuum.mjs
 node scripts/acceptance-workflows.mjs
 node scripts/acceptance-composites.mjs
 node scripts/acceptance-data.mjs
+node scripts/acceptance-state.mjs
 ```
 
-Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/simulation`.
+Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/state ./internal/simulation`.
 
-Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract versions and evaluation/validation evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all five acceptance suites against the Compose stack.
+Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract/state-machine versions and evaluation/validation/scenario evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all six acceptance suites against the Compose stack.
 
 ## Repository structure
 
@@ -221,6 +243,7 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `web/` | Vue application, graphical editor, result views |
 | `internal/model/` | Versioned data model, example project, validation |
 | `internal/behavior/` | Bounded deterministic pure component evaluation and tests |
+| `internal/state/` | Owned-state scenarios, receipts, effect intents and restart evidence |
 | `internal/simulation/` | Deterministic event engine, metrics, assertions |
 | `internal/store/` | PostgreSQL projects, catalogs and immutable simulation/evaluation/validation evidence |
 | `internal/testutil/` | Isolated PostgreSQL test schemas |
@@ -228,10 +251,11 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `cmd/studio/` | Application entry point and graceful shutdown |
 | `cmd/componentcheck/` | Offline profile/bundle validation and composite test execution |
 | `cmd/datacheck/` | Offline data-contract, complete-fixture and compatibility checks |
+| `cmd/statecheck/` | Offline state-machine validation and scenario execution |
 | `scripts/` | Development launcher and API acceptance checks |
 
 ## Next increments
 
-Extend the documented composite foundation deliberately: optional and nested data types, effect/state ownership and typed message contracts; state machines and bounded parallel fork/join; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
+Extend the documented composite foundation deliberately: typed message delivery, effect adapters, event workflows and bounded parallel fork/join; coupling owned-state transitions to resource/failure simulation; optional and nested data types; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.
