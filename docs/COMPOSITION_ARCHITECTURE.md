@@ -8,17 +8,18 @@ LCE Studio should let engineers define a small behaviour precisely, compose it i
 
 The implementation stack remains Vue, TypeScript, Go and PostgreSQL. This architecture does not prescribe a VM, container technology, cloud provider or infrastructure orchestrator. Runtime targets are selected through explicit adapters.
 
-This document distinguishes three stages:
+This document distinguishes delivered increments from the target architecture:
 
 | Stage | Meaning |
 | --- | --- |
 | Delivered v0.3 | Processing profiles, portable locks, weighted exclusive workflows, deployment/resource experiments and recorded evidence described in the existing contracts. |
-| v0.4 increment | A separate Components workbench for bounded, typed, pure evaluation and recursive composition. Package schema 2 extends the existing catalog; project schemas 1–3 and their timed simulation stay unchanged. [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md) defines the exact syntax, limits, endpoints and evidence. |
-| Target architecture | Stateful workflows, richer data contracts, application generation, runtime adapters, federation and calibrated simulation. These require subsequent implementation and acceptance evidence. |
+| Delivered v0.4 | A separate Components workbench for bounded, typed, pure evaluation and recursive composition. Package schema 2 extends the existing catalog; project schemas 1–3 and their timed simulation stay unchanged. [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md) defines the exact syntax, limits, endpoints and evidence. |
+| v0.5 increment | Reusable data contracts, required scalar records, ordered record collections, entity/key/relationship editing and fixture checks. Package schema3 connects exact data types to pure components and adds five operations. [DATA_CONTRACT.md](DATA_CONTRACT.md) defines the supported subset. |
+| Target architecture | Stateful workflows, richer data types, application generation, runtime adapters, federation and calibrated simulation. These require subsequent implementation and acceptance evidence. |
 
 The proposal is inspired by UML, BPMN, C4, ER modelling and flowcharts. It does not claim full conformance, import/export compatibility or execution support for those languages. A familiar diagram shape never implies support for all semantics associated with that shape.
 
-The v0.4 slice supports three scalar types (`boolean`, bounded `integer`, `string`) and eleven pure operations: identity, equality, integer less-than/less-or-equal, Boolean and/or/not, eager value selection, integer addition/subtraction and string concatenation. Nested components use exact version/digest references. Bundles carry all reachable definitions, and successful evaluations retain immutable PostgreSQL snapshots of their bundle, inputs and trace. Definition tests compare typed expected and actual outputs. Records, collections, mutable state, business effects and conditional application routing remain future work.
+The v0.4 slice supports three scalar types (`boolean`, bounded `integer`, `string`) and eleven pure operations: identity, equality, integer less-than/less-or-equal, Boolean and/or/not, eager value selection, integer addition/subtraction and string concatenation. Nested components use exact version/digest references. Bundles carry all reachable definitions, and successful evaluations retain immutable PostgreSQL snapshots of their bundle, inputs and trace. Definition tests compare typed expected and actual outputs. v0.5 adds bounded record construction/field access and collection count/index/append operations. Mutable state, business effects and conditional application routing remain future work.
 
 Composite definitions cannot yet be placed into the existing application graph. There is no project schema 4, nested deployment or timed-resource integration in this slice. A functional evaluation proves only the supported input/output computation. These explicit boundaries keep the new component foundation usable without changing the meaning of earlier resource experiments.
 

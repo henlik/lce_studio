@@ -1,5 +1,32 @@
 # Verification
 
+## v0.5 data contracts and structured components — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.
+
+- Go race tests, vet and the production backend build passed. The Vue TypeScript and production build passed without adding dependencies.
+- The five live API suites cover 64 acceptance groups: 13 legacy, 11 continuum, 12 workflow, 12 scalar composite and 16 data/structured groups.
+- Independent data checks cover compound-key tuple collisions, primary/unique keys, required foreign keys, reverse cardinality, join entities, cyclic relationships, closed records, directional compatibility, deterministic diagnostics and row/byte/issue limits.
+- Structured checks cover all five added operations, nominal equality and selection, empty/ordered collections, invalid indexes, capacity limits, deep-copy isolation, pre-copy value budgets, trace amplification and cancellation. Legacy package digests are pinned by regression tests; schema2 cannot transport structured values through nested calls.
+- Both domain wrappers match all sixteen combinations of four access conditions. Each uses eleven primitive operations and three component invocations, retaining the exact earlier scalar policy and tenant-checker dependencies.
+- Portable closure checks exercise inherited record references, repeated exact data locks, conflicting locks, eight locks per definition and thirty-two distinct locks per bundle. Catalog tests cover concurrent identical/conflicting installs, atomic capacity limits, separate component/data catalogs and reopening persisted definitions.
+- Valid and invalid fixture verdicts retain immutable PostgreSQL snapshots; malformed and over-budget requests do not create evidence. The offline data CLI checks strict JSON, exact locks, fixtures and directional comparisons. Both bundled complete datasets pass with three entities and six rows.
+- Additional bounded composition fuzzing completed 1,119 executions without failure during runtime review.
+
+### Production browser workflow
+
+- Opened both data examples and recorded valid six-row fixtures. Duplicating an organization ID produced deterministic duplicate-key and missing/ambiguous foreign-key findings. Two subjects referencing the same organization violated an edited one-to-one relationship.
+- Changed a row and observed earlier evidence become stale; reopened saved valid and invalid snapshots. Installing a contract succeeded, while changing an installed ID/version returned an explicit conflict. Adding a required field produced a breaking-change comparison.
+- Dragged an entity, exported its exact contract and reimported it with the changed coordinates intact. Inspected all relationship labels and the corrected direction of diagram paths.
+- Verified pending JSON survives hide/reopen. Applying it after newer graphical edits prompts before replacement; cancelling preserves both pending text and graphical changes.
+- Evaluated the structured healthcare wrapper as both permit and tenant-mismatch denial; a missing required Boolean returned an input error. Both healthcare and school definition suites passed five cases each.
+- Built a fresh collection-count component through the graphical editor, embedded the installed organization contract, wired its nominal collection input and integer output, and obtained zero for an empty collection and one for a single record. Captured the result as a test, passed that test, and installed the component. An exact typed empty-collection literal also validated and evaluated to zero.
+- Checked desktop presentation and application-origin browser logs; no application-origin console warnings or errors were observed. Browser extension messages are outside this statement. Mobile-specific visual verification remains incomplete because viewport resizing is not exposed by the browser API.
+
+### Implemented boundary
+
+Records contain required scalar fields; collections hold ordered records of one exact nominal type. These checks do not create SQL tables, enforce live writes, authenticate users, generate applications or deploy systems. Optional/null fields, nested records, scalar arrays, state/effects and migrations remain later increments. Package schema3 adds structured pure composition; application schemas 1–3 and timed simulation engine 0.3.0 remain unchanged. The app and pure evaluator use version 0.5.0. Docker execution is checked separately by the GitHub Actions Compose job using all five acceptance suites.
+
 ## v0.4 typed recursive components — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.

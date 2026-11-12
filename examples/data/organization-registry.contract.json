@@ -1,0 +1,131 @@
+{
+  "contract": {
+    "schemaVersion": 1,
+    "id": "lce.organization-registry",
+    "version": "1.0.0",
+    "name": "Organization registry",
+    "description": "Required scalar organization, subject and resource records with explicit entity identity and tenant references. Synthetic fixtures demonstrate data integrity, not production authorization or tenancy enforcement.",
+    "author": "LCE Studio contributors",
+    "license": "MIT",
+    "records": [
+      {
+        "name": "Organization",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "Subject",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "type": "string"
+          },
+          {
+            "name": "role",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "Resource",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "type": "string"
+          }
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "name": "Organizations",
+        "record": "Organization",
+        "primaryKey": [
+          "id"
+        ],
+        "uniqueKeys": [],
+        "position": {
+          "x": 370,
+          "y": 140
+        }
+      },
+      {
+        "name": "Subjects",
+        "record": "Subject",
+        "primaryKey": [
+          "id"
+        ],
+        "uniqueKeys": [],
+        "position": {
+          "x": 40,
+          "y": 70
+        }
+      },
+      {
+        "name": "Resources",
+        "record": "Resource",
+        "primaryKey": [
+          "id"
+        ],
+        "uniqueKeys": [],
+        "position": {
+          "x": 700,
+          "y": 70
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "name": "SubjectOrganization",
+        "fromEntity": "Subjects",
+        "fromFields": [
+          "tenantId"
+        ],
+        "toEntity": "Organizations",
+        "toFields": [
+          "id"
+        ],
+        "minSources": 0,
+        "maxSources": 0
+      },
+      {
+        "name": "ResourceOrganization",
+        "fromEntity": "Resources",
+        "fromFields": [
+          "tenantId"
+        ],
+        "toEntity": "Organizations",
+        "toFields": [
+          "id"
+        ],
+        "minSources": 0,
+        "maxSources": 0
+      }
+    ]
+  },
+  "digest": "1a46e290cf1fe661ef726c1bccc0eddd1728b90888621ab3ab67fe406f180dd9"
+}

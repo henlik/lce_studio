@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Version        = "0.4.0"
+	Version        = "0.5.0"
 	MaxOperations  = 256
 	MaxInvocations = 256
 	MaxDepth       = 8
@@ -56,6 +56,7 @@ type preparedBundle struct {
 	root       model.ComponentRef
 	hash       string
 	components map[model.ComponentRef]preparedComponent
+	contracts  []model.DataContractLock
 }
 
 type evaluator struct {
@@ -91,6 +92,7 @@ func prepare(ctx context.Context, bundle model.ComponentBundle) (*preparedBundle
 	}
 	hash := sha256.Sum256(encoded)
 	p := &preparedBundle{root: bundle.Root, hash: hex.EncodeToString(hash[:]), components: make(map[model.ComponentRef]preparedComponent, len(bundle.Packages))}
+	p.contracts, _ = model.BundleDataContracts(bundle) // already checked by bundle validation
 	for _, lock := range bundle.Packages {
 		if err := ctx.Err(); err != nil {
 			return nil, fmt.Errorf("$: %w", err)
@@ -143,7 +145,7 @@ func (e *evaluator) call(ref model.ComponentRef, inputs map[string]model.TypedVa
 		return nil, fmt.Errorf("%s: unresolved component %s@%s", path, ref.PackageID, ref.Version)
 	}
 	b := component.definition.Behavior
-	if issues := model.ValidateBehaviorValues(inputs, b.Inputs); len(issues) != 0 {
+	if issues := validateCallValues(component.definition.SchemaVersion, inputs, b.Inputs, e.prepared.contracts); len(issues) != 0 {
 		return nil, fmt.Errorf("%s: invalid inputs at %s: %s", path, issues[0].Path, issues[0].Message)
 	}
 	inputs = cloneValues(inputs)
@@ -170,7 +172,11 @@ func (e *evaluator) call(ref model.ComponentRef, inputs map[string]model.TypedVa
 			}
 			e.result.Operations++
 			var value model.TypedValue
-			value, err = primitive(node.Op, args)
+			if component.definition.SchemaVersion == 3 {
+				value, err = structuredPrimitive(node, args, e.prepared.contracts)
+			} else {
+				value, err = primitive(node.Op, args)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", nodePath, err)
 			}
@@ -186,7 +192,7 @@ func (e *evaluator) call(ref model.ComponentRef, inputs map[string]model.TypedVa
 	if err != nil {
 		return nil, fmt.Errorf("%s: outputs: %w", path, err)
 	}
-	if issues := model.ValidateBehaviorValues(outputs, b.Outputs); len(issues) != 0 {
+	if issues := validateCallValues(component.definition.SchemaVersion, outputs, b.Outputs, e.prepared.contracts); len(issues) != 0 {
 		return nil, fmt.Errorf("%s: invalid outputs at %s: %s", path, issues[0].Path, issues[0].Message)
 	}
 	if err := e.emit(Event{Path: path, Kind: "component_exit", Component: refCopy(ref), Outputs: cloneValues(outputs)}); err != nil {
@@ -239,7 +245,11 @@ func resolveBindings(bindings map[string]model.BehaviorBinding, inputs map[strin
 		if !found {
 			return nil, fmt.Errorf("binding %s has an unresolved source", name)
 		}
-		outputs[name] = cloneValue(value)
+		// Bindings are internal read-only references. The caller validates the
+		// aggregate map before a call/kernel copies values, preventing repeated
+		// bindings from amplifying allocations before the public-map bound.
+		// Every result and event snapshot is independently deep-copied.
+		outputs[name] = value
 	}
 	return outputs, nil
 }
@@ -255,6 +265,13 @@ func sortedKeys[T any](values map[string]T) []string {
 
 func refCopy(ref model.ComponentRef) *model.ComponentRef { return &ref }
 
+func validateCallValues(schema int, values map[string]model.TypedValue, ports []model.BehaviorPort, contracts []model.DataContractLock) []model.ValidationIssue {
+	if schema == 3 {
+		return model.ValidateStructuredBehaviorValues(values, ports, contracts)
+	}
+	return model.ValidateBehaviorValues(values, ports)
+}
+
 func cloneValue(value model.TypedValue) model.TypedValue {
 	copy := value
 	if value.Boolean != nil {
@@ -268,6 +285,20 @@ func cloneValue(value model.TypedValue) model.TypedValue {
 	if value.String != nil {
 		v := *value.String
 		copy.String = &v
+	}
+	if value.RecordRef != nil {
+		ref := *value.RecordRef
+		copy.RecordRef = &ref
+	}
+	if value.Record != nil {
+		copy.Record = cloneValues(value.Record)
+	}
+	if value.Collection != nil {
+		values := make([]model.TypedValue, len(*value.Collection))
+		for i, item := range *value.Collection {
+			values[i] = cloneValue(item)
+		}
+		copy.Collection = &values
 	}
 	return copy
 }

@@ -1,0 +1,95 @@
+{
+  "name": "Education registry",
+  "rows": {
+    "Organizations": [
+      {
+        "id": {
+          "type": "string",
+          "string": "tenant-alpha"
+        },
+        "name": {
+          "type": "string",
+          "string": "Example school"
+        }
+      },
+      {
+        "id": {
+          "type": "string",
+          "string": "tenant-beta"
+        },
+        "name": {
+          "type": "string",
+          "string": "Independent organization"
+        }
+      }
+    ],
+    "Resources": [
+      {
+        "id": {
+          "type": "string",
+          "string": "resource-1"
+        },
+        "scope": {
+          "type": "string",
+          "string": "student:read"
+        },
+        "tenantId": {
+          "type": "string",
+          "string": "tenant-alpha"
+        }
+      },
+      {
+        "id": {
+          "type": "string",
+          "string": "resource-2"
+        },
+        "scope": {
+          "type": "string",
+          "string": "student:read"
+        },
+        "tenantId": {
+          "type": "string",
+          "string": "tenant-beta"
+        }
+      }
+    ],
+    "Subjects": [
+      {
+        "active": {
+          "type": "boolean",
+          "boolean": true
+        },
+        "id": {
+          "type": "string",
+          "string": "subject-1"
+        },
+        "role": {
+          "type": "string",
+          "string": "teacher"
+        },
+        "tenantId": {
+          "type": "string",
+          "string": "tenant-alpha"
+        }
+      },
+      {
+        "active": {
+          "type": "boolean",
+          "boolean": false
+        },
+        "id": {
+          "type": "string",
+          "string": "subject-2"
+        },
+        "role": {
+          "type": "string",
+          "string": "teacher"
+        },
+        "tenantId": {
+          "type": "string",
+          "string": "tenant-beta"
+        }
+      }
+    ]
+  }
+}

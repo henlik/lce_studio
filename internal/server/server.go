@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.4.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.5.0"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return
@@ -103,6 +103,32 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Valid  bool                    `json:"valid"`
 			Issues []model.ValidationIssue `json:"issues"`
 		}{len(issues) == 0, issues})
+	case path == "/api/data/examples":
+		s.dataExamples(w, r)
+	case path == "/api/data/prepare":
+		s.dataPrepare(w, r)
+	case path == "/api/data/validate-lock":
+		s.dataValidateLock(w, r)
+	case path == "/api/data/contracts":
+		s.dataContracts(w, r)
+	case path == "/api/data/contract":
+		s.dataContract(w, r)
+	case path == "/api/data/check":
+		s.dataCheck(w, r, false)
+	case path == "/api/data/validate":
+		s.dataCheck(w, r, true)
+	case path == "/api/data/validations":
+		s.dataValidations(w, r)
+	case strings.HasPrefix(path, "/api/data/validations/"):
+		s.dataValidation(w, r, strings.TrimPrefix(path, "/api/data/validations/"))
+	case path == "/api/data/compare":
+		s.dataCompare(w, r)
+	case path == "/api/data/values":
+		s.dataValues(w, r)
+	case path == "/api/components/structured-primitives":
+		s.structuredPrimitives(w, r)
+	case path == "/api/components/structured-examples":
+		s.structuredExamples(w, r)
 	case path == "/api/components/primitives":
 		s.componentPrimitives(w, r)
 	case path == "/api/components/composite-examples":

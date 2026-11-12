@@ -31,18 +31,19 @@ type ComponentConfig struct {
 // ComponentPackage is a declarative profile of an existing bounded kernel.
 // Its field order and integer types define the typed JSON digest encoding.
 type ComponentPackage struct {
-	SchemaVersion int             `json:"schemaVersion"`
-	ID            string          `json:"id"`
-	Version       string          `json:"version"`
-	Name          string          `json:"name"`
-	Description   string          `json:"description"`
-	Author        string          `json:"author"`
-	License       string          `json:"license"`
-	Kernel        string          `json:"kernel"`
-	Capabilities  []string        `json:"capabilities"`
-	Config        ComponentConfig `json:"config"`
-	Behavior      *Behavior       `json:"behavior,omitempty"`
-	Tests         []BehaviorCase  `json:"tests,omitempty"`
+	SchemaVersion int                `json:"schemaVersion"`
+	ID            string             `json:"id"`
+	Version       string             `json:"version"`
+	Name          string             `json:"name"`
+	Description   string             `json:"description"`
+	Author        string             `json:"author"`
+	License       string             `json:"license"`
+	Kernel        string             `json:"kernel"`
+	Capabilities  []string           `json:"capabilities"`
+	Config        ComponentConfig    `json:"config"`
+	Behavior      *Behavior          `json:"behavior,omitempty"`
+	Tests         []BehaviorCase     `json:"tests,omitempty"`
+	DataContracts []DataContractLock `json:"dataContracts,omitempty"`
 }
 
 type PackageLock struct {
@@ -71,8 +72,8 @@ func ValidateComponentPackage(p ComponentPackage) []ValidationIssue {
 			}
 		}
 	}
-	if p.SchemaVersion != 1 && p.SchemaVersion != 2 {
-		add("schemaVersion", "Supported component package schema versions are 1 (profiles) and 2 (pure composites).")
+	if p.SchemaVersion != 1 && p.SchemaVersion != 2 && p.SchemaVersion != 3 {
+		add("schemaVersion", "Supported component package schema versions are 1 (profiles), 2 (scalar composites), and 3 (structured composites).")
 	}
 	if !safeID.MatchString(p.ID) || !strings.Contains(p.ID, ".") {
 		add("id", "Use a namespaced safe identifier containing a dot, such as example.queued-worker.")
@@ -84,9 +85,26 @@ func ValidateComponentPackage(p ComponentPackage) []ValidationIssue {
 	text("description", p.Description, 4000, false)
 	text("author", p.Author, 200, true)
 	text("license", p.License, 200, true)
-	if p.SchemaVersion == 2 {
+	if p.SchemaVersion != 3 && p.DataContracts != nil {
+		add("dataContracts", "Data contracts require component package schema version 3.")
+	}
+	if p.SchemaVersion == 2 || p.SchemaVersion == 3 {
+		if len(p.DataContracts) > 8 {
+			add("dataContracts", "At most 8 data contract locks are supported per component.")
+		} else {
+			seen := make(map[compositionIdentity]bool)
+			for i, lock := range p.DataContracts {
+				path := fmt.Sprintf("dataContracts[%d]", i)
+				issues = append(issues, prefixBehaviorIssues(path, ValidateDataContractLock(lock))...)
+				key := compositionIdentity{lock.Contract.ID, lock.Contract.Version}
+				if seen[key] {
+					add(path, "Data contract ID/version must be unique within a component.")
+				}
+				seen[key] = true
+			}
+		}
 		if p.Kernel != "composite" {
-			add("kernel", "Schema 2 packages require the composite kernel.")
+			add("kernel", "Schema 2/3 packages require the composite kernel.")
 		}
 		if len(p.Capabilities) != 2 || p.Capabilities[0] != "design" || p.Capabilities[1] != "evaluate" {
 			add("capabilities", `Composite capabilities must be exactly ["design","evaluate"] in this order.`)

@@ -2,7 +2,7 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.4.0** adds a Components workbench for typed, recursively composed behaviour. Build pure logic from eleven primitives, nest exact package versions, evaluate real input/output values, run component tests, and retain immutable PostgreSQL evaluation snapshots. Healthcare and education examples reuse the same authorization policy and tenant-check definitions. Existing application/deployment simulation remains supported with unchanged schema 1–3 semantics and simulation engine 0.3.0. The stack is Vue and Go with PostgreSQL; there is no Python runtime dependency.
+Version **0.5.0** adds reusable data contracts and a **Data** workspace: define records, entity keys and relationships, check complete sample datasets, compare contract versions and keep immutable validation evidence. Components can consume exact record types and ordered collections through five new pure operations. Healthcare and education examples reuse the same organization registry and scalar access policy. The stack remains Vue, Go and PostgreSQL; application/deployment simulation retains engine 0.3.0 and schemas 1–3.
 
 The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. The [recursive component architecture](docs/COMPOSITION_ARCHITECTURE.md) develops the full recommendation from UML, BPMN, C4, ERDs and flowcharts; [COMPOSITION_CONTRACT.md](docs/COMPOSITION_CONTRACT.md) defines the precise v0.4 subset. Healthcare is a reference use case, not a kernel dependency. The [component authoring guide](docs/COMPONENT_SDK.md) explains the implemented package subset and the future SDK; external executable plugins and application generation are not yet implemented.
 
@@ -53,7 +53,7 @@ The editable sample model is in `examples/retry-pipeline.json`.
 
 `DATABASE_URL` is required. On startup, the Go service connects with a bounded timeout and initializes its tables and indexes in a transaction. The configured database must already exist; its role needs permission to create tables and indexes in the selected schema. Startup initialization is serialized across processes. The connection pool allows up to 10 open connections per app process.
 
-Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. The component catalog stores immutable package versions in the same database. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
+Projects and immutable run snapshots are stored as PostgreSQL JSON, with indexed IDs and timestamp columns. Separate component and data catalogs store immutable versions in the same database. Pure evaluations and fixture validations retain their exact inputs, definitions and results. Health checks return HTTP 503 when PostgreSQL is unavailable. Deleting a project retains its recorded run snapshots.
 
 The old `STUDIO_DATA` setting and SQLite backend have been removed. Project JSON exports from the SQLite version can be imported into this version. Existing SQLite files and recorded history are not automatically migrated; retain the old database if you need that history.
 
@@ -92,7 +92,7 @@ The topology and geographic views are schematics. Coordinates and host tiers do 
 
 Engineers can start with the raw manifests in `examples/components/`. Validate a new profile offline using `go run ./cmd/componentcheck path/to/package.json`. Installation rejects unsupported kernels/capabilities and conflicts with an existing ID/version; changing a package requires a new version. See [the authoring guide](docs/COMPONENT_SDK.md).
 
-These profiles describe bounded processing, storage or routing behavior. They do not run a real hospital, logistics or finance application's business logic. The separate Components workspace adds typed pure logic; structured data contracts, stateful behavior and application construction are future milestones.
+These profiles describe bounded processing, storage or routing behavior. They do not run a real hospital, logistics or finance application's business logic. The separate Components workspace adds typed pure logic; data contracts are available in Data; stateful behavior and application construction are future milestones.
 
 ## Typed recursive components
 
@@ -114,6 +114,29 @@ go run ./cmd/componentcheck --test path/to/bundle.json
 
 These commands perform no catalog or network lookup. Test mode returns a nonzero exit status for failed or empty test suites. See [COMPONENT_SDK.md](docs/COMPONENT_SDK.md) for authoring and [COMPOSITION_ARCHITECTURE.md](docs/COMPOSITION_ARCHITECTURE.md) for subsequent state, workflow, data, deployment and federation milestones.
 
+## Data contracts and structured components
+
+1. Open **Data** and choose a bundled healthcare or education fixture. Both use the same exact organization-registry contract.
+2. Inspect the records, entity keys and relationship diagram. `Subjects.tenantId` and `Resources.tenantId` reference `Organizations.id`; every source must have a matching organization.
+3. Validate the complete fixture, then duplicate an ID or reference a missing organization and validate again. The result identifies the row or relationship that failed. Both verdicts retain their own contract and data snapshots.
+4. Create or edit a contract. Add required scalar fields, entity primary/unique keys and foreign-key relationships. Set the reverse cardinality to require at least one source or allow at most one source per target.
+5. Install an exact immutable contract version or export its lock. Compare an edited version with an earlier version before upgrading consumers; compatibility is directional and does not change existing locks.
+6. Open **Components**, load a structured access example, and inspect the `subject` and `resource` record inputs. Field-extraction nodes feed the existing reusable scalar policy. Change a supplied tenant or role and inspect the decision and nested trace.
+7. Build new record/collection components using `record_make`, `record_get`, `collection_count`, `collection_at` and `collection_append`. Identity, equality and eager selection also support exact structured types in component schema3.
+
+Records currently contain **required scalar fields**. Collections are ordered sequences of one exact record type. Optional/null fields, embedded nested records, live database writes, SQL generation and migrations are later increments. A valid fixture is evidence about that supplied complete snapshot; it does not certify an external database. Data-contract and component versions are separate identities with exact locks.
+
+Offline authoring checks require no server or database:
+
+```sh
+go run ./cmd/datacheck path/to/contract.json
+go run ./cmd/datacheck --lock path/to/contract-lock.json
+go run ./cmd/datacheck --fixture path/to/fixture-example.json
+go run ./cmd/datacheck --compare path/to/old-new-locks.json
+```
+
+Fixture files have `{contract,fixture}`; comparison files have `{old,new}` locked contracts. Invalid fixtures and potentially breaking comparisons print their verdict and exit unsuccessfully. See [DATA_AUTHORING.md](docs/DATA_AUTHORING.md) for the workflow and [DATA_CONTRACT.md](docs/DATA_CONTRACT.md) for exact semantics and limits.
+
 ## Included in this version
 
 - Requirement editing with no-duplicate-write, completion, and p95-latency assertions.
@@ -133,7 +156,9 @@ These commands perform no catalog or network lookup. Test mode returns a nonzero
 - Strict model validation, bounded input, same-origin browser writes, and local defaults.
 - Typed pure composite components, nested exact dependencies, graphical editing, functional evaluation, tests and immutable evaluation history.
 - Atomic multi-package installation in the shared versioned catalog.
-- Go unit/integration tests, four API acceptance suites, and a GitHub Actions workflow.
+- Reusable data contracts, entity/relationship editing, complete-fixture checks and directional compatibility comparison.
+- Exact record/collection ports and five structured operations in pure components.
+- Go unit/integration tests, five API acceptance suites, and a GitHub Actions workflow.
 
 ## Supported models and limits
 
@@ -182,11 +207,12 @@ node scripts/acceptance.mjs
 node scripts/acceptance-continuum.mjs
 node scripts/acceptance-workflows.mjs
 node scripts/acceptance-composites.mjs
+node scripts/acceptance-data.mjs
 ```
 
 Create `studio_test` only once. Storage and API tests create a unique schema per test and clean it up afterwards; the test role needs `CREATE` permission on the test database. Missing or unreachable PostgreSQL fails these tests instead of silently skipping them. Model, functional evaluator and simulation tests can run without a database using `go test ./internal/model ./internal/behavior ./internal/simulation`.
 
-Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component versions and evaluation evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all four acceptance suites against the Compose stack.
+Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The acceptance scripts delete their test projects afterwards; recorded runs, component/data-contract versions and evaluation/validation evidence remain. Start the server with `DATABASE_URL="$TEST_DATABASE_URL"` and use a disposable database for acceptance testing. GitHub Actions provisions PostgreSQL 17 and runs all of these checks. A separate job builds the Docker image and runs all five acceptance suites against the Compose stack.
 
 ## Repository structure
 
@@ -196,15 +222,16 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 | `internal/model/` | Versioned data model, example project, validation |
 | `internal/behavior/` | Bounded deterministic pure component evaluation and tests |
 | `internal/simulation/` | Deterministic event engine, metrics, assertions |
-| `internal/store/` | PostgreSQL projects and immutable run records |
+| `internal/store/` | PostgreSQL projects, catalogs and immutable simulation/evaluation/validation evidence |
 | `internal/testutil/` | Isolated PostgreSQL test schemas |
 | `internal/server/` | HTTP API and frontend serving |
 | `cmd/studio/` | Application entry point and graceful shutdown |
 | `cmd/componentcheck/` | Offline profile/bundle validation and composite test execution |
+| `cmd/datacheck/` | Offline data-contract, complete-fixture and compatibility checks |
 | `scripts/` | Development launcher and API acceptance checks |
 
 ## Next increments
 
-Extend the documented composite foundation deliberately: structured data/ER constraints, effect/state ownership and typed message contracts; state machines and bounded parallel fork/join; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
+Extend the documented composite foundation deliberately: optional and nested data types, effect/state ownership and typed message contracts; state machines and bounded parallel fork/join; isolated external component adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.

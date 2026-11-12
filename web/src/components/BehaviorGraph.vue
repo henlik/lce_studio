@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DataContractLock } from "../dataTypes";
 import { computed, ref } from "vue";
 import { Maximize2, Minus, Plus } from "lucide-vue-next";
 import {
@@ -17,6 +18,7 @@ const props = defineProps<{
   primitives: PrimitiveSpec[];
   selectedId: string;
   readonly?: boolean;
+  contracts?: DataContractLock[];
 }>();
 const emit = defineEmits<{
   select: [id: string];
@@ -31,12 +33,19 @@ let drag:
   | undefined;
 const nodes = computed(() =>
   props.behavior.nodes.map((node) => {
-    const inputs = nodeInputs(node, props.dependencies, props.primitives);
+    const inputs = nodeInputs(
+      node,
+      props.dependencies,
+      props.primitives,
+      props.contracts,
+      props.behavior,
+    );
     const outputs = nodeOutputs(
       node,
       props.behavior,
       props.dependencies,
       props.primitives,
+      props.contracts,
     );
     return {
       node,

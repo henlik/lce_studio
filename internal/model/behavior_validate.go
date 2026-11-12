@@ -36,6 +36,9 @@ func behaviorTextValid(value string, max int, required bool) bool {
 // ValidateTypedValue rejects null/mixed values, coercion and browser-unsafe numbers.
 func ValidateTypedValue(v TypedValue) []ValidationIssue {
 	issues := make([]ValidationIssue, 0)
+	if v.RecordRef != nil || v.Record != nil || v.Collection != nil {
+		issues = append(issues, ValidationIssue{"", "Scalar values cannot contain structured value members."})
+	}
 	count := 0
 	if v.Boolean != nil {
 		count++
@@ -160,8 +163,15 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 			if _, exists := result[port.Name]; exists {
 				add(at+".name", "Port names must be unique within their direction.")
 			}
-			if !scalarType(port.Type) {
-				add(at+".type", "Public port types must be boolean, integer or string.")
+			if p.SchemaVersion == 3 {
+				issues = append(issues, prefixBehaviorIssues(at, validateBehaviorValueType(PortBehaviorType(port)))...)
+			} else {
+				if !scalarType(port.Type) {
+					add(at+".type", "Public port types must be boolean, integer or string.")
+				}
+				if port.RecordRef != nil {
+					add(at+".recordRef", "Record references require component schema version 3.")
+				}
 			}
 			result[port.Name] = port.Type
 		}
@@ -170,7 +180,11 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 	inputs, outputs := ports("behavior.inputs", b.Inputs), ports("behavior.outputs", b.Outputs)
 	nodes := make(map[string]bool)
 	knownOps := make(map[string]bool)
-	for _, spec := range PrimitiveSpecs() {
+	specs := PrimitiveSpecs()
+	if p.SchemaVersion == 3 {
+		specs = StructuredPrimitiveSpecs()
+	}
+	for _, spec := range specs {
 		knownOps[spec.Op] = true
 	}
 	for i, node := range b.Nodes {
@@ -190,6 +204,11 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 		}
 		if node.Op != "" && !knownOps[node.Op] {
 			add(at+".op", "Unsupported pure primitive.")
+		}
+		if p.SchemaVersion == 3 {
+			issues = append(issues, prefixBehaviorIssues(at, validateStructuredNodeMetadata(node))...)
+		} else if node.RecordRef != nil || node.Field != "" {
+			add(at, "Structured node metadata requires component schema version 3.")
 		}
 		if node.Component != nil {
 			issues = append(issues, prefixBehaviorIssues(at+".component", ValidateComponentReference(*node.Component))...)
@@ -232,7 +251,11 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 			}
 		}
 		if value.Literal != nil {
-			issues = append(issues, prefixBehaviorIssues(path+".literal", ValidateTypedValue(*value.Literal))...)
+			if p.SchemaVersion == 3 {
+				issues = append(issues, prefixBehaviorIssues(path+".literal", validateStructuredShape(*value.Literal))...)
+			} else {
+				issues = append(issues, prefixBehaviorIssues(path+".literal", ValidateTypedValue(*value.Literal))...)
+			}
 		}
 	}
 	for i, node := range b.Nodes {
@@ -268,8 +291,16 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 			add(at+".name", "Test names must be unique.")
 		}
 		names[test.Name] = true
-		issues = append(issues, prefixBehaviorIssues(at+".inputs", ValidateBehaviorValues(test.Inputs, b.Inputs))...)
-		issues = append(issues, prefixBehaviorIssues(at+".expected", ValidateBehaviorValues(test.Expected, b.Outputs))...)
+		if p.SchemaVersion == 3 {
+			issues = append(issues, prefixBehaviorIssues(at+".inputs", validateStructuredBehaviorValues(test.Inputs, b.Inputs, nil, false))...)
+			issues = append(issues, prefixBehaviorIssues(at+".expected", validateStructuredBehaviorValues(test.Expected, b.Outputs, nil, false))...)
+		} else {
+			issues = append(issues, prefixBehaviorIssues(at+".inputs", ValidateBehaviorValues(test.Inputs, b.Inputs))...)
+			issues = append(issues, prefixBehaviorIssues(at+".expected", ValidateBehaviorValues(test.Expected, b.Outputs))...)
+		}
+	}
+	if p.SchemaVersion == 3 && len(issues) == 0 && len(p.DataContracts) <= 8 {
+		issues = append(issues, validateLocalStructuredReferences(p)...)
 	}
 	return issues
 }

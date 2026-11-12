@@ -19,7 +19,7 @@ func TestComponentPackageValidation(t *testing.T) {
 		name, path string
 		mutate     func(*ComponentPackage)
 	}{
-		{"schema", "schemaVersion", func(p *ComponentPackage) { p.SchemaVersion = 3 }},
+		{"schema", "schemaVersion", func(p *ComponentPackage) { p.SchemaVersion = 4 }},
 		{"namespace", "id", func(p *ComponentPackage) { p.ID = "worker" }},
 		{"unsafe ID", "id", func(p *ComponentPackage) { p.ID = "example/worker" }},
 		{"long ID", "id", func(p *ComponentPackage) { p.ID = strings.Repeat("a", 128) + ".worker" }},

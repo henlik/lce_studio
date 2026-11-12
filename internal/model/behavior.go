@@ -1,15 +1,19 @@
 package model
 
 type TypedValue struct {
-	Type    string  `json:"type"`
-	Boolean *bool   `json:"boolean,omitempty"`
-	Integer *int64  `json:"integer,omitempty"`
-	String  *string `json:"string,omitempty"`
+	Type       string                `json:"type"`
+	Boolean    *bool                 `json:"boolean,omitempty"`
+	Integer    *int64                `json:"integer,omitempty"`
+	String     *string               `json:"string,omitempty"`
+	RecordRef  *DataTypeRef          `json:"recordRef,omitempty"`
+	Record     map[string]TypedValue `json:"record,omitempty"`
+	Collection *[]TypedValue         `json:"collection,omitempty"`
 }
 
 type BehaviorPort struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name      string       `json:"name"`
+	Type      string       `json:"type"`
+	RecordRef *DataTypeRef `json:"recordRef,omitempty"`
 }
 
 type BehaviorBinding struct {
@@ -25,6 +29,8 @@ type BehaviorNode struct {
 	Component *ComponentRef              `json:"component,omitempty"`
 	Inputs    map[string]BehaviorBinding `json:"inputs"`
 	Position  Position                   `json:"position"`
+	RecordRef *DataTypeRef               `json:"recordRef,omitempty"`
+	Field     string                     `json:"field,omitempty"`
 }
 
 type Behavior struct {

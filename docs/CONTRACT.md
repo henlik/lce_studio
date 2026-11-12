@@ -32,7 +32,7 @@ internal/simulation exposes `func Run(context.Context, model.Project) (model.Run
 
 ## HTTP API (same-origin)
 
-GET /api/health -> {status:'ok',version:'0.4.0'}
+GET /api/health -> {status:'ok',version:'0.5.0'}
 GET /api/example -> Project
 GET /api/example?template=continuum -> schema v2 Project; template=retry is equivalent to the legacy default; unknown template returns 400
 GET /api/example?template=branching -> schema3 Project with embedded component locks
@@ -63,3 +63,7 @@ Client at (60,160) -> Order service at (360,160) -> Ledger at (660,160). Edge la
 ## Frontend
 
 Use actual Go API only, no mock simulation. Vite proxy /api to http://127.0.0.1:8080. Professional dark ink/navy canvas, cyan/teal accents, light readable panels or consistent dark style. Desktop split editor with component palette/project explorer, main Vue Flow canvas, property inspector, bottom results/event timeline. Plan/Design/Simulate views or tabs. Responsive mobile stacks. Functional controls only. Save status/error messages; save project; import/export JSON; select node/edge edit; add/remove/connect nodes; scenario fields; requirement CRUD; validate/run; run list select; playback/step/reset saved trace with node highlighting explicitly labelled replay. Provide request status and metrics. Include demo reset with confirmation if dirty. API errors visible. Handle offline backend cleanly.
+
+## Structured data increment
+
+The data-contract catalog, complete-fixture validation, immutable validation history, directional compatibility and structured component APIs are specified in [DATA_CONTRACT.md](DATA_CONTRACT.md). Data definitions are separate immutable artifacts; component schema3 embeds their exact locks. Existing scalar endpoints/examples remain available. `/components/structured-primitives` exposes all16 operations while `/components/primitives` retains the11 scalar operations for older clients.

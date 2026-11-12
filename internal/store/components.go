@@ -180,7 +180,7 @@ func (s *Store) ComponentBundle(ctx context.Context, root model.ComponentRef) (m
 		if !ok || record.Digest != ref.Digest {
 			return ErrNotFound
 		}
-		if record.Package.SchemaVersion != 2 || record.Package.Behavior == nil {
+		if (record.Package.SchemaVersion != 2 && record.Package.SchemaVersion != 3) || record.Package.Behavior == nil {
 			return ErrNotComposite
 		}
 		if seen[k] {

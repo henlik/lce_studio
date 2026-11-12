@@ -1,6 +1,6 @@
 # Component authoring and SDK direction
 
-v0.4 adds typed pure composites while preserving the **declarative component profiles** introduced in v0.3 for the service, database and exclusive-router simulation kernels. An engineer can install, reuse and share a new profile without modifying studio source. A profile defines a name, exact version, parameter defaults and permitted ranges. It cannot introduce a new execution primitive or execute arbitrary code. The general external-code SDK described later in this document is still a proposal. Pure composites execute only the bounded operations documented below.
+v0.5 adds reusable data contracts and structured pure composites to the scalar composition available in v0.4. It preserves the **declarative component profiles** introduced in v0.3 for the service, database and exclusive-router simulation kernels. An engineer can install, reuse and share a new profile without modifying studio source. A profile defines a name, exact version, parameter defaults and permitted ranges. It cannot introduce a new execution primitive or execute arbitrary code. The general external-code SDK described later in this document is still a proposal. Pure composites execute only the bounded operations documented below.
 
 ## Author a resource profile
 
@@ -65,6 +65,16 @@ go run ./cmd/componentcheck --test path/to/bundle.json
 The root test suite travels inside the immutable definition. A bundle contains every dependency and rejects unrelated definitions, mismatched digests and hidden catalog resolution. Tests and evaluation have bounded outputs and no arbitrary code or external I/O.
 
 `select` computes both inputs before choosing a value; it is not a conditional workflow branch. Composition is finite nested invocation, not unbounded self-recursion. Functional evaluation has no virtual-time or infrastructure metrics. Stateful execution, message delivery, effectful persistence, timed composition and independent application deployment follow separate acceptance gates in [COMPOSITION_ARCHITECTURE.md](COMPOSITION_ARCHITECTURE.md). See [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md) for precise syntax, limits and endpoints.
+
+## Structured components available in v0.5
+
+The **Data** workspace defines required scalar record fields, entities, primary/unique keys and required foreign-key relationships. Data contracts have their own immutable catalog and portable locks. Fixture validation checks complete bounded datasets; it neither creates SQL tables nor mutates application state.
+
+To consume these definitions, explicitly upgrade a pure component to package schema3 and embed its data-contract locks. Record and ordered record-collection ports refer to an exact contract ID, version, digest and record name. Dependency bundles carry every required lock, so evaluation never resolves types from the mutable catalog. The earlier schema1/schema2 definitions keep their original digests and semantics.
+
+Five additional operations are available: `record_make`, `record_get`, `collection_count`, `collection_at` and `collection_append`. Schema3 also extends identity, equality and eager selection to these structured values. Record fields remain required scalars; nested record fields, optional/null fields, scalar collections and external effects are not supported. A collection holds at most 128 records, each structured value has a 64 KiB limit, and a public value map has a 256 KiB limit. The existing operation/call/depth limits still apply.
+
+The structured healthcare and school examples extract attributes from the same organization-registry contract and call the exact existing scalar access-policy and tenant-checker definitions. This demonstrates data-type reuse without duplicating the policy kernel. Use [DATA_AUTHORING.md](DATA_AUTHORING.md) for the authoring workflow and [DATA_CONTRACT.md](DATA_CONTRACT.md) for exact syntax and bounds.
 
 ## Future executable SDK proposal
 

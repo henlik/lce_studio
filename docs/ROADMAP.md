@@ -51,6 +51,12 @@ The standalone Components workspace adds three scalar types, eleven pure primiti
 
 The full recommendation is recorded in [COMPOSITION_ARCHITECTURE.md](COMPOSITION_ARCHITECTURE.md); [COMPOSITION_CONTRACT.md](COMPOSITION_CONTRACT.md) specifies the implemented boundary. C4, ERD, flowchart, UML and BPMN concepts inform one future canonical model, with explicit relationships and capability support rather than interchangeable diagram symbols.
 
+### v0.5 — reusable data contracts and entity relationships
+
+A separate immutable data-contract catalog defines named records of required scalar fields, entity primary/unique keys, and required foreign-key relationships with reverse cardinality. The Data workspace projects those definitions as an ER diagram and validates complete supplied datasets, retaining immutable PostgreSQL verdict snapshots. Directional version comparison identifies potentially breaking changes without migrating data or replacing locks.
+
+Component schema3 embeds exact data-contract locks and supports record values and ordered record collections. Record construction/field access and collection count/index/append compose with existing scalar logic. Two structured access wrappers reuse one generic registry contract and the unchanged scalar access policy. Legacy package digests and application simulation semantics stay unchanged. See [DATA_CONTRACT.md](DATA_CONTRACT.md).
+
 ## Development milestones and acceptance gates
 
 | Milestone | Deliverables | Acceptance evidence |
@@ -68,7 +74,7 @@ The full recommendation is recorded in [COMPOSITION_ARCHITECTURE.md](COMPOSITION
 
 Security, testing, documentation and usability progress throughout the milestones. No milestone claims that simulation alone proves correctness of arbitrary software or authorizes clinical deployment. Calendar estimates must be revisited once the required simulation fidelity, deployment targets and staffing are fixed.
 
-The next increment should extend scalar ports into reusable structured data contracts and explicit state/effect ownership. Then integrate functional components with timed workflow execution under defined outcome, retry, cancellation and resource-accounting rules; follow with bounded parallel fork/join and independent correctness cases. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
+The next increment should define explicit state/effect ownership, persistence and recovery semantics, while expanding data types only when use cases require them. Then integrate functional components with timed workflow execution under defined outcome, retry, cancellation and resource-accounting rules; follow with bounded parallel fork/join and independent correctness cases. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
 
 ## Reference project strategy
 

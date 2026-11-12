@@ -199,3 +199,19 @@ Version 2 and placed version 3 runs retain their exact project snapshot and add 
 - Per-link attempted transfers, successfully delivered payload bytes, and dropped transfer counts.
 
 Trace events can carry `hostId` or `linkId` for environmental events. They need not invent an application `nodeId` or `requestId` when none applies. A schema 3 `route_selected` event identifies the router, request, attempt, and selected application `edgeId`. The original application metrics, verdict types, and stored-run identity fields remain unchanged.
+
+## Reusable data contracts (v0.5)
+
+Data contracts are separately versioned immutable definitions, with exact ID/version/digest locks. They describe closed named records, entity identity and relationships. They do not allocate databases, execute queries or enforce production tenancy. Both reference datasets use `lce.organization-registry@1.0.0` unchanged; healthcare and education supply different rows.
+
+A record has 1–16 required scalar fields (`boolean`, browser-safe `integer`, `string`). Unknown, missing and null fields are invalid. False, zero and empty strings remain values. Each entity selects one record, a primary-key tuple and optional unique-key tuples. Keys contain 1–4 distinct fields and use exact typed tuple equality; the validator never joins display strings to infer identity.
+
+A relationship maps a required source tuple to one declared primary/unique target tuple with matching types and order. Each source row must find exactly one target. `minSources` is 0 or 1; `maxSources` is 0 (unbounded) or 1, and both apply to the number of source rows per target. Many-to-many relationships use an explicit join entity. Relationship cycles and self references are legal because checks inspect a finite snapshot. They imply no cascades, recursive record values, transactions or effects.
+
+Fixture validation checks a complete bounded snapshot. Omitted entities are empty; unknown entity names, null row arrays and null row objects are invalid. The checker reports field, uniqueness, required-reference and reverse-cardinality failures. Invalid keys are never indexed, and duplicate target keys never silently select a row. At most 256 rows and 512 KiB of typed JSON are accepted. Diagnostics follow sorted entity/field order and declared relationship order. Only the first 200 issue details are retained; `issuesTruncated` and `valid:false` preserve the failed verdict. Invalid contract locks and over-budget inputs are errors rather than recorded verdicts. Valid and invalid bounded snapshots can both be saved as immutable evidence.
+
+The data contract limit is 32 records, 32 entities, 64 relationships and 64 KiB of typed JSON. Every required definition array must be present and nonnull, including empty `entities`, `relationships` and `uniqueKeys` arrays. Metadata and names follow the component conventions. Hashing uses the declared Go struct order and `json.Marshal`, with sorted map keys where maps appear; it is exact content identity, not RFC8785, publisher trust or behavioral equivalence.
+
+Compatibility comparison is explicitly `old-to-new`: it conservatively reports whether values and complete datasets accepted by the old declaration remain accepted by the new one. Required-field changes, removed records/entities, new constraints and tightened cardinalities are breaking. Removed constraints and relaxed cardinalities can be nonbreaking; metadata and display ordering are informational. Exact nominal locks remain mandatory regardless of the report. No data migration or automatic dependency upgrade occurs.
+
+Portable files are under `examples/data/`: one contract lock, two fixture files, and combined `healthcare-registry.check.json` / `education-registry.check.json` inputs for `datacheck --fixture`. Exact fields, HTTP responses and structured-component integration are specified in [DATA_CONTRACT.md](DATA_CONTRACT.md).

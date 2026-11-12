@@ -143,7 +143,7 @@ function tree(name, { leafSteps = 1, firstWidth = 2, type = 'integer' } = {}) {
   return bundleOf(p, dependencies);
 }
 
-assert.equal((await request('/api/health')).version, '0.4.0');
+assert.equal((await request('/api/health')).version, '0.5.0');
 for (const [template, version] of [['retry', 1], ['continuum', 2], ['branching', 3]]) {
   const project = await request(`/api/example?template=${template}`);
   assert.equal(project.schemaVersion, version);
@@ -190,7 +190,7 @@ const expectedValues = Object.fromEntries([...operations.map(([op, _inputs, expe
 assert.deepEqual(primitiveRecord.result.outputs, expectedValues);
 assert.equal(primitiveRecord.result.operations, 13);
 assert.equal(primitiveRecord.result.invocations, 1);
-assert.equal(primitiveRecord.result.engineVersion, '0.4.0');
+assert.equal(primitiveRecord.result.engineVersion, '0.5.0');
 assert.equal(primitiveRecord.result.bundleHash, bundleHash(primitiveBundle));
 assert.deepEqual(primitiveEvents(primitiveRecord).map(e => e.path), primitivePackage.behavior.nodes.map(n => `$/` + n.id).sort());
 primitiveRecord.result.events.forEach((e, i) => assert.equal(e.sequence, i + 1));

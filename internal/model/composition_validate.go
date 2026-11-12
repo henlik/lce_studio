@@ -28,8 +28,8 @@ func ValidateComponentBundle(bundle ComponentBundle) []ValidationIssue {
 		path := fmt.Sprintf("packages[%d]", i)
 		local := ValidateComponentPackage(lock.Package)
 		issues = append(issues, prefixBehaviorIssues(path+".package", local)...)
-		if lock.Package.SchemaVersion != 2 {
-			add(path+".package.schemaVersion", "Every bundled definition must be a schema 2 composite.")
+		if lock.Package.SchemaVersion != 2 && lock.Package.SchemaVersion != 3 {
+			add(path+".package.schemaVersion", "Every bundled definition must be a schema 2 or 3 composite.")
 		}
 		identity := packageIdentity(lock.Package)
 		if _, exists := indices[identity]; exists {
@@ -62,6 +62,11 @@ func ValidateComponentBundle(bundle ComponentBundle) []ValidationIssue {
 	if len(issues) != 0 {
 		return issues
 	}
+	contracts, contractIssues := BundleDataContracts(bundle)
+	issues = append(issues, contractIssues...)
+	if len(issues) != 0 {
+		return issues
+	}
 	orders := make(map[compositionIdentity][]BehaviorNode, len(indices))
 	for i, lock := range bundle.Packages {
 		path := fmt.Sprintf("packages[%d].package.behavior", i)
@@ -81,7 +86,7 @@ func ValidateComponentBundle(bundle ComponentBundle) []ValidationIssue {
 		return issues
 	}
 	for i, lock := range bundle.Packages {
-		issues = append(issues, validateCompositionTypes(lock.Package, fmt.Sprintf("packages[%d].package.behavior", i), orders[packageIdentity(lock.Package)], bundle.Packages, indices)...)
+		issues = append(issues, validateCompositionTypes(lock.Package, fmt.Sprintf("packages[%d].package.behavior", i), orders[packageIdentity(lock.Package)], bundle.Packages, indices, contracts)...)
 	}
 	if len(issues) != 0 {
 		return issues
@@ -133,24 +138,56 @@ func ValidateComponentBundle(bundle ComponentBundle) []ValidationIssue {
 	return issues
 }
 
-func validateCompositionTypes(p ComponentPackage, path string, order []BehaviorNode, locks []PackageLock, indices map[compositionIdentity]int) []ValidationIssue {
+func validateCompositionTypes(p ComponentPackage, path string, order []BehaviorNode, locks []PackageLock, indices map[compositionIdentity]int, contracts []DataContractLock) []ValidationIssue {
 	issues := make([]ValidationIssue, 0)
 	add := func(path, message string) { issues = append(issues, ValidationIssue{path, message}) }
 	b := p.Behavior
-	inputs, nodeOutputs := make(map[string]string), make(map[string]map[string]string)
+	if p.SchemaVersion == 3 {
+		for _, group := range []struct {
+			name  string
+			ports []BehaviorPort
+		}{{"inputs", b.Inputs}, {"outputs", b.Outputs}} {
+			for i, port := range group.ports {
+				if port.RecordRef != nil {
+					if _, err := ResolveDataRecord(*port.RecordRef, contracts); err != nil {
+						add(fmt.Sprintf("%s.%s[%d].recordRef", path, group.name, i), err.Error())
+					}
+				}
+			}
+		}
+		for i, node := range b.Nodes {
+			for _, name := range sortedBehaviorKeys(node.Inputs) {
+				if literal := node.Inputs[name].Literal; literal != nil {
+					issues = append(issues, prefixBehaviorIssues(fmt.Sprintf("%s.nodes[%d].inputs.%s.literal", path, i, name), ValidateStructuredTypedValue(*literal, contracts))...)
+				}
+			}
+		}
+		for _, name := range sortedBehaviorKeys(b.Bindings) {
+			if literal := b.Bindings[name].Literal; literal != nil {
+				issues = append(issues, prefixBehaviorIssues(path+".bindings."+name+".literal", ValidateStructuredTypedValue(*literal, contracts))...)
+			}
+		}
+		testPath := path[:len(path)-len("behavior")] + "tests"
+		for i, test := range p.Tests {
+			at := fmt.Sprintf("%s[%d]", testPath, i)
+			issues = append(issues, prefixBehaviorIssues(at+".inputs", ValidateStructuredBehaviorValues(test.Inputs, b.Inputs, contracts))...)
+			issues = append(issues, prefixBehaviorIssues(at+".expected", ValidateStructuredBehaviorValues(test.Expected, b.Outputs, contracts))...)
+		}
+	}
+	inputs, nodeOutputs := make(map[string]BehaviorValueType), make(map[string]map[string]BehaviorValueType)
 	for _, port := range b.Inputs {
-		inputs[port.Name] = port.Type
+		inputs[port.Name] = PortBehaviorType(port)
 	}
 	nodePaths := make(map[string]string, len(b.Nodes))
 	for i, node := range b.Nodes {
 		nodePaths[node.ID] = fmt.Sprintf("%s.nodes[%d]", path, i)
 	}
-	bindingType := func(binding BehaviorBinding, at string) string {
+	bindingType := func(binding BehaviorBinding, at string) BehaviorValueType {
 		if binding.Input != "" {
 			return inputs[binding.Input]
 		}
 		if binding.Literal != nil {
-			return binding.Literal.Type
+			return ValueBehaviorType(*binding.Literal)
 		}
 		kind, ok := nodeOutputs[binding.Node][binding.Port]
 		if !ok {
@@ -160,29 +197,50 @@ func validateCompositionTypes(p ComponentPackage, path string, order []BehaviorN
 	}
 	for _, node := range order {
 		at := nodePaths[node.ID]
-		kinds := make(map[string]string)
+		kinds := make(map[string]BehaviorValueType)
 		for _, name := range sortedBehaviorKeys(node.Inputs) {
 			kinds[name] = bindingType(node.Inputs[name], at+".inputs."+name)
 		}
 		if node.Component == nil {
-			kind, err := PrimitiveOutputType(node.Op, kinds)
+			var kind BehaviorValueType
+			var err error
+			if p.SchemaVersion == 3 {
+				kind, err = StructuredPrimitiveOutputType(node, kinds, contracts)
+			} else {
+				scalars := make(map[string]string, len(kinds))
+				for name, typ := range kinds {
+					scalars[name] = typ.Type
+				}
+				var scalar string
+				scalar, err = PrimitiveOutputType(node.Op, scalars)
+				kind = BehaviorValueType{Type: scalar}
+			}
 			if err != nil {
 				add(at+".inputs", err.Error())
 			} else {
-				nodeOutputs[node.ID] = map[string]string{"result": kind}
+				nodeOutputs[node.ID] = map[string]BehaviorValueType{"result": kind}
 			}
 			continue
 		}
 		callee := locks[indices[referenceIdentity(*node.Component)]].Package.Behavior
-		expected := make(map[string]string)
+		if p.SchemaVersion == 2 {
+			for _, ports := range [][]BehaviorPort{callee.Inputs, callee.Outputs} {
+				for _, port := range ports {
+					if !scalarType(port.Type) || port.RecordRef != nil {
+						add(at+".component", "Schema 2 call nodes require a scalar component interface.")
+					}
+				}
+			}
+		}
+		expected := make(map[string]BehaviorValueType)
 		for _, port := range callee.Inputs {
-			expected[port.Name] = port.Type
+			expected[port.Name] = PortBehaviorType(port)
 		}
 		for _, name := range sortedBehaviorKeys(expected) {
 			kind, ok := kinds[name]
 			if !ok {
 				add(at+".inputs."+name, "Every component input requires one binding.")
-			} else if kind != expected[name] {
+			} else if !SameBehaviorType(kind, expected[name]) {
 				add(at+".inputs."+name, "Binding type must exactly match the called component input.")
 			}
 		}
@@ -191,18 +249,18 @@ func validateCompositionTypes(p ComponentPackage, path string, order []BehaviorN
 				add(at+".inputs."+name, "Binding does not correspond to a called component input.")
 			}
 		}
-		outputs := make(map[string]string)
+		outputs := make(map[string]BehaviorValueType)
 		for _, port := range callee.Outputs {
-			outputs[port.Name] = port.Type
+			outputs[port.Name] = PortBehaviorType(port)
 		}
 		nodeOutputs[node.ID] = outputs
 	}
-	outputs := make(map[string]string)
+	outputs := make(map[string]BehaviorValueType)
 	for _, port := range b.Outputs {
-		outputs[port.Name] = port.Type
+		outputs[port.Name] = PortBehaviorType(port)
 	}
 	for _, name := range sortedBehaviorKeys(outputs) {
-		if kind := bindingType(b.Bindings[name], path+".bindings."+name); kind != outputs[name] {
+		if kind := bindingType(b.Bindings[name], path+".bindings."+name); !SameBehaviorType(kind, outputs[name]) {
 			add(path+".bindings."+name, "Binding type must exactly match the public output type.")
 		}
 	}
@@ -240,8 +298,8 @@ func PrepareComponentBundle(p ComponentPackage, dependencies []PackageLock) (Com
 		return ComponentBundle{}, []ValidationIssue{{"dependencies", "At most 49 dependency locks are supported."}}
 	}
 	issues := prefixBehaviorIssues("package", ValidateComponentPackage(p))
-	if p.SchemaVersion != 2 {
-		issues = append(issues, ValidationIssue{"package.schemaVersion", "The prepared root must be a schema 2 composite."})
+	if p.SchemaVersion != 2 && p.SchemaVersion != 3 {
+		issues = append(issues, ValidationIssue{"package.schemaVersion", "The prepared root must be a schema 2 or 3 composite."})
 	}
 	if len(issues) != 0 {
 		return ComponentBundle{}, issues

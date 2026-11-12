@@ -22,7 +22,7 @@ func (s *Server) components(w http.ResponseWriter, r *http.Request) {
 		if !decode(w, r, &p) {
 			return
 		}
-		if p.SchemaVersion == 2 {
+		if p.SchemaVersion == 2 || p.SchemaVersion == 3 {
 			fail(w, http.StatusUnprocessableEntity, "Composite packages require their complete dependency closure. Install through /api/components/bundles.", nil)
 			return
 		}

@@ -27,6 +27,12 @@ func primitive(op string, inputs map[string]model.TypedValue) (model.TypedValue,
 	if _, err := model.PrimitiveOutputType(op, types); err != nil {
 		return model.TypedValue{}, err
 	}
+	return primitiveValue(op, inputs)
+}
+
+// primitiveValue runs the shared pure operations after their caller has
+// validated values and signatures for its schema version.
+func primitiveValue(op string, inputs map[string]model.TypedValue) (model.TypedValue, error) {
 	left, right := inputs["left"], inputs["right"]
 	switch op {
 	case "identity":
@@ -79,6 +85,22 @@ func equalValue(left, right model.TypedValue) bool {
 		return left.Integer != nil && right.Integer != nil && *left.Integer == *right.Integer
 	case "string":
 		return left.String != nil && right.String != nil && *left.String == *right.String
+	case "record":
+		return sameDataReference(left.RecordRef, right.RecordRef) && left.Record != nil && right.Record != nil && equalValues(left.Record, right.Record)
+	case "collection":
+		if !sameDataReference(left.RecordRef, right.RecordRef) || left.Collection == nil || right.Collection == nil || len(*left.Collection) != len(*right.Collection) {
+			return false
+		}
+		for i := range *left.Collection {
+			if !equalValue((*left.Collection)[i], (*right.Collection)[i]) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
+}
+
+func sameDataReference(left, right *model.DataTypeRef) bool {
+	return left != nil && right != nil && *left == *right
 }

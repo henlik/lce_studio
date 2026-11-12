@@ -52,6 +52,7 @@ import InfrastructureResults from "./components/InfrastructureResults.vue";
 import ComponentCatalog from "./components/ComponentCatalog.vue";
 import RoutingResults from "./components/RoutingResults.vue";
 import BehaviorWorkbench from "./components/BehaviorWorkbench.vue";
+import DataWorkbench from "./components/DataWorkbench.vue";
 import { api, APIError } from "./api";
 import type {
   ComponentNode,
@@ -68,12 +69,17 @@ const project = ref<Project | null>(null);
 const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
-const view = ref<"design" | "plan" | "deployment" | "results" | "components">(
-  "design",
-);
+const view = ref<
+  "design" | "plan" | "deployment" | "results" | "components" | "data"
+>("design");
 const workbenchOpened = ref(false);
+const dataOpened = ref(false);
+const definitionView = computed(
+  () => view.value === "components" || view.value === "data",
+);
 watch(view, (next) => {
   if (next === "components") workbenchOpened.value = true;
+  if (next === "data") dataOpened.value = true;
 });
 const inspector = ref<"properties" | "scenario">("scenario");
 const selectedNodeId = ref("");
@@ -767,7 +773,7 @@ onUnmounted(() => {
         ><span class="brand-mark"><Box :size="24" /></span
         ><span
           >software<span class="brand-sub"
-            >studio<span class="version"> / 0.4</span></span
+            >studio<span class="version"> / 0.5</span></span
           ></span
         ></a
       >
@@ -813,6 +819,14 @@ onUnmounted(() => {
           <Layers3 :size="18" /><span>Components</span
           ><span class="nav-number">05</span>
         </button>
+        <button
+          :class="{ active: view === 'data' }"
+          @click="view = 'data'"
+          aria-label="Data workspace"
+        >
+          <Database :size="18" /><span>Data</span
+          ><span class="nav-number">06</span>
+        </button>
       </nav>
       <div class="rail-divider" />
       <button class="rail-action" @click="showProjects = true">
@@ -830,7 +844,7 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.4</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.5</span>
       </div>
     </aside>
 
@@ -838,38 +852,48 @@ onUnmounted(() => {
       <header class="topbar">
         <div class="project-heading">
           <span class="breadcrumb"
-            >{{ view === "components" ? "Components" : "Projects" }}
+            >{{
+              view === "data"
+                ? "Data"
+                : view === "components"
+                  ? "Components"
+                  : "Projects"
+            }}
             <span>/</span>
             {{
-              view === "components"
-                ? "Behavior definitions"
-                : "Engineering workspace"
+              view === "data"
+                ? "Data contracts"
+                : view === "components"
+                  ? "Behavior definitions"
+                  : "Engineering workspace"
             }}</span
           >
           <div class="project-title">
             <input
-              v-if="project && view !== 'components'"
+              v-if="project && !definitionView"
               v-model="project.name"
               aria-label="Project name"
               maxlength="120"
             />
             <h1 v-else>
               {{
-                view === "components"
-                  ? "Component workbench"
-                  : "Software Studio"
+                view === "data"
+                  ? "Data workbench"
+                  : view === "components"
+                    ? "Component workbench"
+                    : "Software Studio"
               }}
             </h1>
             <span
               class="dirty-dot"
-              v-if="dirty && view !== 'components'"
+              v-if="dirty && !definitionView"
               title="Unsaved changes"
-            /><span class="draft-tag" v-if="view !== 'components'">{{
+            /><span class="draft-tag" v-if="!definitionView">{{
               dirty ? "Draft" : "Saved"
             }}</span>
           </div>
         </div>
-        <div v-if="view !== 'components'" class="topbar-actions">
+        <div v-if="!definitionView" class="topbar-actions">
           <button
             class="icon-button"
             @click="importInput?.click()"
@@ -915,18 +939,14 @@ onUnmounted(() => {
         />
       </header>
 
-      <div
-        v-if="error && view !== 'components'"
-        class="alert error"
-        role="alert"
-      >
+      <div v-if="error && !definitionView" class="alert error" role="alert">
         <CircleAlert :size="18" /><span>{{ error }}</span
         ><button @click="error = ''" aria-label="Dismiss error">
           <X :size="16" />
         </button>
       </div>
       <div
-        v-if="validation && !validation.valid && view !== 'components'"
+        v-if="validation && !validation.valid && !definitionView"
         class="validation-alert"
       >
         <div>
@@ -962,7 +982,7 @@ onUnmounted(() => {
       </div>
 
       <template v-else>
-        <div v-if="view !== 'components'" class="workspace-bar">
+        <div v-if="!definitionView" class="workspace-bar">
           <div class="workspace-label">
             <span class="section-eyebrow">{{
               view === "design"
@@ -1008,6 +1028,7 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <DataWorkbench v-if="dataOpened" v-show="view === 'data'" />
         <BehaviorWorkbench
           v-if="workbenchOpened"
           v-show="view === 'components'"
@@ -1856,7 +1877,7 @@ onUnmounted(() => {
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.4</span
+          <span class="footer-dot">·</span> v0.5</span
         >
       </footer>
     </main>

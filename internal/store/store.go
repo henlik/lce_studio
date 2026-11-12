@@ -103,6 +103,21 @@ CREATE TABLE IF NOT EXISTS component_evaluations (
  summary JSON NOT NULL
 );
 CREATE INDEX IF NOT EXISTS component_evaluations_created ON component_evaluations(created_at DESC, id DESC);
+CREATE TABLE IF NOT EXISTS data_contracts (
+ id TEXT NOT NULL,
+ version TEXT NOT NULL,
+ digest TEXT NOT NULL,
+ body JSON NOT NULL,
+ installed_at TIMESTAMPTZ NOT NULL,
+ PRIMARY KEY(id, version)
+);
+CREATE TABLE IF NOT EXISTS data_validations (
+ id TEXT PRIMARY KEY,
+ created_at TIMESTAMPTZ NOT NULL,
+ body JSON NOT NULL,
+ summary JSON NOT NULL
+);
+CREATE INDEX IF NOT EXISTS data_validations_created ON data_validations(created_at DESC, id DESC);
 `)
 	if err != nil {
 		return err

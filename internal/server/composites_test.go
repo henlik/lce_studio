@@ -76,7 +76,7 @@ func TestCompositeHTTPWorkbenchAndEvidence(t *testing.T) {
 	}
 	w = req(t, s, "POST", "/api/components/evaluate", map[string]any{"bundle": prepared, "inputs": inputs})
 	var first store.EvaluationRecord
-	if w.Code != 201 || json.Unmarshal(w.Body.Bytes(), &first) != nil || first.ID == "" || first.CreatedAt == "" || first.Result.EngineVersion != "0.4.0" || len(first.Result.Events) == 0 {
+	if w.Code != 201 || json.Unmarshal(w.Body.Bytes(), &first) != nil || first.ID == "" || first.CreatedAt == "" || first.Result.EngineVersion != behavior.Version || len(first.Result.Events) == 0 {
 		t.Fatalf("portable evaluation: %d %s", w.Code, w.Body.String())
 	}
 	if !reflect.DeepEqual(first.Result.Outputs, root.Tests[0].Expected) || first.Bundle.Root != prepared.Root || !reflect.DeepEqual(first.Inputs, inputs) {

@@ -23,6 +23,10 @@ import { api, apiRawJson, APIError } from "../api";
 import type { Validation, ValidationIssue } from "../types";
 import {
   bindingType,
+  bindingShape,
+  componentDataContracts,
+  typeKey,
+  typeLabel,
   cloneBehavior,
   dependencyClosure,
   lockKey,
@@ -53,6 +57,14 @@ import BehaviorBindingEditor from "./BehaviorBindingEditor.vue";
 import BehaviorEvidence from "./BehaviorEvidence.vue";
 import BehaviorGraph from "./BehaviorGraph.vue";
 import TypedValueEditor from "./TypedValueEditor.vue";
+import {
+  dataKey,
+  recordRef,
+  resolveRecord,
+  dataRefKey,
+  type DataContractRecord,
+  type DataTypeRef,
+} from "../dataTypes";
 
 function newDefinition(): CompositePackage {
   return {
@@ -86,6 +98,124 @@ const primitives = ref<PrimitiveSpec[]>([]);
 const examples = ref<ComponentBundle[]>([]);
 const installed = ref<InstalledComposite[]>([]);
 const history = ref<EvaluationSummary[]>([]);
+const dataCatalog = ref<DataContractRecord[]>([]);
+const selectedDataContract = ref("");
+const allDataContracts = computed(() =>
+  componentDataContracts(
+    draft.value,
+    dependencyClosure(draft.value, dependencies.value),
+  ),
+);
+const recordChoices = computed(() =>
+  allDataContracts.value.flatMap((l) =>
+    l.contract.records.map((r) => ({
+      key: dataRefKey(recordRef(l, r.name)),
+      ref: recordRef(l, r.name),
+      label: `${r.name} · ${l.contract.id}@${l.contract.version} · ${l.digest.slice(0, 8)}`,
+    })),
+  ),
+);
+const portChoices = computed(() => [
+  ...scalarTypes.map((type) => ({
+    key: typeKey({ type }),
+    type,
+    recordRef: undefined as DataTypeRef | undefined,
+    label: type as string,
+  })),
+  ...(viewed.value.schemaVersion === 3
+    ? recordChoices.value.flatMap((r) =>
+        (["record", "collection"] as const).map((type) => ({
+          key: typeKey({ type, recordRef: r.ref }),
+          type,
+          recordRef: r.ref,
+          label: `${type} <${r.label}>`,
+        })),
+      )
+    : []),
+]);
+const availablePrimitives = computed(() =>
+  primitives.value.filter(
+    (p) =>
+      draft.value.schemaVersion === 3 ||
+      ![
+        "record_make",
+        "record_get",
+        "collection_count",
+        "collection_at",
+        "collection_append",
+      ].includes(p.op),
+  ),
+);
+function upgradeStructured() {
+  if (readonly.value || busy.value) return;
+  draft.value.schemaVersion = 3;
+  notice.value =
+    "Schema 3 enabled. Embed an exact data contract to use its record and collection types.";
+}
+function embedDataContract() {
+  const l = dataCatalog.value.find(
+    (l) => dataKey(l) === selectedDataContract.value,
+  );
+  if (!l || busy.value || readonly.value) return;
+  const old = (draft.value.dataContracts || []).find(
+    (x) =>
+      x.contract.id === l.contract.id &&
+      x.contract.version === l.contract.version,
+  );
+  if (old && old.digest !== l.digest) {
+    error.value =
+      "This ID/version is already pinned to different data content.";
+    return;
+  }
+  if (old) return;
+  if ((draft.value.dataContracts?.length || 0) >= 8) {
+    error.value = "A component may embed at most eight data contracts.";
+    return;
+  }
+  draft.value.schemaVersion = 3;
+  (draft.value.dataContracts ||= []).push(
+    cloneBehavior({ contract: l.contract, digest: l.digest }),
+  );
+  notice.value =
+    "Exact data contract embedded in the component. Select its types in Typed interface.";
+}
+function setPortType(port: BehaviorPort, event: Event) {
+  const selected = portChoices.value.find(
+    (p) => p.key === (event.target as HTMLSelectElement).value,
+  );
+  if (!selected) return;
+  port.type = selected.type;
+  if (selected.recordRef) port.recordRef = cloneBehavior(selected.recordRef);
+  else delete port.recordRef;
+}
+function setNodeRecord(event: Event) {
+  if (!selectedNode.value) return;
+  const choice = recordChoices.value.find(
+    (r) => r.key === (event.target as HTMLSelectElement).value,
+  );
+  if (!choice) return;
+  selectedNode.value.recordRef = cloneBehavior(choice.ref);
+  const fields =
+    resolveRecord(choice.ref, allDataContracts.value)?.fields || [];
+  selectedNode.value.inputs = Object.fromEntries(
+    fields.map((f) => [
+      f.name,
+      selectedNode.value!.inputs[f.name] || { literal: typedDefault(f.type) },
+    ]),
+  );
+}
+const getFieldChoices = computed(() => {
+  const node = selectedNode.value;
+  if (!node || node.op !== "record_get") return [];
+  const source = bindingShape(
+    node.inputs.value,
+    behavior.value,
+    dependencies.value,
+    primitives.value,
+    allDataContracts.value,
+  );
+  return resolveRecord(source?.recordRef, allDataContracts.value)?.fields || [];
+});
 const tab = ref<"compose" | "interface" | "evaluate" | "history">("compose");
 const busy = ref("");
 const error = ref("");
@@ -152,12 +282,24 @@ const selectedNode = computed(() =>
 );
 const selectedInputs = computed(() =>
   selectedNode.value
-    ? nodeInputs(selectedNode.value, dependencies.value, primitives.value)
+    ? nodeInputs(
+        selectedNode.value,
+        dependencies.value,
+        primitives.value,
+        allDataContracts.value,
+        behavior.value,
+      )
     : [],
 );
 const sources = computed(() =>
   (behavior.value.nodes || []).flatMap((n) =>
-    nodeOutputs(n, behavior.value, dependencies.value, primitives.value),
+    nodeOutputs(
+      n,
+      behavior.value,
+      dependencies.value,
+      primitives.value,
+      allDataContracts.value,
+    ),
   ),
 );
 const nodeSources = computed(() =>
@@ -230,7 +372,7 @@ function resetInputs() {
     : Object.fromEntries(
         (draft.value.behavior.inputs || []).map((p) => [
           p.name,
-          typedDefault(p.type),
+          typedDefault(p.type, p.recordRef, allDataContracts.value),
         ]),
       );
 }
@@ -254,17 +396,21 @@ function adopt(bundle: ComponentBundle, catalog = false) {
 }
 async function refreshCatalog() {
   const values = await api<CatalogRecord[]>("/components");
-  installed.value = values.filter(
-    (p): p is InstalledComposite => p.package.schemaVersion === 2,
+  installed.value = values.filter((p): p is InstalledComposite =>
+    [2, 3].includes(p.package.schemaVersion),
   );
 }
 async function initialize() {
   await work("load", async () => {
     const values = await Promise.allSettled([
-      api<PrimitiveSpec[]>("/components/primitives"),
-      api<ComponentBundle[]>("/components/composite-examples"),
+      api<PrimitiveSpec[]>("/components/structured-primitives"),
+      Promise.all([
+        api<ComponentBundle[]>("/components/composite-examples"),
+        api<ComponentBundle[]>("/components/structured-examples"),
+      ]).then((values) => values.flat()),
       refreshCatalog(),
       api<EvaluationSummary[]>("/components/evaluations"),
+      api<DataContractRecord[]>("/data/contracts"),
     ]);
     if (values[0].status === "fulfilled") primitives.value = values[0].value;
     else fail(values[0].reason);
@@ -276,6 +422,8 @@ async function initialize() {
       }
     } else fail(values[1].reason);
     if (values[2].status === "rejected") fail(values[2].reason);
+    if (values[4].status === "fulfilled") dataCatalog.value = values[4].value;
+    else fail(values[4].reason);
     if (values[3].status === "fulfilled") history.value = values[3].value;
     else fail(values[3].reason);
   });
@@ -465,18 +613,42 @@ function insertNode(node: Omit<BehaviorNode, "position">) {
   inspected.value = [];
 }
 function addPrimitive() {
-  const spec = primitives.value.find((p) => p.op === selectedPrimitive.value);
+  const spec = availablePrimitives.value.find(
+    (p) => p.op === selectedPrimitive.value,
+  );
   if (!spec || readonly.value) return;
-  insertNode({
+  const metadata =
+    spec.op === "record_make" && recordChoices.value[0]
+      ? { recordRef: cloneBehavior(recordChoices.value[0].ref) }
+      : spec.op === "record_get"
+        ? { field: "" }
+        : {};
+  const node: BehaviorNode = {
     id: freshNodeId(spec.op),
     op: spec.op,
-    inputs: Object.fromEntries(
-      spec.inputs.map((p) => [
-        p.name,
-        { literal: typedDefault(p.type === "T" ? "integer" : p.type) },
-      ]),
-    ),
-  });
+    inputs: {},
+    position: { x: 0, y: 0 },
+    ...metadata,
+  };
+  node.inputs = Object.fromEntries(
+    nodeInputs(
+      node,
+      dependencies.value,
+      primitives.value,
+      allDataContracts.value,
+      behavior.value,
+    ).map((p) => [
+      p.name,
+      {
+        literal: typedDefault(
+          p.type === "T" ? "integer" : p.type,
+          p.recordRef,
+          allDataContracts.value,
+        ),
+      },
+    ]),
+  );
+  insertNode(node);
 }
 function mergeDependencies(incoming: CompositeLock[]) {
   for (const lock of incoming) {
@@ -511,6 +683,11 @@ async function addNested() {
     installed.value.find((p) => lockKey(p) === selectedNested.value) ||
     dependencies.value.find((p) => lockKey(p) === selectedNested.value);
   if (!entry || readonly.value) return;
+  if (entry.package.schemaVersion === 3 && draft.value.schemaVersion !== 3) {
+    error.value =
+      "Enable structured data on this component before adding a schema 3 component.";
+    return;
+  }
   await work("dependency", async () => {
     const alreadyEmbedded = dependencies.value.find(
       (p) => lockKey(p) === lockKey(entry),
@@ -540,7 +717,13 @@ async function addNested() {
       inputs: Object.fromEntries(
         (p.behavior.inputs || []).map((port) => [
           port.name,
-          { literal: typedDefault(port.type) },
+          {
+            literal: typedDefault(
+              port.type,
+              port.recordRef,
+              componentDataContracts(p, bundle.packages),
+            ),
+          },
         ]),
       ),
     });
@@ -730,7 +913,7 @@ function addCase(capture = false) {
         : Object.fromEntries(
             (draft.value.behavior.outputs || []).map((p) => [
               p.name,
-              typedDefault(p.type),
+              typedDefault(p.type, p.recordRef, allDataContracts.value),
             ]),
           ),
   });
@@ -861,9 +1044,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         <span class="section-eyebrow">TYPED COMPONENT WORKBENCH</span>
         <h2>Build behavior from reusable parts</h2>
         <p>
-          Define scalar inputs and outputs, compose pure operations, and nest
-          exact component versions. Evaluate the resulting behavior with real
-          values and inspect every step.
+          Define scalar or structured inputs and outputs, compose pure
+          operations, and nest exact component versions. Evaluate the resulting
+          behavior with real values and inspect every step.
         </p>
       </div>
       <span class="workbench-version">DESIGN · EVALUATE</span>
@@ -924,6 +1107,65 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         </button>
       </div>
     </div>
+    <section class="workbench-data-contracts">
+      <div class="workbench-data-heading">
+        <strong
+          >Data contracts · component schema {{ draft.schemaVersion }}</strong
+        ><button
+          v-if="draft.schemaVersion === 2"
+          class="button secondary"
+          :disabled="!!busy || readonly"
+          @click="upgradeStructured"
+        >
+          Enable structured data
+        </button>
+      </div>
+      <p class="workbench-help">
+        Record and collection ports use exact embedded type identities. Install
+        a data contract in Data, then refresh and embed it here. Scalar
+        definitions remain schema 2 until explicitly upgraded.
+      </p>
+      <div v-if="draft.schemaVersion === 3" class="workbench-data-picker">
+        <label class="field"
+          >Installed data contract<select
+            v-model="selectedDataContract"
+            aria-label="Component data contract"
+            :disabled="!!busy || readonly"
+          >
+            <option value="">Choose an installed exact version</option>
+            <option
+              v-for="lock in dataCatalog"
+              :key="dataKey(lock)"
+              :value="dataKey(lock)"
+            >
+              {{ lock.contract.id }} @ {{ lock.contract.version }}
+            </option>
+          </select></label
+        ><button
+          class="button secondary"
+          :disabled="!!busy || readonly || !selectedDataContract"
+          @click="embedDataContract"
+        >
+          Embed data contract
+        </button>
+      </div>
+      <div
+        v-for="(lock, index) in draft.dataContracts"
+        :key="dataKey(lock)"
+        class="workbench-data-lock"
+      >
+        <span
+          >{{ lock.contract.name }} · {{ lock.contract.id }} @
+          {{ lock.contract.version }}<small>{{ lock.digest }}</small></span
+        ><button
+          class="button quiet"
+          :disabled="!!busy || readonly"
+          @click="draft.dataContracts?.splice(index, 1)"
+        >
+          Remove embedded contract
+        </button>
+      </div>
+    </section>
     <div class="workbench-draft-bar">
       <div>
         <Box :size="18" /><span
@@ -1098,6 +1340,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
           :behavior="behavior"
           :dependencies="dependencies"
           :primitives="primitives"
+          :contracts="allDataContracts"
           :selected-id="selectedNodeId"
           :readonly="readonly || !!busy"
           @select="selectedNodeId = $event"
@@ -1118,7 +1361,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                 :disabled="!!busy"
               >
                 <option
-                  v-for="primitive in primitives"
+                  v-for="primitive in availablePrimitives"
                   :key="primitive.op"
                   :value="primitive.op"
                 >
@@ -1212,11 +1455,68 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                   /></label>
                 </div>
                 <p class="workbench-help">{{ selectedDescription }}</p>
+                <label v-if="selectedNode.op === 'record_make'" class="field"
+                  >Constructed record type<select
+                    :value="dataRefKey(selectedNode.recordRef)"
+                    aria-label="Constructed record type"
+                    @change="setNodeRecord"
+                  >
+                    <option value="">Select an exact record</option>
+                    <option
+                      v-if="
+                        selectedNode.recordRef &&
+                        !recordChoices.some(
+                          (r) => r.key === dataRefKey(selectedNode!.recordRef),
+                        )
+                      "
+                      :value="dataRefKey(selectedNode.recordRef)"
+                    >
+                      Unresolved: {{ selectedNode.recordRef.record }} @
+                      {{ selectedNode.recordRef.version }}
+                    </option>
+                    <option
+                      v-for="r in recordChoices"
+                      :key="r.key"
+                      :value="r.key"
+                    >
+                      {{ r.label }}
+                    </option>
+                  </select></label
+                >
+                <label v-if="selectedNode.op === 'record_get'" class="field"
+                  >Field to extract<select
+                    v-model="selectedNode.field"
+                    aria-label="Record field to extract"
+                  >
+                    <option value="">Bind a record and select a field</option>
+                    <option
+                      v-if="
+                        selectedNode.field &&
+                        !getFieldChoices.some(
+                          (f) => f.name === selectedNode!.field,
+                        )
+                      "
+                      :value="selectedNode.field"
+                    >
+                      Unresolved: {{ selectedNode.field }}
+                    </option>
+                    <option
+                      v-for="f in getFieldChoices"
+                      :key="f.name"
+                      :value="f.name"
+                    >
+                      {{ f.name }} · {{ f.type }}
+                    </option>
+                  </select></label
+                >
                 <BehaviorBindingEditor
                   v-for="port in selectedInputs"
                   :key="selectedNode.id + ':' + port.name"
                   :model-value="selectedNode.inputs?.[port.name]"
                   :expected-type="port.type"
+                  :record-ref="port.recordRef"
+                  :contracts="allDataContracts"
+                  :structured="viewed.schemaVersion === 3"
                   :label="`${selectedNode.id}.${port.name}`"
                   :inputs="behavior.inputs || []"
                   :sources="nodeSources"
@@ -1271,6 +1571,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
               :key="port.name"
               :model-value="behavior.bindings?.[port.name]"
               :expected-type="port.type"
+              :record-ref="port.recordRef"
+              :contracts="allDataContracts"
+              :structured="viewed.schemaVersion === 3"
               :label="`Output ${port.name}`"
               :inputs="behavior.inputs || []"
               :sources="sources"
@@ -1341,12 +1644,27 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                   maxlength="64"
                   @change="renamePort(direction, index, $event)" /></label
               ><label class="field"
-                >Scalar type<select
-                  v-model="port.type"
+                >Port type<select
+                  :value="typeKey(port)"
+                  @change="setPortType(port, $event)"
                   :aria-label="`${direction} port ${index + 1} type`"
                 >
-                  <option v-for="type in scalarTypes" :key="type">
-                    {{ type }}
+                  <option
+                    v-if="
+                      !portChoices.some(
+                        (choice) => choice.key === typeKey(port),
+                      )
+                    "
+                    :value="typeKey(port)"
+                  >
+                    Unresolved: {{ typeLabel(port) }}
+                  </option>
+                  <option
+                    v-for="choice in portChoices"
+                    :key="choice.key"
+                    :value="choice.key"
+                  >
+                    {{ choice.label }}
                   </option>
                 </select></label
               ><button
@@ -1438,6 +1756,8 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                 :key="port.name"
                 :model-value="inputValues[port.name]"
                 :type="port.type"
+                :record-ref="port.recordRef"
+                :contracts="allDataContracts"
                 :label="`Input ${port.name}`"
                 @update:model-value="
                   (value) => valueMap(inputValues, port.name, value)
@@ -1505,6 +1825,8 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                     :key="port.name"
                     :model-value="activeCase.inputs?.[port.name]"
                     :type="port.type"
+                    :record-ref="port.recordRef"
+                    :contracts="allDataContracts"
                     :label="`Test input ${port.name}`"
                     @update:model-value="
                       (value) =>
@@ -1519,6 +1841,8 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
                     :key="port.name"
                     :model-value="activeCase.expected?.[port.name]"
                     :type="port.type"
+                    :record-ref="port.recordRef"
+                    :contracts="allDataContracts"
                     :label="`Expected ${port.name}`"
                     @update:model-value="
                       (value) =>
@@ -1613,6 +1937,53 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 </template>
 
 <style scoped>
+.workbench-data-contracts {
+  background: #fff;
+  border: 1px solid #dce7eb;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+.workbench-data-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #486c7f;
+  margin-bottom: 12px;
+}
+.workbench-data-picker {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+}
+.workbench-data-picker .field {
+  flex: 1;
+  margin: 0;
+}
+.workbench-data-lock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f4faf7;
+  border: 1px solid #d7e8df;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #537c6e;
+}
+.workbench-data-lock small {
+  display: block;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+}
+.workbench-data-lock > span {
+  min-width: 0;
+}
 .behavior-workbench {
   padding: 22px 30px 28px;
   background: #f5f8fa;
