@@ -4,7 +4,6 @@ import { api, apiRawJson, APIError } from "../api";
 import {
   cloneBehavior,
   stableBehavior,
-  typedDefault,
   typeKey,
   lockKey,
   type CatalogRecord,
@@ -40,14 +39,7 @@ function blankMachine(): StateMachine {
     author: "Local author",
     license: "UNLICENSED",
     dataContracts: [],
-    state: [
-      {
-        name: "quantity",
-        type: "integer",
-        durability: "durable",
-        initial: typedDefault("integer"),
-      },
-    ],
+    state: [],
     effects: [],
     commands: [],
   };
@@ -56,7 +48,7 @@ function blankScenario(): StateScenario {
   return {
     schemaVersion: 1,
     name: "New state experiment",
-    instances: [{ id: "instance1", name: "First instance", initial: {} }],
+    instances: [],
     steps: [],
     expected: [],
   };
@@ -108,7 +100,6 @@ const dirty = computed(
 const file = ref<HTMLInputElement | null>(null),
   fileKind = ref<"machine" | "scenario" | "handler">("machine"),
   handlerIndex = ref(-1);
-let initialLoaded = false;
 function fail(e: unknown) {
   error.value = e instanceof Error ? e.message : String(e);
   issues.value = e instanceof APIError ? e.issues : [];
@@ -189,10 +180,6 @@ async function initialize() {
     ]);
     if (results[0].status === "fulfilled") {
       examples.value = results[0].value;
-      if (!initialLoaded && !dirty.value && examples.value[0]) {
-        adopt(examples.value[0].machine, examples.value[0].scenario);
-        initialLoaded = true;
-      }
     } else fail(results[0].reason);
     if (results[1].status === "fulfilled") catalog.value = results[1].value;
     else fail(results[1].reason);
@@ -218,8 +205,10 @@ function newDraft() {
   jsonBaseline.value = "";
   showJSON.value = false;
   tab.value = "definition";
+  error.value = "";
+  issues.value = [];
   notice.value =
-    "Start with owned state, then add a command and choose a tested pure handler. Add scenario steps and independent expectations before running.";
+    "Empty state machine and scenario. Add a state slot and a command, choose its pure handler, then add scenario instances, steps and independent expectations.";
 }
 function openExample() {
   const example = examples.value[Number(selectedExample.value)];
@@ -235,7 +224,7 @@ function openMachine() {
   adopt(lock, undefined, true);
   tab.value = "scenario";
   notice.value =
-    "Installed machine opened with a fresh scenario. Add ordered steps before running.";
+    "Installed machine opened with an empty scenario. Add an instance, ordered steps and independent expectations before running.";
 }
 async function validateMachine() {
   await work("validate", async () => {
@@ -692,6 +681,15 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         State run history
       </button>
     </nav>
+    <section
+      v-if="tab === 'definition' && !machine.state.length && !machine.commands.length"
+      class="state-panel"
+    >
+      <p class="state-help">
+        This machine is empty. Use Add state slot to declare what it owns,
+        then Add command and choose a pure handler for its behavior.
+      </p>
+    </section>
     <StateDefinitionEditor
       v-show="tab === 'definition'"
       :machine="machine"
@@ -704,6 +702,10 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       @embed-data="embedData"
     />
     <div v-show="tab === 'scenario'">
+      <p v-if="!scenario.instances.length" class="state-panel state-help">
+        This scenario is empty. Use Add state instance below, then add the
+        commands or restarts you want to test and your expected outcomes.
+      </p>
       <div class="state-actions">
         <button
           class="button secondary"

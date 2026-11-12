@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { DataContractLock } from "../dataTypes";
 import { computed, ref } from "vue";
-import { Maximize2, Minus, Plus } from "lucide-vue-next";
+import CanvasControls from "./CanvasControls.vue";
+import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import {
   nodeInputs,
   nodeOutputs,
@@ -26,7 +27,10 @@ const emit = defineEmits<{
   move: [id: string, position: { x: number; y: number }];
 }>();
 const svg = ref<SVGSVGElement | null>(null);
-const zoom = ref(1);
+const wrapper = ref<HTMLElement | null>(null);
+const viewport = ref<HTMLElement | null>(null);
+const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
+const { expanded, toggleExpand } = useCanvasFocus(wrapper, fit);
 const dragView = ref("");
 let drag:
   | { id: string; x: number; y: number; original: { x: number; y: number } }
@@ -168,7 +172,7 @@ const clipped = (text: string, max = 24) =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 </script>
 <template>
-  <section class="behavior-graph-panel">
+  <section ref="wrapper" class="behavior-graph-panel" :class="{ 'canvas-focus--expanded': expanded }">
     <div class="behavior-graph-toolbar">
       <span
         >BOUND DATAFLOW
@@ -177,40 +181,19 @@ const clipped = (text: string, max = 24) =>
           {{ wires.length }} connections</small
         ></span
       >
-      <div>
-        <button
-          class="icon-button"
-          aria-label="Zoom out component graph"
-          @click="zoom = Math.max(1, zoom - 0.25)"
-          :disabled="zoom <= 1"
-        >
-          <Minus :size="14" /></button
-        ><button
-          class="icon-button"
-          aria-label="Zoom in component graph"
-          @click="zoom = Math.min(3, zoom + 0.25)"
-          :disabled="zoom >= 3"
-        >
-          <Plus :size="14" /></button
-        ><button
-          class="icon-button"
-          aria-label="Fit component graph"
-          @click="zoom = 1"
-        >
-          <Maximize2 :size="14" />
-        </button>
-      </div>
+      <CanvasControls label="component graph" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
     </div>
-    <div class="behavior-graph-scroll">
+    <div ref="viewport" class="behavior-graph-scroll canvas-viewport">
       <svg
         ref="svg"
         :viewBox="dragView || viewBox"
-        :style="{ width: `${zoom * 100}%`, minHeight: '280px' }"
+        :style="svgStyle"
         role="img"
         aria-label="Typed component input, operation and output bindings"
         @pointermove="move"
         @pointerup="stop"
         @pointercancel="stop"
+        @lostpointercapture="stop"
       >
         <defs>
           <pattern
@@ -357,11 +340,14 @@ const clipped = (text: string, max = 24) =>
   background: #fff;
   overflow: hidden;
 }
+.behavior-graph-panel.canvas-focus--expanded { display: flex; flex-direction: column; }
 .behavior-graph-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
+  gap: 12px;
+  flex-wrap: wrap;
   border-bottom: 1px solid #e7edf1;
 }
 .behavior-graph-toolbar > span {
@@ -383,13 +369,10 @@ const clipped = (text: string, max = 24) =>
 }
 .behavior-graph-scroll {
   overflow: auto;
-  max-height: 480px;
   background: #f9fbfc;
 }
 .behavior-graph-scroll svg {
   display: block;
-  min-width: 620px;
-  max-height: 1000px;
   user-select: none;
   touch-action: none;
 }

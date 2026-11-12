@@ -18,7 +18,6 @@ import {
   type EdgeMouseEvent,
 } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
-import { ControlButton, Controls } from "@vue-flow/controls";
 import {
   Activity,
   ArrowDownToLine,
@@ -39,7 +38,6 @@ import {
   LoaderCircle,
   Monitor,
   Minus,
-  Maximize2,
   Pause,
   Play,
   Plus,
@@ -54,8 +52,14 @@ import {
   X,
   XCircle,
   PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-vue-next";
 import StudioNode from "./components/StudioNode.vue";
+import DesignOrientation from "./components/DesignOrientation.vue";
+import CanvasControls from "./components/CanvasControls.vue";
+import { useCanvasFocus } from "./composables/useCanvasFocus";
 import DeploymentEditor from "./components/DeploymentEditor.vue";
 import InfrastructureResults from "./components/InfrastructureResults.vue";
 import ComponentCatalog from "./components/ComponentCatalog.vue";
@@ -118,9 +122,14 @@ const notice = ref("");
 const connected = ref(false);
 const validation = ref<Validation | null>(null);
 const saved = ref("");
+const pristineProjectStamp = ref("");
 const showProjects = ref(false);
 const showRunHistory = ref(false);
-const showMobilePalette = ref(false);
+const railCollapsed = ref(window.matchMedia("(max-width: 1050px)").matches);
+const paletteCollapsed = ref(window.matchMedia("(max-width: 1050px)").matches);
+const inspectorCollapsed = ref(window.matchMedia("(max-width: 850px)").matches);
+const compactCanvas = ref(window.matchMedia("(max-width: 850px)").matches);
+const designWrapper = ref<HTMLElement | null>(null);
 const showCatalog = ref(false);
 const importInput = ref<HTMLInputElement | null>(null);
 const replayIndex = ref(-1);
@@ -128,6 +137,7 @@ const playing = ref(false);
 const replaySpeed = ref(120);
 const {
   fitView,
+  setViewport,
   zoomIn,
   zoomOut,
   viewport,
@@ -136,6 +146,40 @@ const {
   dimensions,
   getNodes,
 } = useVueFlow("studio-model");
+const {
+  expanded: designExpanded,
+  toggleExpand: toggleDesignExpand,
+  restore: restoreDesign,
+  scheduleLayout: designLayoutChanged,
+} = useCanvasFocus(designWrapper, requestProjectFit);
+function togglePalette(force?: boolean) {
+  paletteCollapsed.value =
+    force === undefined ? !paletteCollapsed.value : !force;
+  if (compactCanvas.value && !paletteCollapsed.value)
+    inspectorCollapsed.value = true;
+  designLayoutChanged();
+}
+function toggleInspector(force?: boolean) {
+  inspectorCollapsed.value =
+    force === undefined ? !inspectorCollapsed.value : !force;
+  if (compactCanvas.value && !inspectorCollapsed.value)
+    paletteCollapsed.value = true;
+  designLayoutChanged();
+}
+function updateResponsive() {
+  compactCanvas.value = window.matchMedia("(max-width: 850px)").matches;
+}
+watch(view, (next) => {
+  if (next !== "design") restoreDesign(false);
+});
+watch([showCatalog, showProjects, showRunHistory], (values) => {
+  if (values.some(Boolean)) restoreDesign(false);
+});
+watch(error, (value) => {
+  if (value) restoreDesign(false);
+});
+watch(railCollapsed, designLayoutChanged);
+
 let pendingProjectFit = false;
 let projectFitRevision = 0;
 let projectFitFrame: number | undefined;
@@ -159,6 +203,12 @@ async function fitAdoptedProject() {
       !project.value
     )
       return;
+    if (!project.value.nodes.length) {
+      if (!dimensions.value.width || !dimensions.value.height) return;
+      const reset = await setViewport({ x: 0, y: 0, zoom: 1 });
+      if (reset && revision === projectFitRevision) pendingProjectFit = false;
+      return;
+    }
     const nodes = getNodes.value;
     if (
       !dimensions.value.width ||
@@ -200,8 +250,32 @@ const stableJSON = (value: unknown): string =>
       : v,
   );
 const uid = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+function emptyProject(): Project {
+  return {
+    schemaVersion: 1,
+    id: uid("project"),
+    name: "Untitled system",
+    description: "",
+    nodes: [],
+    edges: [],
+    requirements: [],
+    scenario: {
+      requestCount: 12,
+      intervalMs: 40,
+      timeoutMs: 100,
+      maxRetries: 2,
+      dropFirstResponse: false,
+      jitterMs: 0,
+      seed: 42,
+    },
+  };
+}
+
 const dirty = computed(
   () => !!project.value && stableJSON(project.value) !== saved.value,
+);
+const needsProjectDiscard = computed(
+  () => dirty.value && stableJSON(project.value) !== pristineProjectStamp.value,
 );
 const selectedNode = computed(() =>
   project.value?.nodes.find((n) => n.id === selectedNodeId.value),
@@ -333,6 +407,7 @@ async function action(name: string, work: () => Promise<void>) {
   }
 }
 function adopt(p: Project, isSaved = true) {
+  pristineProjectStamp.value = "";
   project.value = clone(p);
   requestProjectFit();
   saved.value = isSaved ? stableJSON(project.value) : "";
@@ -349,20 +424,25 @@ async function refreshRuns() {
     );
   else runs.value = [];
 }
+function startEmptyProject() {
+  const p = emptyProject();
+  adopt(p, false);
+  pristineProjectStamp.value = stableJSON(p);
+}
 async function connect() {
   await action("connect", async () => {
+    if (!project.value) startEmptyProject();
     await api("/health");
     connected.value = true;
     projects.value = await api<Project[]>("/projects");
-    if (!project.value) {
-      const p = await api<Project>("/example");
-      adopt(p, false);
-    }
     await refreshRuns();
   });
 }
 async function loadProject(p: Project) {
-  if (dirty.value && !confirm("Discard unsaved changes and open this project?"))
+  if (
+    needsProjectDiscard.value &&
+    !confirm("Discard unsaved changes and open this project?")
+  )
     return;
   await action("open", async () => {
     adopt(await api<Project>(`/projects/${encodeURIComponent(p.id)}`));
@@ -384,16 +464,12 @@ async function saveProject() {
 }
 async function newProject() {
   if (
-    dirty.value &&
+    needsProjectDiscard.value &&
     !confirm("Discard unsaved changes and create a new project?")
   )
     return;
   await action("new", async () => {
-    const p = await api<Project>("/example");
-    p.id = uid("project");
-    p.name = "Untitled system";
-    p.description = "";
-    adopt(p, false);
+    startEmptyProject();
     runs.value = [];
     view.value = "design";
     showProjects.value = false;
@@ -415,7 +491,10 @@ async function saveCopy() {
   });
 }
 async function resetExample() {
-  if (dirty.value && !confirm("Discard unsaved changes and open the example?"))
+  if (
+    needsProjectDiscard.value &&
+    !confirm("Discard unsaved changes and open the example?")
+  )
     return;
   await action("example", async () => {
     adopt(await api<Project>("/example"), false);
@@ -426,7 +505,7 @@ async function resetExample() {
 }
 async function loadContinuumExample() {
   if (
-    dirty.value &&
+    needsProjectDiscard.value &&
     !confirm("Discard unsaved changes and open the continuum example?")
   )
     return;
@@ -442,7 +521,7 @@ async function loadContinuumExample() {
 }
 async function loadBranchingExample() {
   if (
-    dirty.value &&
+    needsProjectDiscard.value &&
     !confirm("Discard unsaved changes and open the branching example?")
   )
     return;
@@ -496,7 +575,7 @@ async function openRun(run: Run) {
 function openRunModel() {
   if (!currentRun.value) return;
   if (
-    dirty.value &&
+    needsProjectDiscard.value &&
     !confirm("Replace your unsaved design with this run’s model snapshot?")
   )
     return;
@@ -625,7 +704,8 @@ function addNode(type: NodeKind, profile?: PackageLock) {
   selectedEdgeId.value = "";
   inspector.value = "properties";
   view.value = "design";
-  showMobilePalette.value = false;
+  if (compactCanvas.value) paletteCollapsed.value = true;
+  requestProjectFit();
   showCatalog.value = false;
   validation.value = null;
   if (upgraded)
@@ -712,7 +792,7 @@ async function importProject(e: Event) {
         checked.issues,
       );
     if (
-      dirty.value &&
+      needsProjectDiscard.value &&
       !confirm("Discard unsaved changes and import this project?")
     )
       return;
@@ -781,36 +861,64 @@ watch(replaySpeed, () => {
 onMounted(() => {
   connect();
   window.addEventListener("beforeunload", beforeUnload);
+  window.addEventListener("resize", updateResponsive);
 });
 onUnmounted(() => {
   pause();
   if (projectFitFrame !== undefined) cancelAnimationFrame(projectFitFrame);
   clearTimeout(noticeTimer);
   window.removeEventListener("beforeunload", beforeUnload);
+  window.removeEventListener("resize", updateResponsive);
 });
 </script>
 
 <template>
-  <div class="studio-shell">
-    <aside class="app-rail">
-      <a
-        class="brand"
-        href="#"
-        @click.prevent="view = 'design'"
-        aria-label="Software Studio home"
-        ><span class="brand-mark"><Box :size="24" /></span
-        ><span
-          >software<span class="brand-sub"
-            >studio<span class="version"> / 0.7</span></span
-          ></span
-        ></a
-      >
+  <div
+    class="studio-shell"
+    :class="{
+      'rail-collapsed': railCollapsed,
+      'rail-expanded': !railCollapsed,
+      'canvas-expanded': designExpanded,
+    }"
+  >
+    <aside class="app-rail" aria-label="Main navigation">
+      <div class="rail-header">
+        <a
+          class="brand"
+          href="#"
+          @click.prevent="view = 'design'"
+          aria-label="Software Studio home"
+          ><span class="brand-mark"><Box :size="24" /></span
+          ><span
+            >software<span class="brand-sub"
+              >studio<span class="version"> / 0.7.1</span></span
+            ></span
+          ></a
+        >
+        <button
+          class="rail-toggle"
+          :aria-label="
+            railCollapsed ? 'Expand main sidebar' : 'Collapse main sidebar'
+          "
+          :title="
+            railCollapsed ? 'Expand main sidebar' : 'Collapse main sidebar'
+          "
+          :aria-expanded="!railCollapsed"
+          @click="railCollapsed = !railCollapsed"
+        >
+          <PanelLeftOpen v-if="railCollapsed" :size="18" /><PanelLeftClose
+            v-else
+            :size="18"
+          />
+        </button>
+      </div>
       <div class="rail-section">WORKSPACE</div>
       <nav class="main-nav" aria-label="Workspace">
         <button
           :class="{ active: view === 'plan' }"
           @click="view = 'plan'"
           aria-label="Plan workspace"
+          title="Plan"
         >
           <FileCheck2 :size="18" /><span>Plan</span
           ><span class="nav-number">01</span>
@@ -819,6 +927,7 @@ onUnmounted(() => {
           :class="{ active: view === 'design' }"
           @click="view = 'design'"
           aria-label="Design workspace"
+          title="Design"
         >
           <GitBranch :size="18" /><span>Design</span
           ><span class="nav-number">02</span>
@@ -827,6 +936,7 @@ onUnmounted(() => {
           :class="{ active: view === 'deployment' }"
           @click="view = 'deployment'"
           aria-label="Deployment workspace"
+          title="Deployment"
         >
           <Server :size="18" /><span>Deployment</span
           ><span class="nav-number">03</span>
@@ -835,6 +945,7 @@ onUnmounted(() => {
           :class="{ active: view === 'results' }"
           @click="view = 'results'"
           aria-label="Experiments workspace"
+          title="Experiments"
         >
           <FlaskConical :size="18" /><span>Experiments</span
           ><span class="nav-number">04</span>
@@ -843,6 +954,7 @@ onUnmounted(() => {
           :class="{ active: view === 'components' }"
           @click="view = 'components'"
           aria-label="Components workspace"
+          title="Components"
         >
           <Layers3 :size="18" /><span>Components</span
           ><span class="nav-number">05</span>
@@ -851,6 +963,7 @@ onUnmounted(() => {
           :class="{ active: view === 'data' }"
           @click="view = 'data'"
           aria-label="Data workspace"
+          title="Data"
         >
           <Database :size="18" /><span>Data</span
           ><span class="nav-number">06</span>
@@ -859,6 +972,7 @@ onUnmounted(() => {
           :class="{ active: view === 'state' }"
           @click="view = 'state'"
           aria-label="State workspace"
+          title="State"
         >
           <RotateCcw :size="18" /><span>State</span
           ><span class="nav-number">07</span>
@@ -867,17 +981,30 @@ onUnmounted(() => {
           :class="{ active: view === 'messages' }"
           @click="view = 'messages'"
           aria-label="Messages workspace"
+          title="Messages"
         >
           <Send :size="18" /><span>Messages</span
           ><span class="nav-number">08</span>
         </button>
       </nav>
       <div class="rail-divider" />
-      <button class="rail-action" @click="showProjects = true">
-        <FolderOpen :size="17" /> Projects <span>{{ projects.length }}</span>
+      <button
+        class="rail-action"
+        @click="showProjects = true"
+        aria-label="Open projects"
+        title="Projects"
+      >
+        <FolderOpen :size="17" /><span class="rail-action-label">Projects</span
+        ><span class="rail-count">{{ projects.length }}</span>
       </button>
-      <button class="rail-action" @click="showRunHistory = true">
-        <Activity :size="17" /> Run history <span>{{ runs.length }}</span>
+      <button
+        class="rail-action"
+        @click="showRunHistory = true"
+        aria-label="Open run history"
+        title="Run history"
+      >
+        <Activity :size="17" /><span class="rail-action-label">Run history</span
+        ><span class="rail-count">{{ runs.length }}</span>
       </button>
       <div class="rail-bottom">
         <span class="small-logo"><Layers3 :size="17" /></span
@@ -888,9 +1015,15 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.7</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.7.1</span>
       </div>
     </aside>
+    <button
+      v-if="!railCollapsed"
+      class="rail-scrim"
+      aria-label="Close main sidebar"
+      @click="railCollapsed = true"
+    />
 
     <main class="main-shell">
       <header class="topbar">
@@ -994,6 +1127,7 @@ onUnmounted(() => {
           @change="importProject"
         />
       </header>
+      <DesignOrientation :workspace="view" />
 
       <div v-if="error && !definitionView" class="alert error" role="alert">
         <CircleAlert :size="18" /><span>{{ error }}</span
@@ -1101,13 +1235,32 @@ onUnmounted(() => {
           @load-example="loadContinuumExample"
         />
 
-        <section v-show="view === 'design'" class="design-workspace">
+        <section
+          ref="designWrapper"
+          v-show="view === 'design'"
+          class="design-workspace"
+          :class="{
+            'palette-collapsed': paletteCollapsed,
+            'inspector-collapsed': inspectorCollapsed,
+            'canvas-focus--expanded': designExpanded,
+          }"
+          aria-label="Application design workspace"
+        >
           <aside
+            id="design-component-palette"
             class="component-palette"
-            :class="{ 'mobile-open': showMobilePalette }"
+            v-show="!paletteCollapsed"
           >
             <div class="panel-heading">
-              <span>COMPONENTS</span><Layers3 :size="14" />
+              <span>COMPONENTS</span
+              ><button
+                class="icon-button panel-collapse"
+                aria-label="Collapse components panel"
+                title="Collapse components panel"
+                @click="togglePalette(false)"
+              >
+                <PanelLeftClose :size="16" />
+              </button>
             </div>
             <p class="panel-caption">
               Add a building block.<br />Connect its ports to define flow.
@@ -1197,14 +1350,41 @@ onUnmounted(() => {
                 <small class="schema-label"
                   >v{{ project.schemaVersion }}</small
                 ></span
-              ><button
-                @click="showMobilePalette = !showMobilePalette"
-                class="mobile-palette-toggle"
               >
-                <Plus :size="14" /> Components</button
-              ><span class="canvas-hint"
-                >Drag to arrange · Connect ports · Select to inspect</span
+              <div
+                class="canvas-panel-controls"
+                role="group"
+                aria-label="Design panel visibility"
               >
+                <button
+                  class="canvas-panel-toggle"
+                  :class="{ active: !paletteCollapsed }"
+                  :aria-label="
+                    paletteCollapsed
+                      ? 'Show components panel'
+                      : 'Hide components panel'
+                  "
+                  :aria-expanded="!paletteCollapsed"
+                  aria-controls="design-component-palette"
+                  @click="togglePalette()"
+                >
+                  <PanelLeftOpen :size="15" /><span>Components</span>
+                </button>
+                <button
+                  class="canvas-panel-toggle"
+                  :class="{ active: !inspectorCollapsed }"
+                  :aria-label="
+                    inspectorCollapsed
+                      ? 'Show inspector panel'
+                      : 'Hide inspector panel'
+                  "
+                  :aria-expanded="!inspectorCollapsed"
+                  aria-controls="design-inspector"
+                  @click="toggleInspector()"
+                >
+                  <PanelRightOpen :size="15" /><span>Inspector</span>
+                </button>
+              </div>
             </div>
             <VueFlow
               id="studio-model"
@@ -1229,37 +1409,21 @@ onUnmounted(() => {
                 ><StudioNode v-bind="props" /></template
               ><template #node-router="props"
                 ><StudioNode v-bind="props" /></template
-              ><Background
-                pattern-color="#c7d3df"
-                :gap="20"
-                :size="1" /><Controls
-                position="bottom-left"
-                :show-interactive="false"
-                ><template #control-zoom-in
-                  ><ControlButton
-                    class="vue-flow__controls-zoomin"
-                    aria-label="Zoom in application canvas"
-                    title="Zoom in"
-                    :disabled="viewport.zoom >= maxZoom"
-                    @click="zoomIn()"
-                    ><Plus :size="16" /></ControlButton></template
-                ><template #control-zoom-out
-                  ><ControlButton
-                    class="vue-flow__controls-zoomout"
-                    aria-label="Zoom out application canvas"
-                    title="Zoom out"
-                    :disabled="viewport.zoom <= minZoom"
-                    @click="zoomOut()"
-                    ><Minus :size="16" /></ControlButton></template
-                ><template #control-fit-view
-                  ><ControlButton
-                    class="vue-flow__controls-fitview"
-                    aria-label="Fit application model to canvas"
-                    title="Fit model"
-                    @click="fitView({ padding: 0.16, maxZoom: 1 })"
-                    ><Maximize2
-                      :size="16" /></ControlButton></template></Controls
-            ></VueFlow>
+              ><Background pattern-color="#c7d3df" :gap="20" :size="1"
+            /></VueFlow>
+            <div class="design-view-controls">
+              <CanvasControls
+                label="application canvas"
+                :zoom="viewport.zoom"
+                :min-zoom="minZoom"
+                :max-zoom="maxZoom"
+                :expanded="designExpanded"
+                @zoom-in="zoomIn()"
+                @zoom-out="zoomOut()"
+                @fit="requestProjectFit"
+                @expand="toggleDesignExpand"
+              />
+            </div>
             <div class="canvas-legend">
               <span><i class="legend-client" />Client</span
               ><span><i class="legend-service" />Service</span
@@ -1268,13 +1432,36 @@ onUnmounted(() => {
             </div>
             <div class="canvas-empty" v-if="!project.nodes.length">
               <Box :size="30" />
-              <h3>Start with a component</h3>
+              <h3>Your project starts empty</h3>
               <p>
-                Add a client, service, and database to build your first model.
+                Add the first building block, then connect its ports. Examples
+                are optional starting points.
               </p>
+              <div class="canvas-empty-actions">
+                <button class="button secondary" @click="togglePalette(true)">
+                  <Plus :size="14" /> Add a component</button
+                ><button class="button quiet" @click="showProjects = true">
+                  Browse examples
+                </button>
+              </div>
             </div>
           </div>
-          <aside class="inspector">
+          <aside
+            id="design-inspector"
+            class="inspector"
+            v-show="!inspectorCollapsed"
+          >
+            <div class="inspector-panel-heading">
+              <span>INSPECTOR</span
+              ><button
+                class="icon-button panel-collapse"
+                aria-label="Collapse inspector panel"
+                title="Collapse inspector panel"
+                @click="toggleInspector(false)"
+              >
+                <PanelRightClose :size="16" />
+              </button>
+            </div>
             <div class="inspector-tabs">
               <button
                 :class="{ active: inspector === 'properties' }"
@@ -1908,7 +2095,7 @@ onUnmounted(() => {
           </div>
         </section>
         <div
-          v-if="!currentRun && view === 'design'"
+          v-if="!currentRun && view === 'design' && project.nodes.length > 0"
           class="getting-started-strip"
         >
           <span class="strip-icon"><FlaskConical :size="20" /></span>
@@ -1935,7 +2122,7 @@ onUnmounted(() => {
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.7</span
+          <span class="footer-dot">·</span> v0.7.1</span
         >
       </footer>
     </main>
@@ -2015,7 +2202,7 @@ onUnmounted(() => {
             @click="resetExample"
             :disabled="!!busy"
           >
-            <RotateCcw :size="16" /> Open example project
+            <RotateCcw :size="16" /> Open retry example
           </button>
           <button
             class="button secondary full continuum-example-button"

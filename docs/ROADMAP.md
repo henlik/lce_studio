@@ -71,6 +71,10 @@ Transport durability is a modeled assumption. Steps are serial and explicitly or
 
 ## Development milestones and acceptance gates
 
+### v0.7.1 authoring usability
+
+Empty new artifacts, explicit examples, collapsible navigation/side panels, expanded diagrams and visible design context improve the current workspaces. [DESIGN_HIERARCHY.md](DESIGN_HIERARCHY.md) separates artifact responsibility from editor views and defines the intended top-down/bottom-up navigation. A unified project artifact tree remains the next modeling milestone; this UI release does not pretend that independently stored workbench drafts already belong to one hierarchy.
+
 | Milestone | Deliverables | Acceptance evidence |
 | --- | --- | --- |
 | 1. Shared modelling foundation | Versioned application, infrastructure and deployment models; reference scenarios; explicit units and assumptions | The same application executes under alternative placements, with deterministic differences under resource/network/power constraints |
@@ -86,7 +90,7 @@ Transport durability is a modeled assumption. Steps are serial and explicitly or
 
 Security, testing, documentation and usability progress throughout the milestones. No milestone claims that simulation alone proves correctness of arbitrary software or authorizes clinical deployment. Calendar estimates must be revisited once the required simulation fidelity, deployment targets and staffing are fixed.
 
-The next increment should couple owned-state execution and typed message delivery to the continuum simulator under explicit clock, scheduling, retry, cancellation, outage and resource-accounting rules. Follow with bounded parallel fork/join and independent correctness cases. Expand data types only when use cases require them. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
+The next increment should establish explicit artifact kinds, project membership and a parent/child design navigator so engineers can see what boundary they are building while moving top-down or bottom-up. Then couple owned-state execution and typed message delivery to the continuum simulator under explicit clock, scheduling, retry, cancellation, outage and resource-accounting rules. Follow with bounded parallel fork/join and independent correctness cases. Expand data types only when use cases require them. An external execution adapter follows only once the isolation, cancellation and reproducibility contract has executable conformance tests. Application generation should start from this documented subset rather than implying that every diagram can already become a runnable system.
 
 ## Reference project strategy
 

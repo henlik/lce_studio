@@ -84,10 +84,10 @@ function newDefinition(): CompositePackage {
       deduplicate: false,
     },
     behavior: {
-      inputs: [{ name: "value", type: "string" }],
-      outputs: [{ name: "result", type: "string" }],
+      inputs: [],
+      outputs: [],
       nodes: [],
-      bindings: { result: { input: "value" } },
+      bindings: {},
     },
     tests: [],
   };
@@ -228,9 +228,7 @@ const selectedNested = ref("");
 const selectedLibrary = ref("");
 const selectedExample = ref("0");
 const selectedCase = ref(0);
-const inputValues = ref<Record<string, TypedValue>>({
-  value: { type: "string", string: "Hello" },
-});
+const inputValues = ref<Record<string, TypedValue>>({});
 const record = ref<EvaluationRecord | null>(null);
 const recordStamp = ref("");
 const testResult = ref<BehaviorTestResult | null>(null);
@@ -246,7 +244,6 @@ const pendingAdvanced = computed(
 );
 const showAdvanced = ref(false);
 const metadataOpen = ref(false);
-let initialLoaded = false;
 
 function definitionStamp(p: CompositePackage, deps: CompositeLock[]) {
   const comparable = (value: CompositePackage) => ({
@@ -416,10 +413,6 @@ async function initialize() {
     else fail(values[0].reason);
     if (values[1].status === "fulfilled") {
       examples.value = values[1].value;
-      if (!initialLoaded && examples.value[0] && !dirty.value) {
-        adopt(examples.value[0]);
-        initialLoaded = true;
-      }
     } else fail(values[1].reason);
     if (values[2].status === "rejected") fail(values[2].reason);
     if (values[4].status === "fulfilled") dataCatalog.value = values[4].value;
@@ -464,7 +457,7 @@ function createDraft() {
   error.value = "";
   issues.value = [];
   notice.value =
-    "New local draft. Its initial output passes the string input through unchanged.";
+    "Empty component draft. Add an input or output, then connect primitives or reusable components. Examples open only when you choose Open example.";
 }
 function loadExample() {
   const bundle = examples.value[Number(selectedExample.value)];
@@ -1316,6 +1309,37 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         <span>{{ history.length }}</span>
       </button>
     </nav>
+    <section
+      v-if="
+        !readonly &&
+        (tab === 'compose' || tab === 'interface') &&
+        !behavior.inputs.length &&
+        !behavior.outputs.length &&
+        !behavior.nodes.length
+      "
+      class="workbench-panel"
+    >
+      <p class="workbench-help">
+        This component is empty. Start with its typed interface, then add
+        primitives or reusable components in Composition.
+      </p>
+      <div class="workbench-actions">
+        <button
+          class="button secondary"
+          :disabled="!!busy"
+          @click="addPort('inputs'); tab = 'interface'"
+        >
+          Add first input
+        </button>
+        <button
+          class="button secondary"
+          :disabled="!!busy"
+          @click="addPort('outputs'); tab = 'interface'"
+        >
+          Add first output
+        </button>
+      </div>
+    </section>
     <template v-if="tab === 'compose' || tab === 'interface'">
       <div v-if="readonly" class="nested-breadcrumb">
         <button

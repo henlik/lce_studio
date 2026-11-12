@@ -143,7 +143,7 @@ function tree(name, { leafSteps = 1, firstWidth = 2, type = 'integer' } = {}) {
   return bundleOf(p, dependencies);
 }
 
-assert.equal((await request('/api/health')).version, '0.7.0');
+assert.equal((await request('/api/health')).version, '0.7.1');
 for (const [template, version] of [['retry', 1], ['continuum', 2], ['branching', 3]]) {
   const project = await request(`/api/example?template=${template}`);
   assert.equal(project.schemaVersion, version);

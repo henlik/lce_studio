@@ -1,5 +1,18 @@
 # Verification
 
+## v0.7.1 empty workspaces and canvas usability — 12 November 2026
+
+Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.
+
+- Full Go race tests, vet, production backend build and all seven live API suites pass: **101 acceptance groups**. Vue TypeScript checking and the production web build pass without new dependencies. The existing initial JavaScript chunk size advisory remains.
+- Fresh application, component, data, state and message editors start empty. In the production browser, each definition editor's New action returned to an empty definition after explicitly loading an example. Refresh did not inject examples. An empty application project saved and reopened with zero components, connections and requirements.
+- Collapsing the main navigation and both Design panels increased the measured application canvas width from 694 to 1,284 pixels at the tested desktop size. A node name survived hiding/reopening its inspector; a component operation survived changing workspaces and returning. An edited application prompted before replacement, while pristine blank drafts opened examples directly.
+- Expand, zoom, Fit and Restore/Escape were exercised for application, pure component, data, state, message and deployment canvases. Expansion filled the viewport and released page scroll locking on restore. Deployment topology and geography both supported fitting; selecting a resource reopened its hidden inspector.
+- The design guide displays the current artifact/view, explains top-down and bottom-up composition, and explicitly labels the unified hierarchy as planned. It does not change an artifact's kind or claim a stored parent/child tree.
+- Read-only review identified and resolved scroll locking when a conditional canvas disappears, and an expanded-canvas minimum-height conflict on short mobile layouts. Mobile-specific visual verification remains incomplete because viewport resizing is not exposed by the available browser API.
+
+This patch changes authoring defaults and presentation only. Application version is 0.7.1; delivery remains 0.7.0, state 0.6.0, pure/data 0.5.0 and timed simulation 0.3.0. Runtime schemas and canonical digest fixtures are unchanged. Component/data/state/message drafts remain separate artifacts; creating a new application project does not erase another workbench's draft or shared catalog. See [DESIGN_HIERARCHY.md](DESIGN_HIERARCHY.md) for the intended common hierarchy and current limits.
+
 ## v0.7 typed delivery between owned machines — 12 November 2026
 
 Verified against PostgreSQL 17.11 with Go 1.25.5, Node.js 24.22.1 and npm 11.9.0.

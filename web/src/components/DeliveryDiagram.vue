@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import CanvasControls from "./CanvasControls.vue";
+import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import { instanceMachine, type DeliveryModel } from "../deliveryTypes";
 const props = defineProps<{
   model: DeliveryModel;
@@ -11,8 +13,11 @@ const emit = defineEmits<{
   move: [id: string, position: { x: number; y: number }];
 }>();
 const svg = ref<SVGSVGElement | null>(null),
-  zoom = ref(1),
   frozen = ref<{ x: number; y: number; w: number; h: number } | null>(null);
+const wrapper = ref<HTMLElement | null>(null);
+const viewport = ref<HTMLElement | null>(null);
+const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
+const { expanded, toggleExpand } = useCanvasFocus(wrapper, fit);
 let drag:
   | {
       id: string;
@@ -157,33 +162,20 @@ function short(value: string) {
 }
 </script>
 <template>
-  <section class="delivery-diagram">
+  <section ref="wrapper" class="delivery-diagram" :class="{ 'canvas-focus--expanded': expanded }">
     <div class="delivery-diagram-tools">
       <strong>PINNED OWNERS & TYPED ROUTES</strong
       ><span
         >{{ model.instances.length }} instances ·
         {{ model.routes.length }} routes</span
-      ><button
-        class="button quiet"
-        aria-label="Zoom message diagram out"
-        @click="zoom = Math.max(1, zoom - 0.25)"
       >
-        −</button
-      ><button
-        class="button quiet"
-        aria-label="Zoom message diagram in"
-        @click="zoom = Math.min(3, zoom + 0.25)"
-      >
-        +</button
-      ><button class="button quiet" @click="zoom = 1">
-        Fit message diagram
-      </button>
+      <CanvasControls label="message diagram" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
     </div>
-    <div class="delivery-diagram-scroll">
+    <div ref="viewport" class="delivery-diagram-scroll canvas-viewport">
       <svg
         ref="svg"
         :viewBox="`${visible.x} ${visible.y} ${visible.w} ${visible.h}`"
-        :style="{ width: `${zoom * 100}%` }"
+        :style="svgStyle"
         role="img"
         aria-label="Pinned state machine instances connected by typed effect to command routes"
         @pointermove="move"
@@ -265,9 +257,11 @@ function short(value: string) {
   overflow: hidden;
   margin: 18px 0;
 }
+.delivery-diagram.canvas-focus--expanded { display: flex; flex-direction: column; }
 .delivery-diagram-tools {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px 16px;
   font-size: 11px;
@@ -279,13 +273,10 @@ function short(value: string) {
 }
 .delivery-diagram-scroll {
   overflow: auto;
-  max-height: 520px;
   background: #f8fbfc;
 }
 .delivery-diagram svg {
   display: block;
-  min-width: 700px;
-  min-height: 320px;
   touch-action: none;
   user-select: none;
 }

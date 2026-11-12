@@ -33,7 +33,7 @@ func TestDeliveryHTTPExamplesPrepareAndImmutableCatalog(t *testing.T) {
 	example := deliveryHTTPExample(t)
 	lock := example.Model
 	w := req(t, s, "GET", "/api/health", nil)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.7.0"`) {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.7.1"`) {
 		t.Fatalf("health: %d %s", w.Code, w.Body.String())
 	}
 	w = req(t, s, "GET", "/api/delivery/examples", nil)

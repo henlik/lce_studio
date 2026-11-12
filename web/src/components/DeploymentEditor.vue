@@ -4,6 +4,8 @@ import {
   ArrowRight,
   Cable,
   CircleAlert,
+  ChevronLeft,
+  ChevronRight,
   Cpu,
   Globe2,
   MapPin,
@@ -13,6 +15,8 @@ import {
   Zap,
 } from "lucide-vue-next";
 import OutageWindows from "./OutageWindows.vue";
+import CanvasControls from "./CanvasControls.vue";
+import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import type {
   ComponentNode,
   Host,
@@ -34,6 +38,14 @@ const mapMode = ref<"topology" | "geography">("topology");
 const selectedSite = ref("");
 const selectedHost = ref("");
 const selectedLink = ref("");
+const wrapper = ref<HTMLElement | null>(null);
+const viewport = ref<HTMLElement | null>(null);
+const paletteVisible = ref(window.innerWidth > 1100);
+const inspectorVisible = ref(window.innerWidth > 1100);
+const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
+const { expanded, toggleExpand } = useCanvasFocus(wrapper, fit);
+watch(mapMode, fit);
+watch([paletteVisible, inspectorVisible], fit);
 const infra = computed(() => props.project.infrastructure);
 const site = computed(() =>
   infra.value?.sites.find((s) => s.id === selectedSite.value),
@@ -301,14 +313,17 @@ function assign(nodeId: string, event: Event) {
   if (hostId) infra.value.placements.push({ nodeId, hostId });
 }
 function editHost(hostId: string) {
+  inspectorVisible.value = true;
   selectedHost.value = hostId;
   tab.value = "hosts";
 }
 function editSite(siteId: string) {
+  inspectorVisible.value = true;
   selectedSite.value = siteId;
   tab.value = "sites";
 }
 function editLink(linkId: string) {
+  inspectorVisible.value = true;
   selectedLink.value = linkId;
   tab.value = "links";
 }
@@ -400,6 +415,29 @@ function serialization(l: NetworkLink) {
           </button>
         </div>
       </div>
+      <div ref="wrapper" class="deployment-canvas-layout" :class="{ 'canvas-focus--expanded': expanded, 'resources-hidden': !paletteVisible, 'inspector-hidden': !inspectorVisible }">
+        <div class="deployment-canvas-toolbar">
+          <div class="deployment-panel-toggles">
+            <button type="button" class="button quiet" :aria-label="`${paletteVisible ? 'Hide' : 'Show'} deployment resources`" :aria-expanded="paletteVisible" @click="paletteVisible = !paletteVisible"><component :is="paletteVisible ? ChevronLeft : ChevronRight" :size="15" /> Resources</button>
+            <button type="button" class="button quiet" :aria-label="`${inspectorVisible ? 'Hide' : 'Show'} deployment inspector`" :aria-expanded="inspectorVisible" @click="inspectorVisible = !inspectorVisible">Inspector <component :is="inspectorVisible ? ChevronRight : ChevronLeft" :size="15" /></button>
+          </div>
+          <CanvasControls label="deployment canvas" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
+        </div>
+        <aside v-show="paletteVisible" class="deployment-palette" aria-label="Deployment resources">
+          <h3>Resources</h3>
+          <p>Add infrastructure, then select it to edit its properties.</p>
+          <div class="deployment-create-actions">
+            <button class="button secondary" :disabled="busy || infra.sites.length >= 30" @click="addSite(); tab = 'sites'; inspectorVisible = true"><MapPin :size="14" /> Add site</button>
+            <button class="button secondary" :disabled="busy || !infra.sites.length || infra.hosts.length >= 30" @click="addHost(); tab = 'hosts'; inspectorVisible = true"><Cpu :size="14" /> Add host</button>
+            <button class="button secondary" :disabled="busy || !canAddLink" @click="addLink(); tab = 'links'; inspectorVisible = true"><Cable :size="14" /> Add link</button>
+          </div>
+          <h4>Sites · {{ infra.sites.length }}</h4>
+          <button v-for="s in infra.sites" :key="s.id" class="deployment-resource-item" :class="{ active: tab === 'sites' && selectedSite === s.id }" @click="editSite(s.id)"><MapPin :size="13" /><span>{{ s.name }}</span></button>
+          <h4>Hosts · {{ infra.hosts.length }}</h4>
+          <button v-for="h in infra.hosts" :key="h.id" class="deployment-resource-item" :class="{ active: tab === 'hosts' && selectedHost === h.id }" @click="editHost(h.id)"><Cpu :size="13" /><span>{{ h.name }}<small>{{ h.tier }}</small></span></button>
+          <h4>Links · {{ infra.links.length }}</h4>
+          <button v-for="l in infra.links" :key="l.id" class="deployment-resource-item" :class="{ active: tab === 'links' && selectedLink === l.id }" @click="editLink(l.id)"><Cable :size="13" /><span>{{ hostName(l.sourceHostId) }} ↔ {{ hostName(l.targetHostId) }}</span></button>
+        </aside>
       <div class="deployment-topology">
         <div class="deployment-map-toolbar">
           <div>
@@ -432,11 +470,12 @@ function serialization(l: NetworkLink) {
             </button>
           </div>
         </div>
-        <div class="deployment-svg-scroll">
+        <div ref="viewport" class="deployment-svg-scroll canvas-viewport">
           <svg
             v-if="mapMode === 'topology'"
             class="deployment-svg"
             :viewBox="`0 0 900 ${topologyHeight}`"
+            :style="svgStyle"
             role="img"
             aria-label="Hosts and direct physical network links"
           >
@@ -558,6 +597,7 @@ function serialization(l: NetworkLink) {
             v-else
             class="deployment-svg geography-svg"
             viewBox="0 0 900 310"
+            :style="svgStyle"
             role="img"
             aria-label="Relative geographic positions of sites"
           >
@@ -631,7 +671,7 @@ function serialization(l: NetworkLink) {
         </div>
       </div>
 
-      <div class="deployment-editor-body">
+      <div v-show="inspectorVisible" class="deployment-editor-body" aria-label="Deployment inspector">
         <nav class="deployment-tabs" aria-label="Deployment settings">
           <button
             :class="{ active: tab === 'placements' }"
@@ -1028,6 +1068,7 @@ function serialization(l: NetworkLink) {
           </template>
         </div>
       </div>
+      </div>
       <div class="deployment-assumptions">
         <Zap :size="17" />
         <p>
@@ -1052,6 +1093,36 @@ function serialization(l: NetworkLink) {
   flex: 1;
   min-width: 0;
 }
+.deployment-canvas-layout {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) 370px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: clamp(540px, 74vh, 860px);
+  min-width: 0;
+  gap: 0;
+  position: relative;
+  border: 1px solid #dce5ed;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+.deployment-canvas-layout.resources-hidden { grid-template-columns: minmax(0, 1fr) 370px; }
+.deployment-canvas-layout.inspector-hidden { grid-template-columns: 190px minmax(0, 1fr); }
+.deployment-canvas-layout.resources-hidden.inspector-hidden { grid-template-columns: minmax(0, 1fr); }
+.deployment-canvas-toolbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #dce5ed; background: #fff; }
+.deployment-panel-toggles { display: flex; gap: 4px; }
+.deployment-panel-toggles .button { font-size: 11px; padding: 7px 8px; }
+.deployment-palette { min-width: 0; min-height: 0; overflow: auto; padding: 16px 12px; border-right: 1px solid #dce5ed; background: #f9fbfc; }
+.deployment-palette h3 { margin: 0 0 8px; font-size: 13px; }
+.deployment-palette p { font-size: 11px; line-height: 1.6; color: #73899a; margin: 0 0 14px; }
+.deployment-palette h4 { margin: 20px 0 7px; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: #78909f; }
+.deployment-create-actions { display: grid; gap: 7px; }
+.deployment-create-actions .button { justify-content: flex-start; padding: 8px; font-size: 11px; }
+.deployment-resource-item { display: flex; align-items: flex-start; gap: 7px; width: 100%; padding: 8px 7px; border-radius: 6px; background: transparent; text-align: left; color: #567386; font-size: 11px; line-height: 1.5; }
+.deployment-resource-item > svg { flex-shrink: 0; margin-top: 2px; }
+.deployment-resource-item span { overflow-wrap: anywhere; }
+.deployment-resource-item small { display: block; color: #8b9eaa; }
+.deployment-resource-item:hover, .deployment-resource-item.active { background: #e5f3ee; color: #167e6c; }
 .deployment-welcome {
   background: white;
   border: 1px solid var(--line);
@@ -1149,8 +1220,10 @@ function serialization(l: NetworkLink) {
   border-color: #f1dfc4;
 }
 .deployment-topology {
-  border: 1px solid #dce5ed;
-  border-radius: 9px;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: #f9fbfd;
   overflow: hidden;
   box-shadow: 0 4px 12px #19344c04;
@@ -1163,6 +1236,7 @@ function serialization(l: NetworkLink) {
   padding: 12px 17px;
   border-bottom: 1px solid #e4ebf0;
   background: #fff;
+  flex-wrap: wrap;
 }
 .deployment-map-toolbar > div:first-child {
   display: flex;
@@ -1202,12 +1276,12 @@ function serialization(l: NetworkLink) {
 }
 .deployment-svg-scroll {
   overflow: auto;
-  max-height: 450px;
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 .deployment-svg {
   display: block;
-  width: 100%;
-  min-width: 650px;
 }
 .topology-tier {
   font-size: 10px;
@@ -1311,11 +1385,11 @@ function serialization(l: NetworkLink) {
   white-space: nowrap;
 }
 .deployment-editor-body {
-  margin-top: 20px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--line);
   background: #fff;
-  overflow: hidden;
+  overflow: auto;
 }
 .deployment-tabs {
   display: flex;
@@ -1323,6 +1397,10 @@ function serialization(l: NetworkLink) {
   padding: 8px 13px 0;
   border-bottom: 1px solid var(--line);
   background: #fbfcfd;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  overflow-x: auto;
 }
 .deployment-tabs button {
   display: flex;
@@ -1346,7 +1424,7 @@ function serialization(l: NetworkLink) {
   color: #8d9daa;
 }
 .deployment-settings {
-  padding: 22px 24px 24px;
+  padding: 16px;
 }
 .deployment-section-heading {
   display: flex;
@@ -1354,6 +1432,7 @@ function serialization(l: NetworkLink) {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 19px;
+  flex-wrap: wrap;
 }
 .deployment-section-heading h3 {
   font-size: 15px;
@@ -1568,6 +1647,9 @@ function serialization(l: NetworkLink) {
   padding: 4px 7px;
 }
 @media (max-width: 1100px) {
+  .deployment-canvas-layout { grid-template-columns: 170px minmax(0, 1fr) 320px; }
+  .deployment-canvas-layout.resources-hidden { grid-template-columns: minmax(0, 1fr) 320px; }
+  .deployment-canvas-layout.inspector-hidden { grid-template-columns: 170px minmax(0, 1fr); }
   .deployment-workspace {
     padding: 20px;
   }
@@ -1587,6 +1669,14 @@ function serialization(l: NetworkLink) {
   .deployment-assumptions > .button {
     margin-left: 27px;
   }
+}
+@media (max-width: 900px) {
+  .deployment-canvas-layout,
+  .deployment-canvas-layout.resources-hidden,
+  .deployment-canvas-layout.inspector-hidden { grid-template-columns: minmax(0, 1fr); }
+  .deployment-palette, .deployment-editor-body { position: absolute; top: 70px; bottom: 0; z-index: 4; box-shadow: 0 4px 20px #173a4526; }
+  .deployment-palette { left: 0; width: 210px; max-width: 80%; }
+  .deployment-editor-body { right: 0; width: 350px; max-width: 88%; }
 }
 @media (max-width: 650px) {
   .deployment-workspace {

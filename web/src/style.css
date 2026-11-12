@@ -2546,3 +2546,440 @@ code,
   gap: 10px;
   justify-content: space-between;
 }
+
+/* Workspace panels change available canvas space without unmounting editors. */
+.studio-shell {
+  --sidebar-width: 206px;
+}
+.studio-shell.rail-collapsed {
+  --sidebar-width: 64px;
+}
+.studio-shell .app-rail {
+  width: var(--sidebar-width);
+  flex-basis: var(--sidebar-width);
+  align-items: stretch;
+  padding: 16px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.studio-shell .main-shell {
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  min-width: 0;
+}
+.rail-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rail-header .brand {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  gap: 8px;
+  font-size: 15px;
+}
+.rail-header .brand-mark {
+  flex-shrink: 0;
+  width: 32px;
+  height: 37px;
+}
+.rail-header .brand-sub {
+  font-size: 13px;
+}
+.rail-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 32px;
+  padding: 0;
+  color: #b4d4da;
+  background: #203347;
+  border: 1px solid #32495e;
+  border-radius: 6px;
+}
+.rail-toggle:hover {
+  color: #fff;
+  background: #2a4358;
+}
+.rail-expanded .brand > span:last-child,
+.rail-expanded .rail-section,
+.rail-expanded .rail-bottom,
+.rail-expanded .main-nav button > span {
+  display: block;
+}
+.rail-expanded .rail-section {
+  padding: 22px 12px 12px;
+}
+.rail-expanded .main-nav {
+  display: grid;
+  margin-top: 0;
+  gap: 4px;
+}
+.rail-expanded .main-nav button {
+  padding: 12px;
+  gap: 10px;
+}
+.rail-expanded .main-nav button > span:not(.nav-number) {
+  font-size: 12px;
+}
+.rail-expanded .rail-divider {
+  width: auto;
+  margin: 18px 10px 10px;
+}
+.rail-expanded .rail-action {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  padding: 11px 10px;
+}
+.rail-action .rail-action-label {
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: 12px;
+}
+.rail-action .rail-count {
+  margin-left: auto;
+}
+.rail-expanded .rail-action > span {
+  display: inline;
+}
+.rail-expanded .rail-bottom {
+  padding: 20px 10px 0;
+}
+.rail-expanded .rail-bottom p {
+  margin-bottom: 15px;
+}
+.rail-collapsed .app-rail {
+  padding: 14px 7px;
+}
+.rail-collapsed .rail-header {
+  justify-content: center;
+}
+.rail-collapsed .brand,
+.rail-collapsed .rail-section,
+.rail-collapsed .rail-bottom,
+.rail-collapsed .main-nav button > span,
+.rail-collapsed .rail-action > span {
+  display: none;
+}
+.rail-collapsed .main-nav {
+  display: grid;
+  margin-top: 18px;
+  gap: 5px;
+}
+.rail-collapsed .main-nav button,
+.rail-collapsed .rail-action {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  font-size: 0;
+  gap: 0;
+}
+.rail-collapsed .rail-divider {
+  width: 30px;
+  margin: 18px auto 8px;
+}
+.rail-scrim {
+  display: none;
+}
+.studio-shell .toast {
+  left: calc(50% + var(--sidebar-width) / 2);
+}
+.studio-shell.canvas-expanded > .toast {
+  z-index: 1300;
+}
+.studio-shell .design-workspace {
+  --palette-width: 188px;
+  --inspector-width: 260px;
+  display: grid;
+  grid-template-columns: var(--palette-width) minmax(0, 1fr) var(
+      --inspector-width
+    );
+  grid-template-rows: minmax(0, 1fr);
+  position: relative;
+  flex: none;
+  height: clamp(460px, calc(100dvh - 260px), 900px);
+  min-height: 460px;
+  overflow: hidden;
+}
+.studio-shell .design-workspace.palette-collapsed {
+  --palette-width: 0px;
+}
+.studio-shell .design-workspace.inspector-collapsed {
+  --inspector-width: 0px;
+}
+.design-workspace > .component-palette {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+.design-workspace > .canvas-area {
+  grid-column: 2;
+  grid-row: 1;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.design-workspace > .canvas-area > .vue-flow {
+  height: 100%;
+  min-height: 0;
+}
+.design-workspace > .inspector {
+  grid-column: 3;
+  grid-row: 1;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+.panel-collapse {
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.inspector-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 13px 2px 18px;
+  color: #6e8596;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.canvas-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+.canvas-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #d5e1e9;
+  border-radius: 5px;
+  background: #fff;
+  color: #5e7c8f;
+  padding: 6px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.canvas-panel-toggle.active {
+  color: #297d6a;
+  background: #eef8f3;
+  border-color: #bbd8cd;
+}
+.design-workspace .canvas-ribbon {
+  height: 46px;
+  padding: 0 12px;
+  z-index: 25;
+}
+.design-workspace .canvas-ribbon > span:first-child {
+  min-width: 0;
+  white-space: nowrap;
+}
+.design-view-controls {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 10;
+  padding: 5px;
+  border: 1px solid #dce6ed;
+  border-radius: 8px;
+  background: #ffffffed;
+  box-shadow: 0 3px 12px #29445b10;
+}
+.design-workspace .canvas-empty {
+  max-width: 290px;
+  width: calc(100% - 36px);
+  pointer-events: auto;
+}
+.canvas-empty-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.canvas-empty-actions .button {
+  font-size: 11px;
+  padding: 9px 11px;
+}
+.studio-shell .design-workspace.canvas-focus--expanded {
+  min-height: 0;
+}
+.design-workspace.canvas-focus--expanded > .canvas-area,
+.design-workspace.canvas-focus--expanded > .component-palette,
+.design-workspace.canvas-focus--expanded > .inspector {
+  min-height: 0;
+}
+@media (min-width: 1700px) {
+  .studio-shell .design-workspace {
+    --palette-width: 216px;
+    --inspector-width: 290px;
+  }
+}
+@media (max-width: 1250px) {
+  .studio-shell .design-workspace {
+    --palette-width: 162px;
+    --inspector-width: 230px;
+  }
+  .design-workspace .canvas-legend {
+    display: none;
+  }
+  .canvas-panel-toggle span {
+    display: none;
+  }
+}
+@media (max-width: 850px) {
+  .studio-shell .design-workspace {
+    --palette-width: 0px;
+    --inspector-width: 0px;
+  }
+  .design-workspace > .component-palette,
+  .design-workspace > .inspector {
+    display: block;
+    position: absolute;
+    top: 50px;
+    bottom: 65px;
+    width: min(280px, calc(100% - 16px));
+    height: auto;
+    max-height: none;
+    z-index: 20;
+    border: 1px solid #d8e4ea;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px #24455b25;
+  }
+  .design-workspace > .component-palette {
+    left: 8px;
+    right: auto;
+  }
+  .design-workspace > .inspector {
+    right: 8px;
+    left: auto;
+  }
+  .design-workspace .palette-note,
+  .design-workspace .model-heading,
+  .design-workspace .tree-row {
+    display: block;
+  }
+  .design-workspace .tree-row {
+    display: flex;
+  }
+  .canvas-panel-toggle span {
+    display: inline;
+  }
+}
+@media (max-width: 600px) {
+  .studio-shell .app-rail {
+    position: sticky;
+    top: 0;
+    left: 0;
+    bottom: auto;
+    width: 100%;
+    height: 58px;
+    flex-direction: row;
+    gap: 5px;
+    padding: 6px;
+    overflow: visible;
+  }
+  .studio-shell .main-shell {
+    margin-left: 0;
+    width: 100%;
+    min-height: calc(100dvh - 58px);
+  }
+  .rail-collapsed .rail-header {
+    flex: 0 0 32px;
+  }
+  .studio-shell.rail-collapsed .main-nav {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    margin: 0;
+    gap: 3px;
+    align-items: center;
+  }
+  .studio-shell.rail-collapsed .main-nav button {
+    flex: 0 0 36px;
+    width: 36px;
+    padding: 10px;
+  }
+  .studio-shell.rail-collapsed .main-nav button svg {
+    width: 17px;
+    height: 17px;
+  }
+  .studio-shell.rail-collapsed .rail-action {
+    display: inline-flex;
+    flex: 0 0 32px;
+    width: 32px;
+    padding: 8px;
+  }
+  .studio-shell.rail-collapsed .rail-divider {
+    display: none;
+  }
+  .studio-shell.rail-expanded .app-rail {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(250px, 85vw);
+    height: 100dvh;
+    flex-direction: column;
+    padding: 18px 14px;
+    overflow-y: auto;
+    z-index: 32;
+  }
+  .studio-shell.rail-expanded .rail-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #10283d66;
+    z-index: 31;
+  }
+  .rail-expanded .main-nav {
+    margin: 8px 0 0;
+  }
+  .rail-expanded .brand > span:last-child {
+    font-size: 15px;
+  }
+  .rail-expanded .brand-sub {
+    font-size: 13px;
+  }
+  .rail-expanded .rail-action {
+    width: auto;
+  }
+  .studio-shell .toast {
+    left: 50%;
+  }
+  .studio-shell .design-workspace {
+    height: max(440px, calc(100dvh - 245px));
+    min-height: 440px;
+  }
+  .design-workspace .canvas-ribbon {
+    padding: 0 8px;
+  }
+  .design-workspace .canvas-ribbon > span:first-child {
+    font-size: 7px;
+    letter-spacing: 0.3px;
+  }
+  .canvas-panel-toggle {
+    padding: 6px;
+  }
+  .canvas-panel-toggle span {
+    display: none;
+  }
+  .design-view-controls {
+    left: 8px;
+    bottom: 9px;
+  }
+  .studio-shell .statusbar > span:last-child:after {
+    content: "Vue + Go · v0.7.1";
+  }
+}

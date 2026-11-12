@@ -34,7 +34,7 @@ func TestStateHTTPExamplesPrepareAndImmutableCatalog(t *testing.T) {
 	example := stateHTTPExample(t)
 	lock := example.Machine
 	w := req(t, s, "GET", "/api/health", nil)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.7.0"`) {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.7.1"`) {
 		t.Fatalf("health: %d %s", w.Code, w.Body.String())
 	}
 	w = req(t, s, "GET", "/api/state/examples", nil)

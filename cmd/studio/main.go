@@ -43,7 +43,7 @@ func run() error {
 	go func() {
 		serverError <- srv.ListenAndServe()
 	}()
-	log.Printf("LCE Studio v0.7.0 listening at %s (local single-user mode)", server.AddrForLog(addr))
+	log.Printf("LCE Studio v0.7.1 listening at %s (local single-user mode)", server.AddrForLog(addr))
 	select {
 	case <-stop.Done():
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

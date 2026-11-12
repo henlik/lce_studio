@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import CanvasControls from "./CanvasControls.vue";
+import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import type { DataContract } from "../dataTypes";
 const props = defineProps<{
   contract: DataContract;
@@ -10,8 +12,11 @@ const emit = defineEmits<{
   select: [name: string];
   move: [name: string, position: { x: number; y: number }];
 }>();
-const svg = ref<SVGSVGElement | null>(null),
-  zoom = ref(1);
+const svg = ref<SVGSVGElement | null>(null);
+const wrapper = ref<HTMLElement | null>(null);
+const viewport = ref<HTMLElement | null>(null);
+const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
+const { expanded, toggleExpand } = useCanvasFocus(wrapper, fit);
 const frozenBounds = ref<{ x: number; y: number; w: number; h: number } | null>(
   null,
 );
@@ -160,31 +165,20 @@ function end() {
 }
 </script>
 <template>
-  <section class="data-graph">
+  <section ref="wrapper" class="data-graph" :class="{ 'canvas-focus--expanded': expanded }">
     <div class="graph-tools">
       <strong>ENTITY RELATIONSHIPS</strong
       ><span
         >{{ contract.entities.length }} entities ·
         {{ contract.relationships.length }} foreign keys</span
-      ><button
-        class="button quiet"
-        aria-label="Zoom data diagram out"
-        @click="zoom = Math.max(1, zoom - 0.25)"
       >
-        −</button
-      ><button
-        class="button quiet"
-        aria-label="Zoom data diagram in"
-        @click="zoom = Math.min(3, zoom + 0.25)"
-      >
-        +</button
-      ><button class="button quiet" @click="zoom = 1">Fit diagram</button>
+      <CanvasControls label="data diagram" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
     </div>
-    <div class="graph-scroll">
+    <div ref="viewport" class="graph-scroll canvas-viewport">
       <svg
         ref="svg"
         :viewBox="`${visibleBounds.x} ${visibleBounds.y} ${visibleBounds.w} ${visibleBounds.h}`"
-        :style="{ width: `${zoom * 100}%` }"
+        :style="svgStyle"
         role="img"
         aria-label="Entity record fields, keys and required foreign key relationships"
         @pointermove="move"
@@ -276,10 +270,12 @@ function end() {
   overflow: hidden;
   margin-bottom: 18px;
 }
+.data-graph.canvas-focus--expanded { display: flex; flex-direction: column; }
 .graph-tools {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
   padding: 10px 16px;
   border-bottom: 1px solid #e1e9ef;
   font-size: 12px;
@@ -294,13 +290,10 @@ function end() {
 }
 .graph-scroll {
   overflow: auto;
-  max-height: 500px;
   background: #f8fbfc;
 }
 .graph-scroll svg {
   display: block;
-  min-height: 320px;
-  min-width: 680px;
   touch-action: none;
   user-select: none;
 }

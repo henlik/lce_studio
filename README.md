@@ -2,7 +2,9 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.7.0** adds a **Messages workspace**. Connect exact owned-state machines through typed routes, freeze message payloads and recipient revisions at dispatch, and test delivery drops, rollback, lost acknowledgements and safe receipt replay. Pharmacy and school-library experiments share one reservation-to-ledger model. The delivery runner is 0.7.0; state remains 0.6.0, pure/data remain 0.5.0 and application/deployment simulation remains 0.3.0.
+Version **0.7.1** improves authoring space and empty starts: collapse navigation and side panels, expand diagrams, and create empty projects/definitions with examples loaded only on request. A design-context guide distinguishes primitives, components, applications and systems from their data/state/deployment views. See [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md).
+
+The **Messages workspace** connects exact owned-state machines through typed routes, freezes message payloads and recipient revisions at dispatch, and tests delivery drops, rollback, lost acknowledgements and safe receipt replay. Pharmacy and school-library experiments share one reservation-to-ledger model. The delivery runner remains 0.7.0; state remains 0.6.0, pure/data remain 0.5.0 and application/deployment simulation remains 0.3.0.
 
 The [product roadmap](docs/ROADMAP.md) describes the general-purpose engineering studio. The [recursive component architecture](docs/COMPOSITION_ARCHITECTURE.md) develops the full recommendation from UML, BPMN, C4, ERDs and flowcharts; [COMPOSITION_CONTRACT.md](docs/COMPOSITION_CONTRACT.md) defines the precise v0.4 subset. Healthcare is a reference use case, not a kernel dependency. The [component authoring guide](docs/COMPONENT_SDK.md) explains the implemented package subset and the future SDK; external executable plugins and application generation are not yet implemented.
 
@@ -61,7 +63,7 @@ This version has no accounts or authentication; use it locally. Remote access ne
 
 ## First experiment: retries without duplicate writes
 
-The included project contains a client, an order service, and a ledger. Twelve requests pass through the pipeline. The first response for each request is lost after the database processes it, so the client retries.
+The studio opens with an empty project. To try the included pipeline, open **Projects** and load the retry example. It contains a client, an order service, and a ledger. Twelve requests pass through the pipeline. The first response for each request is lost after the database processes it, so the client retries.
 
 1. Run the supplied project. Duplicate protection on the ledger is enabled; all three requirements should pass.
 2. Select the ledger, disable duplicate protection, and run again. The no-duplicate-writes requirement should fail.
@@ -278,6 +280,6 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 
 ## Next increments
 
-Extend the documented composite foundation deliberately: couple owned-state and message transitions to resource/failure simulation under an explicit clock and scheduling contract; add event scheduling and bounded parallel fork/join; optional and nested data types; isolated external effect adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
+First establish explicit artifact kinds and a common parent/child design navigator for top-down and bottom-up work, as described in [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md). Then couple owned-state and message transitions to resource/failure simulation under an explicit clock and scheduling contract; add event scheduling and bounded parallel fork/join; optional and nested data types; isolated external effect adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.

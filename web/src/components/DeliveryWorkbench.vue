@@ -91,7 +91,6 @@ const showJSON = ref(false),
   );
 const file = ref<HTMLInputElement | null>(null),
   fileKind = ref<"model" | "scenario" | "machine">("model");
-let initialLoaded = false;
 function fail(e: unknown) {
   error.value = e instanceof Error ? e.message : String(e);
   issues.value = e instanceof APIError ? e.issues : [];
@@ -158,10 +157,6 @@ async function initialize() {
     ]);
     if (results[0].status === "fulfilled") {
       examples.value = results[0].value;
-      if (!initialLoaded && !dirty.value && examples.value[0]) {
-        adopt(examples.value[0].model, examples.value[0].scenario);
-        initialLoaded = true;
-      }
     } else fail(results[0].reason);
     if (results[1].status === "fulfilled") catalog.value = results[1].value;
     else fail(results[1].reason);
@@ -182,8 +177,10 @@ function newDraft() {
   jsonBaseline.value = "";
   showJSON.value = false;
   tab.value = "model";
+  error.value = "";
+  issues.value = [];
   notice.value =
-    "Embed exact state machines, add instances and routes, then define explicit dispatch/delivery steps and independent expectations.";
+    "Empty message model and scenario. Embed exact state machines, add instances and routes, then define explicit dispatch/delivery steps and independent expectations.";
 }
 function openExample() {
   const example = examples.value[Number(selectedExample.value)];
@@ -661,6 +658,15 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         Message run history
       </button>
     </nav>
+    <section
+      v-if="tab === 'model' && !model.instances.length"
+      class="state-panel"
+    >
+      <p class="state-help">
+        This message model is empty. Import or embed an exact state machine
+        below, then use Add message instance and connect its typed routes.
+      </p>
+    </section>
     <DeliveryDefinitionEditor
       v-show="tab === 'model'"
       :model="model"
@@ -671,6 +677,10 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       @instance-added="instanceAdded"
     />
     <div v-show="tab === 'scenario'">
+      <p v-if="!model.instances.length" class="state-panel state-help">
+        Add an owner in Owners &amp; routes first. Then choose each command,
+        dispatch, delivery or restart explicitly in this scenario.
+      </p>
       <div class="state-actions">
         <button
           class="button secondary"

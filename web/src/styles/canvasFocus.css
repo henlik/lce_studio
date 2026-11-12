@@ -1,0 +1,40 @@
+.canvas-focus--expanded {
+  position: fixed !important;
+  inset: 12px !important;
+  z-index: 1200 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  background: #fff;
+  border: 1px solid #b9d1d8;
+  border-radius: 12px;
+  box-shadow: 0 0 0 100vmax #102e43a6, 0 14px 70px #102e4340;
+  isolation: isolate;
+}
+.canvas-focus--expanded:focus { outline: none; }
+.canvas-viewport {
+  height: clamp(340px, 52vh, 620px);
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.canvas-viewport > svg {
+  display: block;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+}
+.canvas-focus--expanded > .canvas-viewport {
+  flex: 1;
+  height: auto;
+  max-height: none;
+}
+@media (max-width: 640px) {
+  .canvas-focus--expanded { inset: 5px !important; border-radius: 8px; }
+  .canvas-viewport { height: 360px; }
+}

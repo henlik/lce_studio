@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import CanvasControls from "./CanvasControls.vue";
+import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import type { StateMachine } from "../stateTypes";
 const props = defineProps<{ machine: StateMachine; selected: number }>();
 const emit = defineEmits<{ select: [index: number] }>();
+const wrapper = ref<HTMLElement | null>(null);
+const viewport = ref<HTMLElement | null>(null);
+const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
+const { expanded, toggleExpand } = useCanvasFocus(wrapper, fit);
 const height = computed(() =>
   Math.max(
     230,
@@ -47,14 +53,16 @@ const wires = computed(() => {
 });
 </script>
 <template>
-  <section class="state-diagram">
+  <section ref="wrapper" class="state-diagram" :class="{ 'canvas-focus--expanded': expanded }">
     <div class="state-diagram-title">
       <strong>OWNERSHIP & COMMAND BOUNDARIES</strong
       ><span>Choose a handler to inspect its connections</span>
+      <CanvasControls label="state diagram" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
     </div>
-    <div class="state-diagram-scroll">
+    <div ref="viewport" class="state-diagram-scroll canvas-viewport">
       <svg
         :viewBox="`0 0 960 ${height}`"
+        :style="svgStyle"
         role="img"
         aria-label="Owned state, pure command handlers and committed effect intentions"
       >
@@ -109,6 +117,7 @@ const wires = computed(() => {
           :aria-label="`Inspect command ${command.name}`"
           @click="emit('select', i)"
           @keydown.enter="emit('select', i)"
+          @keydown.space.prevent="emit('select', i)"
         >
           <rect
             width="230"
@@ -152,10 +161,13 @@ const wires = computed(() => {
   margin: 18px 0;
   overflow: hidden;
 }
+.state-diagram.canvas-focus--expanded { display: flex; flex-direction: column; }
 .state-diagram-title {
   padding: 13px 16px;
   border-bottom: 1px solid #e1e9ed;
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   font-size: 11px;
@@ -163,13 +175,10 @@ const wires = computed(() => {
 }
 .state-diagram-scroll {
   overflow: auto;
-  max-height: 540px;
   background: #f9fcfc;
 }
 .state-diagram svg {
   display: block;
-  min-width: 800px;
-  width: 100%;
 }
 .state-diagram rect {
   fill: white;

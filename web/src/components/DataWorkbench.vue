@@ -31,21 +31,13 @@ function blank(): DataContract {
     description: "",
     author: "Local author",
     license: "UNLICENSED",
-    records: [{ name: "Item", fields: [{ name: "id", type: "string" }] }],
-    entities: [
-      {
-        name: "Items",
-        record: "Item",
-        primaryKey: ["id"],
-        uniqueKeys: [],
-        position: { x: 40, y: 40 },
-      },
-    ],
+    records: [],
+    entities: [],
     relationships: [],
   };
 }
 const draft = ref<DataContract>(blank()),
-  fixture = ref<DataFixture>({ name: "Example data", rows: { Items: [] } }),
+  fixture = ref<DataFixture>({ name: "New fixture", rows: {} }),
   examples = ref<DataExample[]>([]),
   catalog = ref<DataContractRecord[]>([]),
   history = ref<DataValidationSummary[]>([]);
@@ -58,8 +50,8 @@ const tab = ref<"model" | "relationships" | "fixture" | "history" | "compare">(
   issues = ref<ValidationIssue[]>([]),
   selectedExample = ref("0"),
   selectedCatalog = ref(""),
-  selectedEntity = ref("Items"),
-  selectedRecord = ref("Item");
+  selectedEntity = ref(""),
+  selectedRecord = ref("");
 const baselineContract = ref(""),
   baselineFixture = ref(""),
   installedStamp = ref(""),
@@ -101,7 +93,6 @@ const currentEntity = computed(
     draft.value.entities.find((e) => e.name === selectedEntity.value) ||
     draft.value.entities[0],
 );
-let loaded = false;
 baselineContract.value = draftStamp.value;
 baselineFixture.value = fixtureStamp.value;
 function fail(e: unknown) {
@@ -134,7 +125,7 @@ function adopt(lock: DataContractLock, data?: DataFixture, installed = false) {
   draft.value = cloneBehavior(lock.contract);
   fixture.value = data
     ? cloneBehavior(data)
-    : { name: "Example data", rows: {} };
+    : { name: "New fixture", rows: {} };
   selectedRecord.value = draft.value.records[0]?.name || "";
   selectedEntity.value = draft.value.entities[0]?.name || "";
   jsonText.value = "";
@@ -163,10 +154,6 @@ async function initialize() {
     ]);
     if (results[0].status === "fulfilled") {
       examples.value = results[0].value;
-      if (!loaded && !dirty.value && examples.value[0]) {
-        adopt(examples.value[0].contract, examples.value[0].fixture);
-        loaded = true;
-      }
     } else fail(results[0].reason);
     if (results[1].status === "fulfilled") catalog.value = results[1].value;
     else fail(results[1].reason);
@@ -177,9 +164,9 @@ async function initialize() {
 function newDraft() {
   if (busy.value || !replaceAllowed()) return;
   draft.value = blank();
-  fixture.value = { name: "Example data", rows: { Items: [] } };
-  selectedRecord.value = "Item";
-  selectedEntity.value = "Items";
+  fixture.value = { name: "New fixture", rows: {} };
+  selectedRecord.value = "";
+  selectedEntity.value = "";
   baselineContract.value = "";
   baselineFixture.value = "";
   installedStamp.value = "";
@@ -187,6 +174,10 @@ function newDraft() {
   jsonBaseline.value = "";
   showJSON.value = false;
   tab.value = "model";
+  error.value = "";
+  issues.value = [];
+  notice.value =
+    "Empty data contract. Add a record type, define its fields, then add entities and relationships as needed.";
 }
 function openExample() {
   const e = examples.value[Number(selectedExample.value)];
@@ -664,6 +655,18 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
         Compatibility
       </button>
     </nav>
+    <section
+      v-if="tab === 'model' && !draft.records.length"
+      class="data-panel"
+    >
+      <p class="help">
+        This contract is empty. Add the first record type and its fields, then
+        create entities and relationships for the data you want to model.
+      </p>
+      <button class="button secondary" :disabled="!!busy" @click="addRecord">
+        Add first record type
+      </button>
+    </section>
     <template v-if="tab === 'model' || tab === 'relationships'"
       ><DataGraph
         :contract="draft"
@@ -760,7 +763,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
             <h3>Entities & keys</h3>
             <button
               class="button secondary"
-              :disabled="!!busy || draft.entities.length >= 32"
+              :disabled="!!busy || !currentRecord || draft.entities.length >= 32"
               @click="addEntity"
             >
               Add entity
