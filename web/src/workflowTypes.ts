@@ -50,6 +50,7 @@ export interface WorkflowCommand {
   errorNext: string;
 }
 export interface WorkflowNode {
+  color?: string;
   id: string;
   name: string;
   kind: "task" | "decision" | "command" | "end";

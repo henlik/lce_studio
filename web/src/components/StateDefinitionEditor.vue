@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { focusField } from "../validationFocus";
+import type { ValidationIssue } from "../types";
 import { computed, ref, watch } from "vue";
 import {
   cloneBehavior,
@@ -35,12 +37,28 @@ const props = defineProps<{
   catalog: InstalledComposite[];
   dataCatalog: DataContractRecord[];
   disabled?: boolean;
+  issues?: ValidationIssue[];
 }>();
 const emit = defineEmits<{
   "load-handler": [index: number, key: string];
   "import-handler": [index: number];
   "embed-data": [key: string];
 }>();
+const editorRoot = ref<HTMLElement | null>(null);
+function focusIssue(issue: ValidationIssue) {
+  const command = issue.path.match(/commands\[(\d+)\]/),
+    slot = issue.path.match(/state\[(\d+)\]/);
+  if (command) selected.value = Number(command[1]);
+  focusField(
+    editorRoot.value,
+    command
+      ? '[aria-label="State command name"]'
+      : slot
+        ? `[aria-label="State slot ${Number(slot[1]) + 1} name"]`
+        : '[aria-label="State machine ID"]',
+  );
+}
+defineExpose({ focusIssue });
 const selected = ref(0),
   handler = ref(""),
   dataSelection = ref("");
@@ -124,7 +142,7 @@ function booleanOutputs() {
 }
 </script>
 <template>
-  <div class="state-definition">
+  <div ref="editorRoot" class="state-definition">
     <details class="state-panel">
       <summary>Machine identity and description</summary>
       <fieldset :disabled="disabled">
@@ -337,6 +355,15 @@ function booleanOutputs() {
         </select></label
       ><template v-if="command"
         ><fieldset :disabled="disabled">
+          <p
+            v-for="issue in (issues || []).filter((i) =>
+              i.path.includes(`commands[${selected}]`),
+            )"
+            :key="issue.path"
+            class="state-warning"
+          >
+            {{ issue.message }}
+          </p>
           <label class="field"
             >Command name<input
               v-model="command.name"

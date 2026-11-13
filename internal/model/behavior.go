@@ -24,6 +24,7 @@ type BehaviorBinding struct {
 }
 
 type BehaviorNode struct {
+	Color     string                     `json:"color,omitempty"`
 	ID        string                     `json:"id"`
 	Op        string                     `json:"op,omitempty"`
 	Component *ComponentRef              `json:"component,omitempty"`

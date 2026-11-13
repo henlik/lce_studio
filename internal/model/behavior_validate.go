@@ -10,6 +10,8 @@ import (
 	"unicode/utf8"
 )
 
+var nodeColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
 var behaviorName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,63}$`)
 
 func sortedBehaviorKeys[V any](values map[string]V) []string {
@@ -212,6 +214,9 @@ func validateBehaviorLocal(p ComponentPackage) []ValidationIssue {
 		}
 		if node.Component != nil {
 			issues = append(issues, prefixBehaviorIssues(at+".component", ValidateComponentReference(*node.Component))...)
+		}
+		if node.Color != "" && !nodeColor.MatchString(node.Color) {
+			add(at+".color", "Node color must be a six-digit hexadecimal color.")
 		}
 		if math.IsNaN(node.Position.X) || math.IsInf(node.Position.X, 0) || math.Abs(node.Position.X) > 1e6 {
 			add(at+".position.x", "Position must be finite within -1000000..1000000.")

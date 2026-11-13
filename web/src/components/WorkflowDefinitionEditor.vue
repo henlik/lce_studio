@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { nodeColors } from "../graphPresentation";
+import { focusField } from "../validationFocus";
+import type { ValidationIssue } from "../types";
 import { computed, ref, watch } from "vue";
 import {
   typedDefault,
@@ -47,6 +50,7 @@ const props = defineProps<{
   dataCatalog: DataContractRecord[];
   primitives: PrimitiveSpec[];
   disabled?: boolean;
+  issues?: ValidationIssue[];
 }>();
 const emit = defineEmits<{
   "load-decision": [key: string];
@@ -82,6 +86,38 @@ const inspection = computed(() =>
         )?.decision
       : undefined,
 );
+const editorRoot = ref<HTMLElement | null>(null);
+const issueNode = (path: string) =>
+  Number(path.match(/(?:^|\.)nodes\[(\d+)\]/)?.[1] ?? -1);
+const invalidIds = computed(() =>
+  (props.issues || [])
+    .map((i) => props.workflow.nodes[issueNode(i.path)]?.id)
+    .filter((id): id is string => !!id),
+);
+function focusIssue(issue: ValidationIssue) {
+  const index = issueNode(issue.path);
+  inspectorOpen.value = true;
+  selected.value = index >= 0 ? props.workflow.nodes[index]?.id || "" : "";
+  focusField(
+    editorRoot.value,
+    index >= 0
+      ? `[aria-label="Step ${selected.value} name"]`
+      : '[aria-label="Workflow name"]',
+  );
+}
+defineExpose({ focusIssue });
+function reorderNode(node: WorkflowNode, delta: number) {
+  const nodes = props.workflow.nodes,
+    i = nodes.indexOf(node),
+    j = i + delta;
+  if (props.disabled || j < 0 || j >= nodes.length) return;
+  [nodes[i].position, nodes[j].position] = [
+    nodes[j].position,
+    nodes[i].position,
+  ];
+  nodes.splice(i, 1);
+  nodes.splice(j, 0, node);
+}
 function addNode(kind: WorkflowNode["kind"]) {
   const id = freshStateName(
       kind,
@@ -218,7 +254,7 @@ function inspectNode(n: WorkflowNode) {
 }
 </script>
 <template>
-  <div>
+  <div ref="editorRoot">
     <div class="wf-actions">
       <button
         class="button secondary"
@@ -259,13 +295,15 @@ function inspectNode(n: WorkflowNode) {
             inspectorOpen = true;
           "
         >
-          <span>{{ n.name || n.id }}</span
-          ><small>{{ n.task?.kind || n.kind }} · {{ n.id }}</small>
+          <span>{{ n.name || n.id }}</span><small
+            >{{ n.task?.kind || n.kind }} · {{ n.id }}</small
+          >
         </button>
       </aside>
       <WorkflowCanvas
         :workflow="workflow"
         :selected="selected"
+        :invalid-ids="invalidIds"
         :disabled="disabled"
         @select="selected = $event"
         @move="move"
@@ -332,6 +370,38 @@ function inspectNode(n: WorkflowNode) {
           :key="stateUIKey(n)"
         >
           <h3>{{ n.kind }} step</h3>
+          <p
+            v-for="issue in (issues || []).filter(
+              (i) => issueNode(i.path) === workflow.nodes.indexOf(n),
+            )"
+            :key="issue.path"
+            class="wf-warning"
+          >
+            {{ issue.message }}
+          </p>
+          <div class="wf-actions">
+            <button
+              class="button secondary"
+              :disabled="disabled || workflow.nodes[0] === n"
+              @click="reorderNode(n, -1)"
+            >
+              Move earlier</button
+            ><button
+              class="button secondary"
+              :disabled="disabled || workflow.nodes.at(-1) === n"
+              @click="reorderNode(n, 1)"
+            >
+              Move later
+            </button>
+          </div>
+          <label class="field"
+            >Node color<select v-model="n.color" :disabled="disabled">
+              <option :value="undefined">Default for step type</option>
+              <option v-for="color in nodeColors" :key="color" :value="color">
+                {{ color }}
+              </option>
+            </select></label
+          >
           <fieldset :disabled="disabled">
             <label class="field"
               >Step name<input
@@ -743,8 +813,9 @@ function inspectNode(n: WorkflowNode) {
             :key="referenceKey(b.root)"
             class="wf-card"
           >
-            <strong>{{ bundleRoot(b)?.name || b.root.packageId }}</strong
-            ><code>{{ referenceKey(b.root) }}</code>
+            <strong>{{
+              bundleRoot(b)?.name || b.root.packageId
+            }}</strong><code>{{ referenceKey(b.root) }}</code>
             <div class="wf-actions">
               <button
                 class="button secondary"

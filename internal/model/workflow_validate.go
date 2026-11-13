@@ -499,6 +499,9 @@ func ValidateWorkflowDefinition(w WorkflowDefinition) []ValidationIssue {
 		} else {
 			v.count(node.Name)
 		}
+		if node.Color != "" && !nodeColor.MatchString(node.Color) {
+			v.add(at+".color", "Node color must be a six-digit hexadecimal color.")
+		}
 		if math.IsNaN(node.Position.X) || math.IsInf(node.Position.X, 0) || math.Abs(node.Position.X) > 1e6 || math.IsNaN(node.Position.Y) || math.IsInf(node.Position.Y, 0) || math.Abs(node.Position.Y) > 1e6 {
 			v.add(at+".position", "Position must be finite within ±1000000.")
 		}

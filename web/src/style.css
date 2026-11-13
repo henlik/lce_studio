@@ -885,8 +885,14 @@ code,
   border: 2px solid #f0f4f8 !important;
   background: #8aa6b7 !important;
 }
+.vue-flow__handle.target {
+  background: #2478ba !important;
+}
+.vue-flow__handle.source {
+  background: #d18a22 !important;
+}
 .vue-flow__handle:hover {
-  background: #12a894 !important;
+  outline: 2px solid #184e70;
 }
 .vue-flow__handle-left {
   left: -5px !important;
@@ -2980,6 +2986,27 @@ code,
     bottom: 9px;
   }
   .studio-shell .statusbar > span:last-child:after {
-    content: "Vue + Go · v0.7.1";
+    content: "Vue + Go · v0.8.1";
   }
+}
+
+.validation-focus {
+  outline: 3px solid #d25d4c !important;
+  outline-offset: 4px;
+  background: #fff3ed !important;
+  border-radius: 5px;
+}
+.issue-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  line-height: 1.6;
+}
+
+.vue-flow__node.invalid-definition-node {
+  outline: 3px solid #c63f3f;
+  border-radius: 10px;
 }

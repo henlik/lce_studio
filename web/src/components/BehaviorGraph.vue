@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { nodeColor, feedbackEdges } from "../graphPresentation";
 import type { DataContractLock } from "../dataTypes";
 import { computed, ref } from "vue";
 import CanvasControls from "./CanvasControls.vue";
-import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
+import {
+  useCanvasFocus,
+  useCanvasViewport,
+} from "../composables/useCanvasFocus";
 import {
   nodeInputs,
   nodeOutputs,
@@ -19,10 +23,12 @@ const props = defineProps<{
   primitives: PrimitiveSpec[];
   selectedId: string;
   readonly?: boolean;
+  invalidIds?: string[];
   contracts?: DataContractLock[];
 }>();
 const emit = defineEmits<{
   select: [id: string];
+  "drop-part": [kind: string, key: string, position: { x: number; y: number }];
   inspect: [id: string];
   move: [id: string, position: { x: number; y: number }];
 }>();
@@ -104,8 +110,17 @@ function sourcePoint(binding: BehaviorBinding | undefined) {
     ? { x: n.node.position.x + 250, y: n.node.position.y + 59 + index * 25 }
     : undefined;
 }
+const cyclic = computed(() =>
+  feedbackEdges(
+    props.behavior.nodes.flatMap((n) =>
+      Object.values(n.inputs)
+        .filter((b) => b.node)
+        .map((b) => ({ from: b.node!, to: n.id, id: `${b.node}:${n.id}` })),
+    ),
+  ),
+);
 const wires = computed(() => {
-  const result: { id: string; path: string }[] = [];
+  const result: { id: string; path: string; feedback: boolean }[] = [];
   function wire(
     binding: BehaviorBinding | undefined,
     x: number,
@@ -117,6 +132,9 @@ const wires = computed(() => {
     const curve = Math.max(40, Math.abs(x - from.x) / 2);
     result.push({
       id,
+      feedback:
+        !!binding?.node &&
+        cyclic.value.has(`${binding.node}:${id.split(":")[0]}`),
       path: `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${x - curve} ${y}, ${x} ${y}`,
     });
   }
@@ -140,11 +158,36 @@ const wires = computed(() => {
   );
   return result;
 });
-function point(event: PointerEvent) {
+function point(event: PointerEvent | DragEvent) {
   const p = svg.value!.createSVGPoint();
   p.x = event.clientX;
   p.y = event.clientY;
   return p.matrixTransform(svg.value!.getScreenCTM()!.inverse());
+}
+function dropPart(event: DragEvent) {
+  if (props.readonly || !svg.value) return;
+  try {
+    const value = JSON.parse(
+      event.dataTransfer?.getData("application/x-lce-component") || "null",
+    );
+    if (
+      !value ||
+      !["primitive", "nested", "example"].includes(value.kind) ||
+      typeof value.key !== "string"
+    )
+      return;
+    const p = point(event);
+    emit("drop-part", value.kind, value.key, {
+      x: Math.round(p.x),
+      y: Math.round(p.y),
+    });
+  } catch {}
+}
+function isSystem(node: Behavior["nodes"][number]) {
+  return (
+    !!node.component &&
+    nestedPackage(node, props.dependencies)?.designLevel === "system"
+  );
 }
 function start(id: string, event: PointerEvent) {
   emit("select", id);
@@ -172,7 +215,11 @@ const clipped = (text: string, max = 24) =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 </script>
 <template>
-  <section ref="wrapper" class="behavior-graph-panel" :class="{ 'canvas-focus--expanded': expanded }">
+  <section
+    ref="wrapper"
+    class="behavior-graph-panel"
+    :class="{ 'canvas-focus--expanded': expanded }"
+  >
     <div class="behavior-graph-toolbar">
       <span
         >BOUND DATAFLOW
@@ -181,7 +228,15 @@ const clipped = (text: string, max = 24) =>
           {{ wires.length }} connections</small
         ></span
       >
-      <CanvasControls label="component graph" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
+      <CanvasControls
+        label="component graph"
+        :zoom="zoom"
+        :expanded="expanded"
+        @zoom-in="zoomIn"
+        @zoom-out="zoomOut"
+        @fit="fit"
+        @expand="toggleExpand"
+      />
     </div>
     <div ref="viewport" class="behavior-graph-scroll canvas-viewport">
       <svg
@@ -190,6 +245,8 @@ const clipped = (text: string, max = 24) =>
         :style="svgStyle"
         role="img"
         aria-label="Typed component input, operation and output bindings"
+        @dragover.prevent
+        @drop.prevent="dropPart"
         @pointermove="move"
         @pointerup="stop"
         @pointercancel="stop"
@@ -217,6 +274,7 @@ const clipped = (text: string, max = 24) =>
           :key="wire.id"
           :d="wire.path"
           class="behavior-wire"
+          :class="{ feedback: wire.feedback }"
         />
         <text :x="inputX" y="20" class="graph-section-label">
           PUBLIC INPUTS
@@ -233,7 +291,7 @@ const clipped = (text: string, max = 24) =>
           <text x="161" y="18" text-anchor="end" class="graph-port-type">
             {{ port.type.slice(0, 3) }}
           </text>
-          <circle cx="170" cy="15" r="3" class="graph-port-dot" />
+          <circle cx="170" cy="15" r="4" class="graph-port-dot input-pin" />
           <title>{{ port.name }}: {{ port.type }}</title>
         </g>
         <g
@@ -244,7 +302,10 @@ const clipped = (text: string, max = 24) =>
           :class="{
             selected: n.node.id === selectedId,
             nested: !!n.node.component,
+            system: isSystem(n.node),
+            invalid: invalidIds?.includes(n.node.id),
           }"
+          :style="{ '--node-color': nodeColor(n.node, dependencies) }"
           role="button"
           tabindex="0"
           :aria-label="`Select behavior node ${n.node.id}`"
@@ -253,17 +314,68 @@ const clipped = (text: string, max = 24) =>
           @keydown.space.prevent="emit('select', n.node.id)"
           @dblclick="n.node.component && emit('inspect', n.node.id)"
         >
-          <rect width="250" :height="n.height" rx="8" class="graph-node-box" />
+          <path
+            v-if="!n.node.component"
+            :d="`M 12 0 H 238 L 250 12 V ${n.height - 12} L 238 ${n.height} H 12 L 0 ${n.height - 12} V 12 Z`"
+            class="graph-node-box"
+          />
+          <rect
+            v-else
+            width="250"
+            :height="n.height"
+            :rx="isSystem(n.node) ? 2 : 12"
+            class="graph-node-box"
+          />
+          <rect
+            v-if="isSystem(n.node)"
+            x="5"
+            y="5"
+            width="240"
+            :height="n.height - 10"
+            rx="1"
+            fill="none"
+            :stroke="nodeColor(n.node, dependencies)"
+            opacity=".45"
+          />
+          <text
+            x="231"
+            y="21"
+            text-anchor="middle"
+            :fill="nodeColor(n.node, dependencies)"
+            font-size="17"
+          >
+            {{ isSystem(n.node) ? "▣" : n.node.component ? "▢" : "◇" }}
+          </text>
+          <text
+            v-if="invalidIds?.includes(n.node.id)"
+            x="233"
+            y="39"
+            fill="#b42318"
+            font-weight="bold"
+          >
+            !
+          </text>
           <text x="12" y="20" class="graph-node-title">
-            {{ clipped(n.title || "", 30) }}
+            {{ clipped(n.title || "", 26) }}
           </text>
           <text x="12" y="36" class="graph-node-subtitle">
             {{ n.node.id }} ·
-            {{ n.node.component ? "nested component" : n.node.op }}
+            {{
+              isSystem(n.node)
+                ? "system"
+                : n.node.component
+                  ? "component"
+                  : n.node.op
+            }}
           </text>
           <line x1="0" y1="44" x2="250" y2="44" stroke="#edf1f4" />
           <g v-for="(port, i) in n.inputs" :key="port.name">
-            <circle cx="0" :cy="59 + i * 25" r="3.5" class="graph-port-dot" />
+            <circle
+              cx="0"
+              :cy="59 + i * 25"
+              r="4.5"
+              class="graph-port-dot input-pin"
+            />
             <text x="10" :y="62 + i * 25" class="graph-port-name">
               {{ clipped(port.name, 14) }}
               <tspan
@@ -276,7 +388,12 @@ const clipped = (text: string, max = 24) =>
             <title>{{ port.name }}: {{ port.type }}</title>
           </g>
           <g v-for="(port, i) in n.outputs" :key="port.port">
-            <circle cx="250" :cy="59 + i * 25" r="3.5" class="graph-port-dot" />
+            <circle
+              cx="250"
+              :cy="59 + i * 25"
+              r="4.5"
+              class="graph-port-dot output-pin"
+            />
             <text
               x="241"
               :y="62 + i * 25"
@@ -304,7 +421,7 @@ const clipped = (text: string, max = 24) =>
           :transform="`translate(${outputX},${i * 34 + 39})`"
         >
           <rect width="170" height="29" rx="5" class="graph-boundary output" />
-          <circle cx="0" cy="15" r="3" class="graph-port-dot" />
+          <circle cx="0" cy="15" r="4" class="graph-port-dot output-pin" />
           <text x="9" y="18" class="graph-port-name">
             {{ clipped(port.name, 19) }}
           </text>
@@ -329,7 +446,12 @@ const clipped = (text: string, max = 24) =>
           ? "Pinned definition · select a node to inspect its bindings."
           : "Select and drag nodes to arrange the definition. Edit typed sources in the binding inspector."
       }}
-      Nested calls can be opened with a double-click.
+      Blue = input · amber = output. Double-click a nested definition to inspect
+      it.
+      <strong v-if="cyclic.size" class="cycle-warning"
+        >Purple dashed wires form feedback cycles. Pure compositions must be
+        acyclic; use State or Workflows for repeated behavior.</strong
+      >
     </p>
   </section>
 </template>
@@ -340,7 +462,10 @@ const clipped = (text: string, max = 24) =>
   background: #fff;
   overflow: hidden;
 }
-.behavior-graph-panel.canvas-focus--expanded { display: flex; flex-direction: column; }
+.behavior-graph-panel.canvas-focus--expanded {
+  display: flex;
+  flex-direction: column;
+}
 .behavior-graph-toolbar {
   display: flex;
   justify-content: space-between;
@@ -442,5 +567,41 @@ const clipped = (text: string, max = 24) =>
   margin: 0;
   border-top: 1px solid #e7edf1;
   color: #657e8f;
+}
+.graph-port-dot.input-pin {
+  fill: #2478ba;
+  stroke: white;
+  stroke-width: 1;
+}
+.graph-port-dot.output-pin {
+  fill: #c78116;
+  stroke: white;
+  stroke-width: 1;
+}
+.behavior-graph-node .graph-node-box,
+.behavior-graph-node.nested .graph-node-box {
+  stroke: var(--node-color);
+  stroke-width: 1.5;
+  fill: #fff;
+}
+.behavior-graph-node.selected .graph-node-box {
+  stroke: var(--node-color);
+  stroke-width: 3;
+}
+.behavior-graph-node.invalid .graph-node-box {
+  stroke: #c4312d;
+  stroke-width: 3;
+  fill: #fff0ee;
+}
+.behavior-wire.feedback {
+  stroke: #9746b4;
+  stroke-width: 2.5;
+  stroke-dasharray: 7 4;
+}
+.cycle-warning {
+  display: block;
+  color: #87359f;
+  font-size: 12px;
+  margin-top: 6px;
 }
 </style>

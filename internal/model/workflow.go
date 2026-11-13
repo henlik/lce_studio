@@ -50,6 +50,7 @@ type WorkflowEnd struct {
 	Outputs map[string]WorkflowBinding `json:"outputs"`
 }
 type WorkflowNode struct {
+	Color    string            `json:"color,omitempty"`
 	ID       string            `json:"id"`
 	Name     string            `json:"name"`
 	Kind     string            `json:"kind"`

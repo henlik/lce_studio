@@ -44,6 +44,7 @@ type ComponentPackage struct {
 	Behavior      *Behavior          `json:"behavior,omitempty"`
 	Tests         []BehaviorCase     `json:"tests,omitempty"`
 	DataContracts []DataContractLock `json:"dataContracts,omitempty"`
+	DesignLevel   string             `json:"designLevel,omitempty"`
 }
 
 type PackageLock struct {
@@ -80,6 +81,9 @@ func ValidateComponentPackage(p ComponentPackage) []ValidationIssue {
 	}
 	if len(p.Version) > 32 || !componentVersion.MatchString(p.Version) {
 		add("version", "Use an exact three-part decimal version, at most 32 bytes, without leading zeroes, ranges or suffixes.")
+	}
+	if p.DesignLevel != "" && (p.SchemaVersion == 1 || (p.DesignLevel != "component" && p.DesignLevel != "system")) {
+		add("designLevel", "Choose component or system for a pure composite.")
 	}
 	text("name", p.Name, 200, true)
 	text("description", p.Description, 4000, false)

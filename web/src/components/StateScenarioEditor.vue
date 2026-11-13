@@ -225,9 +225,12 @@ function unknown(map: Record<string, unknown>, names: string[]) {
         </div>
       </div>
       <p class="state-help">
-        A repeated command ID replays its original receipt only when command,
-        expected revision and inputs match. Faults apply only when a new commit
-        reaches their injection point.
+        Expected revision rejects a stale writer: two new requests at the same
+        revision cannot both change the state. Scenarios simulate an explicit
+        ordering; they do not run threads in parallel. A repeated command ID
+        replays its original receipt only when command, expected revision and
+        inputs match. Faults apply only when a new commit reaches their
+        injection point.
       </p>
       <fieldset :disabled="disabled">
         <details

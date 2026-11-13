@@ -19,9 +19,20 @@ const props = defineProps<{
   generation: number;
   stale: boolean;
   disabled?: boolean;
+  form?: {
+    context: string;
+    response: Record<string, TypedValue>;
+    responseBaseline: string;
+    signalDrafts: Record<
+      string,
+      { values: Record<string, TypedValue>; baseline: string }
+    >;
+    signalName: string;
+  } | null;
 }>();
 const emit = defineEmits<{
   start: [];
+  "form-change": [form: NonNullable<typeof props.form>];
   event: [event: WorkflowEvent];
   record: [];
   "copy-scenario": [];
@@ -38,6 +49,10 @@ const definition = computed(
     Record<string, { values: Record<string, TypedValue>; baseline: string }>
   >({}),
   signalName = ref("");
+const formContext = computed(
+  () =>
+    `${props.generation}:${props.session?.workflow.digest || ""}:${task.value?.id || ""}`,
+);
 const signal = computed(() =>
   definition.value.signals.find((s) => s.name === signalName.value),
 );
@@ -51,6 +66,10 @@ watch(
       ]),
     );
     responseBaseline.value = workflowStamp(response.value);
+    if (props.form?.context === formContext.value) {
+      response.value = props.form.response;
+      responseBaseline.value = props.form.responseBaseline;
+    }
   },
   { immediate: true },
 );
@@ -62,6 +81,10 @@ watch(
       signalGeneration = props.generation;
       signalDrafts.value = {};
       signalName.value = "";
+      if (props.form?.context === formContext.value) {
+        signalDrafts.value = props.form.signalDrafts;
+        signalName.value = props.form.signalName;
+      }
     }
     for (const signal of definition.value.signals) {
       if (signalDrafts.value[signal.name]) continue;
@@ -97,6 +120,18 @@ watch(
     ),
   (pending) => emit("pending-change", pending),
   { immediate: true },
+);
+watch(
+  [response, responseBaseline, signalDrafts, signalName],
+  () =>
+    emit("form-change", {
+      context: formContext.value,
+      response: response.value,
+      responseBaseline: responseBaseline.value,
+      signalDrafts: signalDrafts.value,
+      signalName: signalName.value,
+    }),
+  { deep: true, flush: "post" },
 );
 function sendResponse() {
   if (!task.value) return;

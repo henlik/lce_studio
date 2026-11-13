@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { focusField } from "../validationFocus";
+import type { ValidationIssue } from "../types";
 import { computed, ref, watch } from "vue";
 import { typeKey, typeLabel } from "../behaviorTypes";
 import {
@@ -26,6 +28,22 @@ const emit = defineEmits<{
   "import-machine": [];
   "instance-added": [id: string];
 }>();
+const editorRoot = ref<HTMLElement | null>(null);
+function focusIssue(issue: ValidationIssue) {
+  const instance = issue.path.match(/instances\[(\d+)\]/),
+    route = issue.path.match(/routes\[(\d+)\]/);
+  if (instance)
+    selected.value = props.model.instances[Number(instance[1])]?.id || "";
+  focusField(
+    editorRoot.value,
+    instance
+      ? '[aria-label="Message instance ID"]'
+      : route
+        ? `[aria-label="Route ${Number(route[1]) + 1} name"]`
+        : '[aria-label="Message model ID"]',
+  );
+}
+defineExpose({ focusIssue });
 const installed = ref(""),
   selected = ref(""),
   editorError = ref("");
@@ -115,7 +133,7 @@ function mapInput(route: DeliveryRoute, name: string, e: Event) {
 }
 </script>
 <template>
-  <div>
+  <div ref="editorRoot">
     <details class="state-panel">
       <summary>Message model identity and description</summary>
       <fieldset :disabled="disabled">

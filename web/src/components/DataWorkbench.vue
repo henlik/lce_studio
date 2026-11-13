@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
+import { useActionFeedback } from "../composables/useNotifications";
+import DraftStatus from "./DraftStatus.vue";
+import { focusField } from "../validationFocus";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, apiRawJson, APIError } from "../api";
 import type { ValidationIssue } from "../types";
@@ -95,6 +99,30 @@ const currentEntity = computed(
 );
 baselineContract.value = draftStamp.value;
 baselineFixture.value = fixtureStamp.value;
+function focusIssue(issue: ValidationIssue) {
+  const entity = issue.path.match(/entities\[(\d+)\]/),
+    record = issue.path.match(/records\[(\d+)\]/),
+    relationship = issue.path.match(/relationships\[(\d+)\]/);
+  tab.value = relationship
+    ? "relationships"
+    : issue.path.includes("fixture")
+      ? "fixture"
+      : "model";
+  if (entity)
+    selectedEntity.value = draft.value.entities[Number(entity[1])]?.name || "";
+  if (record)
+    selectedRecord.value = draft.value.records[Number(record[1])]?.name || "";
+  focusField(
+    document.querySelector(".data-workbench"),
+    entity
+      ? '[aria-label="Entity name"]'
+      : record
+        ? '[aria-label="Record type name"]'
+        : relationship
+          ? `[aria-label="Relationship ${Number(relationship[1]) + 1} name"]`
+          : '[aria-label="Data contract ID"]',
+  );
+}
 function fail(e: unknown) {
   error.value = e instanceof Error ? e.message : String(e);
   issues.value = e instanceof APIError ? e.issues : [];
@@ -486,20 +514,40 @@ async function compare() {
     comparedLabels.value = `${old.contract.id} @ ${old.contract.version} → ${newLock.contract.id} @ ${newLock.contract.version}`;
   });
 }
+const autosave = useWorkspaceDraft("data", {
+  draft,
+  fixture,
+  tab,
+  selectedEntity,
+  selectedRecord,
+  jsonKind,
+  jsonText,
+  jsonBaseline,
+  jsonSourceStamp,
+  showJSON,
+  baselineContract,
+  baselineFixture,
+  installedStamp,
+  record,
+  recordStamp,
+});
+useActionFeedback("Data", busy, notice, error);
 function unload(e: BeforeUnloadEvent) {
-  if (dirty.value) {
+  if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
   }
 }
-onMounted(() => {
+onMounted(async () => {
+  await autosave.ready;
   initialize();
   window.addEventListener("beforeunload", unload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", unload));
 </script>
 <template>
-  <section class="data-workbench">
+  <section class="data-workbench" :inert="autosave.status.value === 'loading'">
+    <DraftStatus :draft="autosave" />
     <header>
       <span class="section-eyebrow">REUSABLE DATA CONTRACTS</span>
       <h2>Design data and its relationships</h2>
@@ -590,7 +638,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
       />
     </div>
     <p class="help">
-      Drafts remain in this browser session. Installing retains the exact
+      Drafts and fixtures autosave on this browser. Installing retains the exact
       definition; export fixtures separately. Changing installed content
       requires a new version.
     </p>
@@ -598,7 +646,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
       <strong>{{ error }}</strong>
       <ul>
         <li v-for="i in issues" :key="i.path + i.message">
-          <code>{{ i.path }}</code> {{ i.message }}
+          <button class="issue-link" @click="focusIssue(i)">
+            <code>{{ i.path }}</code> {{ i.message }} → Fix
+          </button>
         </li>
       </ul>
     </div>
@@ -655,10 +705,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
         Compatibility
       </button>
     </nav>
-    <section
-      v-if="tab === 'model' && !draft.records.length"
-      class="data-panel"
-    >
+    <section v-if="tab === 'model' && !draft.records.length" class="data-panel">
       <p class="help">
         This contract is empty. Add the first record type and its fields, then
         create entities and relationships for the data you want to model.
@@ -763,7 +810,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
             <h3>Entities & keys</h3>
             <button
               class="button secondary"
-              :disabled="!!busy || !currentRecord || draft.entities.length >= 32"
+              :disabled="
+                !!busy || !currentRecord || draft.entities.length >= 32
+              "
               @click="addEntity"
             >
               Add entity

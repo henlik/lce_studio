@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
+import { useActionFeedback } from "../composables/useNotifications";
+import DraftStatus from "./DraftStatus.vue";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, apiRawJson, APIError } from "../api";
 import {
@@ -96,6 +99,7 @@ const savedDefinition = ref(definitionStamp.value),
   installedStamp = ref("");
 const record = ref<WorkflowRun | null>(null),
   recordStamp = ref("");
+const liveForm = ref<any>(null);
 const live = ref<(WorkflowExample & { result: WorkflowResult }) | null>(null),
   liveInputs = ref<Record<string, TypedValue>>({}),
   liveGeneration = ref(0),
@@ -132,6 +136,13 @@ const dirty = computed(
       (workflowStamp(live.value.workflow.workflow) !== definitionStamp.value ||
         pendingJSON.value),
   );
+const definitionEditor = ref<InstanceType<
+  typeof WorkflowDefinitionEditor
+> | null>(null);
+function focusIssue(issue: ValidationIssue) {
+  tab.value = issue.path.startsWith("scenario") ? "scenario" : "definition";
+  definitionEditor.value?.focusIssue(issue);
+}
 const file = ref<HTMLInputElement | null>(null),
   fileKind = ref<"workflow" | "scenario" | "decision" | "machine">("workflow");
 function fail(e: unknown) {
@@ -664,20 +675,47 @@ async function applyJSON() {
       "Canonical JSON applied. Export, install or record the changed artifact to retain it.";
   });
 }
+const autosave = useWorkspaceDraft("workflows", {
+  workflow,
+  scenario,
+  tab,
+  jsonKind,
+  jsonText,
+  jsonBaseline,
+  jsonSourceStamp,
+  showJSON,
+  savedDefinition,
+  savedScenario,
+  installedStamp,
+  record,
+  recordStamp,
+  live,
+  liveForm,
+  liveInputs,
+  liveGeneration,
+  savedLiveStamp,
+  savedLiveInputs,
+});
+useActionFeedback("Workflows", busy, notice, error);
 function beforeUnload(e: BeforeUnloadEvent) {
-  if (dirty.value || liveDirty.value) {
+  if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
   }
 }
-onMounted(() => {
+onMounted(async () => {
+  await autosave.ready;
   void initialize();
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 </script>
 <template>
-  <section class="workflow-workbench">
+  <section
+    class="workflow-workbench"
+    :inert="autosave.status.value === 'loading'"
+  >
+    <DraftStatus :draft="autosave" />
     <header class="wf-header">
       <span class="section-eyebrow"
         >REUSABLE WORKFLOW · HUMAN & ADAPTER BOUNDARIES</span
@@ -776,7 +814,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       <strong>{{ error }}</strong>
       <ul>
         <li v-for="(issue, i) in issues" :key="i">
-          <code>{{ issue.path }}</code> {{ issue.message }}
+          <button class="issue-link" @click="focusIssue(issue)">
+            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
+          </button>
         </li>
       </ul>
     </div>
@@ -801,6 +841,8 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       </button>
     </nav>
     <WorkflowDefinitionEditor
+      ref="definitionEditor"
+      :issues="issues"
       v-show="tab === 'definition'"
       :workflow="workflow"
       :contracts="contracts"
@@ -818,6 +860,8 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       :workflow="workflow"
       :inputs="liveInputs"
       :session="live"
+      :form="liveForm"
+      @form-change="liveForm = $event"
       :generation="liveGeneration"
       :stale="liveStale"
       :disabled="!!busy"

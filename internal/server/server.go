@@ -69,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, http.StatusServiceUnavailable, "Database unavailable.", nil)
 			return
 		}
-		respond(w, 200, map[string]string{"status": "ok", "version": "0.8.0"})
+		respond(w, 200, map[string]string{"status": "ok", "version": "0.8.1"})
 	case path == "/api/example":
 		if !method(w, r, http.MethodGet) {
 			return

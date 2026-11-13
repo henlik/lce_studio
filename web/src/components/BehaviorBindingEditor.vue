@@ -28,6 +28,7 @@ const props = defineProps<{
   inputs: BehaviorPort[];
   sources: BindingSource[];
   disabled?: boolean;
+  issue?: string;
 }>();
 const emit = defineEmits<{
   "update:modelValue": [value: BehaviorBinding | undefined];
@@ -118,7 +119,18 @@ function setLiteralType(event: Event) {
 }
 </script>
 <template>
-  <div class="binding-editor">
+  <div
+    class="binding-editor"
+    :class="{ invalid: !!issue || !selected || unresolved }"
+  >
+    <p v-if="issue || !selected || unresolved" class="binding-required">
+      {{
+        issue ||
+        (unresolved
+          ? "Source no longer exists. Choose a replacement."
+          : "Required · choose an input, a node output, or a literal value.")
+      }}
+    </p>
     <label class="field"
       >{{ label }}
       <span class="binding-type">{{
@@ -127,11 +139,11 @@ function setLiteralType(event: Event) {
           : recordRef
             ? `${expectedType}<${recordRef.record}>`
             : expectedType
-      }}</span
-      ><select
+      }}</span><select
         :value="selected"
         :disabled="disabled"
         :aria-label="`${label} source`"
+        :aria-invalid="!!issue || !selected || unresolved"
         @change="choose"
       >
         <option value="">Unbound — choose source</option>
@@ -227,5 +239,15 @@ function setLiteralType(event: Event) {
 .binding-editor select {
   width: 100%;
   font-size: 12px;
+}
+.binding-editor.invalid {
+  border-color: #ce6258;
+  background: #fff7f6;
+}
+.binding-required {
+  color: #96362e;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 8px;
 }
 </style>

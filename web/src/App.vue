@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { focusField } from "./validationFocus";
+import { useWorkspaceDraft } from "./composables/useWorkspaceDraft";
+import { useActionFeedback } from "./composables/useNotifications";
+import DraftStatus from "./components/DraftStatus.vue";
+import StudioNotifications from "./components/StudioNotifications.vue";
 import {
   computed,
   defineAsyncComponent,
@@ -325,9 +330,51 @@ const currentEvent = computed(
 const passCount = computed(
   () => currentRun.value?.verdicts.filter((v) => v.passed).length || 0,
 );
+function focusProjectIssue(path: string) {
+  const node = path.match(/^nodes\[(\d+)\]/),
+    edge = path.match(/^edges\[(\d+)\]/);
+  if (node || edge) {
+    view.value = "design";
+    inspectorCollapsed.value = false;
+    inspector.value = "properties";
+    selectedNodeId.value = node
+      ? project.value?.nodes[Number(node[1])]?.id || ""
+      : "";
+    selectedEdgeId.value = edge
+      ? project.value?.edges[Number(edge[1])]?.id || ""
+      : "";
+    focusField(
+      document.querySelector(".studio-shell"),
+      ".inspector-content input",
+    );
+  } else if (
+    path.startsWith("infrastructure") ||
+    path.startsWith("placements")
+  ) {
+    view.value = "deployment";
+    focusField(
+      document.querySelector(".studio-shell"),
+      ".deployment-workspace input",
+    );
+  } else if (path.startsWith("scenario")) {
+    view.value = "design";
+    inspectorCollapsed.value = false;
+    inspector.value = "scenario";
+    focusField(
+      document.querySelector(".studio-shell"),
+      ".inspector-content input",
+    );
+  } else {
+    view.value = "plan";
+    focusField(
+      document.querySelector(".studio-shell"),
+      ".plan-workspace input, .plan-workspace textarea",
+    );
+  }
+}
 const flowNodes = computed(
   () =>
-    project.value?.nodes.map((n) => ({
+    project.value?.nodes.map((n, index) => ({
       id: n.id,
       type: n.type,
       position: n.position,
@@ -336,6 +383,12 @@ const flowNodes = computed(
         active: !runStale.value && currentEvent.value?.nodeId === n.id,
       },
       selected: n.id === selectedNodeId.value,
+      class: validation.value?.issues.some(
+        (i) =>
+          i.path === `nodes[${index}]` || i.path.startsWith(`nodes[${index}].`),
+      )
+        ? "invalid-definition-node"
+        : "",
     })) || [],
 );
 const flowEdges = computed(
@@ -847,7 +900,7 @@ function seek(e: Event) {
   replayIndex.value = Number((e.target as HTMLInputElement).value);
 }
 function beforeUnload(e: BeforeUnloadEvent) {
-  if (dirty.value) {
+  if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
   }
@@ -865,7 +918,20 @@ watch(replaySpeed, () => {
     toggleReplay();
   }
 });
-onMounted(() => {
+const autosave = useWorkspaceDraft("project", {
+  project,
+  view,
+  saved,
+  pristineProjectStamp,
+  railCollapsed,
+  paletteCollapsed,
+  inspectorCollapsed,
+  selectedNodeId,
+  selectedEdgeId,
+});
+useActionFeedback("Project", busy, notice, error);
+onMounted(async () => {
+  await autosave.ready;
   connect();
   window.addEventListener("beforeunload", beforeUnload);
   window.addEventListener("resize", updateResponsive);
@@ -880,8 +946,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <StudioNotifications />
   <div
     class="studio-shell"
+    :inert="autosave.status.value === 'loading'"
     :class="{
       'rail-collapsed': railCollapsed,
       'rail-expanded': !railCollapsed,
@@ -898,7 +966,7 @@ onUnmounted(() => {
           ><span class="brand-mark"><Box :size="24" /></span
           ><span
             >software<span class="brand-sub"
-              >studio<span class="version"> / 0.8.0</span></span
+              >studio<span class="version"> / 0.8.1</span></span
             ></span
           ></a
         >
@@ -1031,7 +1099,7 @@ onUnmounted(() => {
         </div>
         <button v-if="!connected" class="text-link" @click="connect">
           Reconnect</button
-        ><span class="local-label">LOCAL WORKSPACE · V0.8.0</span>
+        ><span class="local-label">LOCAL WORKSPACE · V0.8.1</span>
       </div>
     </aside>
     <button
@@ -1151,6 +1219,7 @@ onUnmounted(() => {
       </header>
       <DesignOrientation :workspace="view" />
 
+      <DraftStatus v-if="!definitionView" :draft="autosave" />
       <div v-if="error && !definitionView" class="alert error" role="alert">
         <CircleAlert :size="18" /><span>{{ error }}</span
         ><button @click="error = ''" aria-label="Dismiss error">
@@ -1169,7 +1238,13 @@ onUnmounted(() => {
         </div>
         <ul>
           <li v-for="(issue, i) in validation.issues" :key="i">
-            <code>{{ issue.path }}</code> {{ issue.message }}
+            <button
+              class="issue-link"
+              @click="focusProjectIssue(issue.path)"
+            >
+              <code>{{ issue.path }}</code> {{ issue.message }}
+              <strong>Fix →</strong>
+            </button>
           </li>
         </ul>
       </div>
@@ -1611,8 +1686,10 @@ onUnmounted(() => {
                   ></label
                 >
                 <div class="inspector-footer">
-                  <code>{{ selectedNode.id }}</code
-                  ><button class="button danger" @click="removeSelected">
+                  <code>{{ selectedNode.id }}</code><button
+                    class="button danger"
+                    @click="removeSelected"
+                  >
                     <Trash2 :size="14" /> Remove component
                   </button>
                 </div></template
@@ -1648,8 +1725,7 @@ onUnmounted(() => {
                   <span>{{
                     project.nodes.find((n) => n.id === selectedEdge?.source)
                       ?.name
-                  }}</span
-                  ><ArrowRight :size="16" /><span>{{
+                  }}</span><ArrowRight :size="16" /><span>{{
                     project.nodes.find((n) => n.id === selectedEdge?.target)
                       ?.name
                   }}</span>
@@ -2137,21 +2213,20 @@ onUnmounted(() => {
       <footer class="statusbar">
         <span
           ><span class="status-indicator" />{{
-            validation?.valid
-              ? "Model validated"
-              : dirty
-                ? "Unsaved design changes"
-                : "Workspace ready"
+            definitionView
+              ? "Definition workspace"
+              : validation?.valid
+                ? "Model validated"
+                : dirty
+                  ? "Project draft · save to publish changes"
+                  : "Workspace ready"
           }}</span
         ><span
           >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
-          <span class="footer-dot">·</span> v0.8.0</span
+          <span class="footer-dot">·</span> v0.8.1</span
         >
       </footer>
     </main>
-    <div v-if="notice" class="toast" role="status">
-      <CheckCircle2 :size="17" />{{ notice }}
-    </div>
 
     <div
       v-if="showProjects || showRunHistory"

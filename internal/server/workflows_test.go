@@ -43,7 +43,7 @@ func TestWorkflowHTTPExamplesPrepareAndImmutableCatalog(t *testing.T) {
 	example := workflowHTTPExample(t)
 	lock := example.Workflow
 	w := req(t, s, "GET", "/api/health", nil)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.8.0"`) {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"version":"0.8.1"`) {
 		t.Fatalf("health: %d %s", w.Code, w.Body.String())
 	}
 	w = req(t, s, "GET", "/api/workflow/examples", nil)

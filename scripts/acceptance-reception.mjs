@@ -141,7 +141,7 @@ function orderedWorkflowScenario(s) {
   return { schemaVersion: s.schemaVersion, name: s.name, inputs: map(s.inputs, orderedValue), events: s.events.map(e => ({ id: e.id, kind: e.kind, ...(e.taskId ? { taskId: e.taskId } : {}), ...(e.signal ? { signal: e.signal } : {}), values: map(e.values, orderedValue) })), ...(s.expected ? { expected: orderedWorkflowExpectation(s.expected) } : {}) };
 }
 
-assert.equal((await get('/api/health')).version, '0.8.0');
+assert.equal((await get('/api/health')).version, '0.8.1');
 const gatePackage = packageDefinition('approval-gate', { inputs: [port('approved', 'boolean'), port('authorized', 'boolean')], outputs: [port('permitted', 'boolean')], nodes: [primitive('gate', 'and', { left: input('approved'), right: input('authorized') })], bindings: { permitted: source('gate') } });
 const gate = await prepareComponent(gatePackage);
 const reservationPackage = packageDefinition('bounded-reservation', {

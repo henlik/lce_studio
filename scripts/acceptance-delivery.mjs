@@ -149,7 +149,7 @@ const stateR = (total, ticks) => ({ total: int(total), ticks: int(ticks) });
 const sendInputs = (amount, allow = true, accept = true) => ({ amount: int(amount), allow: bool(allow), accept: bool(accept) });
 const receiveInputs = (amount, allow = true) => ({ amount: int(amount), allow: bool(allow) });
 
-assert.equal((await get('/api/health')).version, '0.8.0');
+assert.equal((await get('/api/health')).version, '0.8.1');
 assert.equal((await get('/api/components/primitives')).length, 11); assert.equal((await get('/api/components/structured-primitives')).length, 16);
 const sourcePackage = packageDefinition('delivery-source-decision', {
   inputs: [port('current', 'integer'), port('session', 'integer'), port('amount', 'integer'), port('allow', 'boolean'), port('accept', 'boolean')],

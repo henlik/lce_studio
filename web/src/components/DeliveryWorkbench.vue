@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
+import { useActionFeedback } from "../composables/useNotifications";
+import DraftStatus from "./DraftStatus.vue";
+import { focusField } from "../validationFocus";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, apiRawJson, APIError } from "../api";
 import { cloneBehavior } from "../behaviorTypes";
@@ -91,6 +95,21 @@ const showJSON = ref(false),
   );
 const file = ref<HTMLInputElement | null>(null),
   fileKind = ref<"model" | "scenario" | "machine">("model");
+const definitionEditor = ref<InstanceType<
+  typeof DeliveryDefinitionEditor
+> | null>(null);
+function focusIssue(issue: ValidationIssue) {
+  if (issue.path.startsWith("scenario")) {
+    tab.value = "scenario";
+    focusField(
+      document.querySelector(".delivery-workbench"),
+      '[aria-label="Message scenario name"]',
+    );
+  } else {
+    tab.value = "model";
+    definitionEditor.value?.focusIssue(issue);
+  }
+}
 function fail(e: unknown) {
   error.value = e instanceof Error ? e.message : String(e);
   issues.value = e instanceof APIError ? e.issues : [];
@@ -265,7 +284,7 @@ async function install() {
     installedStamp.value = stamp;
     catalog.value = await api<InstalledDeliveryModel[]>("/delivery/models");
     notice.value =
-      "Exact message model installed. Scenario edits are separate and remain in this session until exported or recorded.";
+      "Exact message model installed. Scenario edits autosave separately on this browser. Export or record them for a portable checkpoint.";
   });
 }
 function download(value: unknown, name: string) {
@@ -518,20 +537,41 @@ async function applyJSON() {
       "Canonical JSON applied. Install, export or record the changed artifact to retain it.";
   });
 }
+const autosave = useWorkspaceDraft("messages", {
+  model,
+  scenario,
+  tab,
+  jsonKind,
+  jsonText,
+  jsonBaseline,
+  jsonSourceStamp,
+  showJSON,
+  savedModel,
+  savedScenario,
+  installedStamp,
+  record,
+  recordStamp,
+});
+useActionFeedback("Messages", busy, notice, error);
 function beforeUnload(e: BeforeUnloadEvent) {
-  if (dirty.value) {
+  if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
   }
 }
-onMounted(() => {
+onMounted(async () => {
+  await autosave.ready;
   initialize();
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 </script>
 <template>
-  <section class="state-workbench delivery-workbench">
+  <section
+    class="state-workbench delivery-workbench"
+    :inert="autosave.status.value === 'loading'"
+  >
+    <DraftStatus :draft="autosave" />
     <header>
       <span class="section-eyebrow">TYPED MESSAGE DELIVERY</span>
       <h2>Follow an intention from one owner to another</h2>
@@ -633,7 +673,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       <strong>{{ error }}</strong>
       <ul>
         <li v-for="(issue, i) in issues" :key="i">
-          <code>{{ issue.path }}</code> {{ issue.message }}
+          <button class="issue-link" @click="focusIssue(issue)">
+            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
+          </button>
         </li>
       </ul>
     </div>
@@ -668,6 +710,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       </p>
     </section>
     <DeliveryDefinitionEditor
+      ref="definitionEditor"
       v-show="tab === 'model'"
       :model="model"
       :machines="machines"

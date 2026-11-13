@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
+import { useActionFeedback } from "../composables/useNotifications";
+import DraftStatus from "./DraftStatus.vue";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, apiRawJson, APIError } from "../api";
 import {
@@ -97,6 +100,13 @@ const dirty = computed(
       !!record.value &&
       (recordStamp.value !== workspaceStamp.value || pendingJSON.value),
   );
+const definitionEditor = ref<InstanceType<typeof StateDefinitionEditor> | null>(
+  null,
+);
+function focusIssue(issue: ValidationIssue) {
+  tab.value = issue.path.startsWith("scenario") ? "scenario" : "definition";
+  definitionEditor.value?.focusIssue(issue);
+}
 const file = ref<HTMLInputElement | null>(null),
   fileKind = ref<"machine" | "scenario" | "handler">("machine"),
   handlerIndex = ref(-1);
@@ -538,20 +548,38 @@ async function applyJSON() {
       "Canonical JSON applied. Export, install or record the changed artifact to retain it.";
   });
 }
+const autosave = useWorkspaceDraft("state", {
+  machine,
+  scenario,
+  tab,
+  jsonKind,
+  jsonText,
+  jsonBaseline,
+  jsonSourceStamp,
+  showJSON,
+  savedMachine,
+  savedScenario,
+  installedStamp,
+  record,
+  recordStamp,
+});
+useActionFeedback("State", busy, notice, error);
 function beforeUnload(e: BeforeUnloadEvent) {
-  if (dirty.value) {
+  if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
   }
 }
-onMounted(() => {
+onMounted(async () => {
+  await autosave.ready;
   initialize();
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 </script>
 <template>
-  <section class="state-workbench">
+  <section class="state-workbench" :inert="autosave.status.value === 'loading'">
+    <DraftStatus :draft="autosave" />
     <header>
       <span class="section-eyebrow">OWNED STATE & ATOMIC TRANSITIONS</span>
       <h2>Test what survives a command, retry or restart</h2>
@@ -653,7 +681,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       <strong>{{ error }}</strong>
       <ul>
         <li v-for="(issue, i) in issues" :key="i">
-          <code>{{ issue.path }}</code> {{ issue.message }}
+          <button class="issue-link" @click="focusIssue(issue)">
+            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
+          </button>
         </li>
       </ul>
     </div>
@@ -682,15 +712,21 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       </button>
     </nav>
     <section
-      v-if="tab === 'definition' && !machine.state.length && !machine.commands.length"
+      v-if="
+        tab === 'definition' &&
+        !machine.state.length &&
+        !machine.commands.length
+      "
       class="state-panel"
     >
       <p class="state-help">
-        This machine is empty. Use Add state slot to declare what it owns,
-        then Add command and choose a pure handler for its behavior.
+        This machine is empty. Use Add state slot to declare what it owns, then
+        Add command and choose a pure handler for its behavior.
       </p>
     </section>
     <StateDefinitionEditor
+      ref="definitionEditor"
+      :issues="issues"
       v-show="tab === 'definition'"
       :machine="machine"
       :contracts="contracts"

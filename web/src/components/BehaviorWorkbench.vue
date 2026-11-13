@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
+import { useActionFeedback } from "../composables/useNotifications";
+import DraftStatus from "./DraftStatus.vue";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   ArrowDownToLine,
@@ -56,6 +59,9 @@ import {
 import BehaviorBindingEditor from "./BehaviorBindingEditor.vue";
 import BehaviorEvidence from "./BehaviorEvidence.vue";
 import BehaviorGraph from "./BehaviorGraph.vue";
+import { focusField } from "../validationFocus";
+import ComponentPalette from "./ComponentPalette.vue";
+import { nodeColors, nodeColor } from "../graphPresentation";
 import TypedValueEditor from "./TypedValueEditor.vue";
 import {
   dataKey,
@@ -588,6 +594,141 @@ function freshNodeId(prefix: string) {
     i++;
   return `${prefix}${i}`;
 }
+const inspectorHidden = ref(false),
+  paletteHidden = ref(false);
+let pendingPosition: { x: number; y: number } | undefined;
+async function addFromPalette(
+  kind: string,
+  key: string,
+  position?: { x: number; y: number },
+) {
+  if (busy.value || readonly.value || draft.value.behavior.nodes.length >= 32)
+    return;
+  pendingPosition = position;
+  try {
+    if (kind === "primitive") {
+      selectedPrimitive.value = key;
+      addPrimitive();
+    } else if (kind === "nested") {
+      selectedNested.value = key;
+      await addNested();
+    } else if (kind === "example") {
+      const bundle = examples.value.find((b) => referenceKey(b.root) === key);
+      if (!bundle) return;
+      mergeDependencies(bundle.packages);
+      if (rootLock(bundle).package.schemaVersion === 3)
+        draft.value.schemaVersion = 3;
+      selectedNested.value = key;
+      await addNested();
+    }
+  } catch (e) {
+    fail(e);
+  } finally {
+    pendingPosition = undefined;
+  }
+}
+function selectCanvasNode(id: string) {
+  selectedNodeId.value = id;
+  inspectorHidden.value = false;
+}
+function reorderNode(delta: number) {
+  const nodes = draft.value.behavior.nodes,
+    index = nodes.findIndex((n) => n.id === selectedNodeId.value),
+    target = index + delta;
+  if (
+    readonly.value ||
+    busy.value ||
+    index < 0 ||
+    target < 0 ||
+    target >= nodes.length
+  )
+    return;
+  [nodes[index].position, nodes[target].position] = [
+    nodes[target].position,
+    nodes[index].position,
+  ];
+  const [node] = nodes.splice(index, 1);
+  nodes.splice(target, 0, node);
+  notice.value =
+    "Node order and placement updated. Typed bindings still determine execution.";
+}
+function autoArrange() {
+  const nodes = draft.value.behavior.nodes,
+    levels = new Map<string, number>();
+  for (let pass = 0; pass < nodes.length; pass++)
+    for (const n of nodes) {
+      const deps = Object.values(n.inputs)
+        .filter((b) => b.node)
+        .map((b) => b.node!);
+      if (deps.every((id) => levels.has(id)))
+        levels.set(
+          n.id,
+          Math.min(
+            nodes.length,
+            Math.max(-1, ...deps.map((id) => levels.get(id)!)) + 1,
+          ),
+        );
+    }
+  const rows = new Map<number, number>();
+  for (const n of nodes) {
+    const level = levels.get(n.id) || 0,
+      row = rows.get(level) || 0;
+    n.position = { x: level * 340, y: 30 + row * 240 };
+    rows.set(level, row + 1);
+  }
+  notice.value = "Canvas arranged by dependencies. Connections are unchanged.";
+}
+function issueNodeIndex(path: string) {
+  const pkg = path.match(/packages\[(\d+)\]/);
+  if (pkg && Number(pkg[1]) !== 0) return -1;
+  return Number(path.match(/behavior\.nodes\[(\d+)\]/)?.[1] ?? -1);
+}
+const invalidNodeIds = computed(() =>
+  issues.value
+    .map((i) => behavior.value.nodes[issueNodeIndex(i.path)]?.id)
+    .filter((id): id is string => !!id),
+);
+function nodeIssue(port?: string) {
+  const index = behavior.value.nodes.findIndex(
+    (n) => n.id === selectedNodeId.value,
+  );
+  return issues.value
+    .filter(
+      (i) =>
+        issueNodeIndex(i.path) === index &&
+        (!port || i.path.includes(`.inputs.${port}`)),
+    )
+    .map((i) => i.message)
+    .join(" ");
+}
+function focusIssue(issue: ValidationIssue) {
+  const index = issueNodeIndex(issue.path);
+  if (index >= 0) {
+    tab.value = "compose";
+    inspected.value = [];
+    selectCanvasNode(draft.value.behavior.nodes[index]?.id || "");
+  } else if (issue.path.includes("behavior.bindings")) {
+    tab.value = "compose";
+    inspectorHidden.value = false;
+  } else if (
+    issue.path.includes("behavior.inputs") ||
+    issue.path.includes("behavior.outputs")
+  )
+    tab.value = "interface";
+  else if (issue.path.includes("tests")) tab.value = "evaluate";
+  else metadataOpen.value = true;
+  focusField(
+    document.querySelector(".behavior-workbench"),
+    index >= 0
+      ? ".node-inspector .invalid select, .node-inspector input"
+      : issue.path.includes("behavior.bindings")
+        ? ".composition-outputs select"
+        : issue.path.includes("behavior.inputs") ||
+            issue.path.includes("behavior.outputs")
+          ? ".interface-grid input"
+          : ".definition-metadata input",
+  );
+}
 function insertNode(node: Omit<BehaviorNode, "position">) {
   const nodes = (draft.value.behavior.nodes ||= []);
   if (nodes.length >= 32) {
@@ -596,11 +737,14 @@ function insertNode(node: Omit<BehaviorNode, "position">) {
   }
   nodes.push({
     ...node,
-    position: {
+    position: pendingPosition || {
       x: (nodes.length % 3) * 340,
       y: Math.floor(nodes.length / 3) * 235 + 30,
     },
   });
+  pendingPosition = undefined;
+  inspectorHidden.value = false;
+  notice.value = `Added ${node.id}. Configure its required inputs in the left inspector.`;
   selectedNodeId.value = node.id;
   tab.value = "compose";
   inspected.value = [];
@@ -623,24 +767,6 @@ function addPrimitive() {
     position: { x: 0, y: 0 },
     ...metadata,
   };
-  node.inputs = Object.fromEntries(
-    nodeInputs(
-      node,
-      dependencies.value,
-      primitives.value,
-      allDataContracts.value,
-      behavior.value,
-    ).map((p) => [
-      p.name,
-      {
-        literal: typedDefault(
-          p.type === "T" ? "integer" : p.type,
-          p.recordRef,
-          allDataContracts.value,
-        ),
-      },
-    ]),
-  );
   insertNode(node);
 }
 function mergeDependencies(incoming: CompositeLock[]) {
@@ -707,18 +833,7 @@ async function addNested() {
     insertNode({
       id: freshNodeId("call"),
       component: cloneBehavior(bundle.root),
-      inputs: Object.fromEntries(
-        (p.behavior.inputs || []).map((port) => [
-          port.name,
-          {
-            literal: typedDefault(
-              port.type,
-              port.recordRef,
-              componentDataContracts(p, bundle.packages),
-            ),
-          },
-        ]),
-      ),
+      inputs: {},
     });
     notice.value =
       "Nested instance added with its exact dependency closure. Bind its inputs and connect a result to a public output.";
@@ -821,10 +936,6 @@ function addPort(direction: "inputs" | "outputs") {
   ports.push({ name: `${prefix}${i}`, type: "boolean" });
   if (direction === "inputs")
     inputValues.value[`${prefix}${i}`] = typedDefault("boolean");
-  else
-    (draft.value.behavior.bindings ||= {})[`${prefix}${i}`] = {
-      literal: typedDefault("boolean"),
-    };
 }
 function renamePort(
   direction: "inputs" | "outputs",
@@ -1014,8 +1125,31 @@ async function applyAdvanced() {
       "Advanced definition prepared and validated from its original JSON. Export or install it to keep these edits.";
   });
 }
+const autosave = useWorkspaceDraft("components", {
+  draft,
+  dependencies,
+  tab,
+  inputValues,
+  selectedNodeId,
+  inspected,
+  selectedCase,
+  advancedJSON,
+  advancedBaseline,
+  advancedSourceStamp,
+  showAdvanced,
+  metadataOpen,
+  inspectorHidden,
+  paletteHidden,
+  record,
+  recordStamp,
+  testResult,
+  testedStamp,
+  baseline,
+  installedStamp,
+});
+useActionFeedback("Components", busy, notice, error);
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (dirty.value) {
+  if (autosave.unsaved()) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -1023,7 +1157,8 @@ function beforeUnload(event: BeforeUnloadEvent) {
 watch(draftStamp, () => {
   issues.value = [];
 });
-onMounted(() => {
+onMounted(async () => {
+  await autosave.ready;
   initialize();
   window.addEventListener("beforeunload", beforeUnload);
 });
@@ -1031,7 +1166,11 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 </script>
 
 <template>
-  <section class="behavior-workbench">
+  <section
+    class="behavior-workbench"
+    :inert="autosave.status.value === 'loading'"
+  >
+    <DraftStatus :draft="autosave" />
     <div class="workbench-intro">
       <div>
         <span class="section-eyebrow">TYPED COMPONENT WORKBENCH</span>
@@ -1044,63 +1183,67 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       </div>
       <span class="workbench-version">DESIGN · EVALUATE</span>
     </div>
-    <div class="workbench-library">
-      <div>
-        <label class="field"
-          >Bundled composition<select
-            v-model="selectedExample"
-            aria-label="Bundled component example"
+    <details class="library-disclosure">
+      <summary>Open an installed definition or example</summary>
+      <div class="workbench-library">
+        <div>
+          <label class="field"
+            >Bundled composition<select
+              v-model="selectedExample"
+              aria-label="Bundled component example"
+              :disabled="!!busy"
+            >
+              <option
+                v-for="(example, index) in examples"
+                :key="referenceKey(example.root)"
+                :value="String(index)"
+              >
+                {{ rootLock(example).package.name }}
+              </option>
+            </select></label
+          ><button
+            class="button secondary"
+            @click="loadExample"
+            :disabled="!!busy || !examples.length"
+          >
+            Open example
+          </button>
+        </div>
+        <div>
+          <label class="field"
+            >Installed definitions<select
+              v-model="selectedLibrary"
+              aria-label="Installed component definition"
+              :disabled="!!busy"
+            >
+              <option value="">Select an exact version</option>
+              <option
+                v-for="entry in installed"
+                :key="lockKey(entry)"
+                :value="lockKey(entry)"
+              >
+                {{ entry.package.id }} @ {{ entry.package.version }}
+              </option>
+            </select></label
+          ><button
+            class="button secondary"
+            @click="loadInstalled"
+            :disabled="!!busy || !selectedLibrary"
+          >
+            Open definition</button
+          ><button
+            class="icon-button"
+            aria-label="Refresh component workbench"
+            @click="initialize"
             :disabled="!!busy"
           >
-            <option
-              v-for="(example, index) in examples"
-              :key="referenceKey(example.root)"
-              :value="String(index)"
-            >
-              {{ rootLock(example).package.name }}
-            </option>
-          </select></label
-        ><button
-          class="button secondary"
-          @click="loadExample"
-          :disabled="!!busy || !examples.length"
-        >
-          Open example
-        </button>
+            <RefreshCw :size="15" />
+          </button>
+        </div>
       </div>
-      <div>
-        <label class="field"
-          >Installed definitions<select
-            v-model="selectedLibrary"
-            aria-label="Installed component definition"
-            :disabled="!!busy"
-          >
-            <option value="">Select an exact version</option>
-            <option
-              v-for="entry in installed"
-              :key="lockKey(entry)"
-              :value="lockKey(entry)"
-            >
-              {{ entry.package.id }} @ {{ entry.package.version }}
-            </option>
-          </select></label
-        ><button
-          class="button secondary"
-          @click="loadInstalled"
-          :disabled="!!busy || !selectedLibrary"
-        >
-          Open definition</button
-        ><button
-          class="icon-button"
-          aria-label="Refresh component workbench"
-          @click="initialize"
-          :disabled="!!busy"
-        >
-          <RefreshCw :size="15" />
-        </button>
-      </div>
-    </div>
-    <section class="workbench-data-contracts">
+    </details>
+    <details class="workbench-data-contracts">
+      <summary>Structured data & contracts</summary>
       <div class="workbench-data-heading">
         <strong
           >Data contracts · component schema {{ draft.schemaVersion }}</strong
@@ -1158,7 +1301,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
           Remove embedded contract
         </button>
       </div>
-    </section>
+    </details>
     <div class="workbench-draft-bar">
       <div>
         <Box :size="18" /><span
@@ -1220,7 +1363,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
           ? "Advanced JSON edits are retained but not yet applied. Apply or reset them before validating, evaluating, installing or exporting."
           : isInstalled
             ? "This draft matches an immutable catalog version. Change the version before installing edited content."
-            : "Draft edits live in this browser session. Export a complete bundle or install it to keep the definition."
+            : "Drafts autosave on this browser and recover after reload. Export a bundle to share it, or install an exact version in this studio."
       }}
       Component evaluation is separate from application resource simulation.
     </p>
@@ -1237,7 +1380,9 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       <strong>{{ error }}</strong>
       <ul v-if="issues.length">
         <li v-for="issue in issues" :key="issue.path + issue.message">
-          <code>{{ issue.path }}</code> {{ issue.message }}
+          <button class="issue-link" @click="focusIssue(issue)">
+            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
+          </button>
         </li>
       </ul>
     </div>
@@ -1280,7 +1425,16 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
               v-model="draft.license"
               aria-label="Component license"
               maxlength="200" /></label
-          ><label class="field metadata-description"
+          ><label class="field"
+            >Design level<select
+              v-model="draft.designLevel"
+              aria-label="Component design level"
+            >
+              <option :value="undefined">Component</option>
+              <option value="system">System · pure composition</option>
+            </select></label
+          >
+          <label class="field metadata-description"
             >Description<textarea
               v-model="draft.description"
               aria-label="Component description"
@@ -1327,14 +1481,20 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         <button
           class="button secondary"
           :disabled="!!busy"
-          @click="addPort('inputs'); tab = 'interface'"
+          @click="
+            addPort('inputs');
+            tab = 'interface';
+          "
         >
           Add first input
         </button>
         <button
           class="button secondary"
           :disabled="!!busy"
-          @click="addPort('outputs'); tab = 'interface'"
+          @click="
+            addPort('outputs');
+            tab = 'interface';
+          "
         >
           Add first output
         </button>
@@ -1360,272 +1520,300 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         </button>
       </div>
       <template v-if="tab === 'compose'">
-        <BehaviorGraph
-          :behavior="behavior"
-          :dependencies="dependencies"
-          :primitives="primitives"
-          :contracts="allDataContracts"
-          :selected-id="selectedNodeId"
-          :readonly="readonly || !!busy"
-          @select="selectedNodeId = $event"
-          @inspect="inspectNode"
-          @move="
-            (id, position) => {
-              const n = draft.behavior.nodes.find((node) => node.id === id);
-              if (n && !readonly && !busy) n.position = position;
-            }
-          "
-        />
-        <div v-if="!readonly" class="composition-add">
-          <div>
-            <label class="field"
-              >Pure primitive<select
-                v-model="selectedPrimitive"
-                aria-label="Primitive operation"
-                :disabled="!!busy"
-              >
-                <option
-                  v-for="primitive in availablePrimitives"
-                  :key="primitive.op"
-                  :value="primitive.op"
-                >
-                  {{ primitive.name }} · {{ primitive.op }}
-                </option>
-              </select></label
-            ><button
-              class="button secondary"
-              @click="addPrimitive"
-              :disabled="
-                !!busy ||
-                !primitives.length ||
-                (draft.behavior.nodes?.length || 0) >= 32
-              "
-            >
-              <Plus :size="14" /> Add operation
-            </button>
-          </div>
-          <div>
-            <label class="field"
-              >Pinned nested component<select
-                v-model="selectedNested"
-                aria-label="Nested component definition"
-                :disabled="!!busy"
-              >
-                <option value="">Select embedded or installed version</option>
-                <option
-                  v-for="entry in nestedChoices"
-                  :key="lockKey(entry)"
-                  :value="lockKey(entry)"
-                >
-                  {{ entry.package.name }} · {{ entry.package.version }}
-                </option>
-              </select></label
-            ><button
-              class="button secondary"
-              @click="addNested"
-              :disabled="
-                !!busy ||
-                !selectedNested ||
-                (draft.behavior.nodes?.length || 0) >= 32
-              "
-            >
-              <Plus :size="14" /> Add nested instance
-            </button>
-          </div>
+        <div class="workbench-actions canvas-layout-actions">
+          <button
+            class="button secondary"
+            @click="inspectorHidden = !inspectorHidden"
+          >
+            {{ inspectorHidden ? "Show" : "Hide" }} inspector</button
+          ><button
+            class="button secondary"
+            @click="paletteHidden = !paletteHidden"
+          >
+            {{ paletteHidden ? "Show" : "Hide" }} library</button
+          ><button
+            class="button secondary"
+            :disabled="readonly || !!busy"
+            @click="autoArrange"
+          >
+            Auto-arrange</button
+          ><small
+            >Blue input pins · amber output pins · purple dashed feedback</small
+          >
         </div>
-        <div class="composition-inspectors">
-          <section class="workbench-panel">
-            <div class="workbench-panel-heading">
-              <h3>Internal node</h3>
-              <span>{{
-                readonly ? "Pinned / read-only" : "Editable bindings"
-              }}</span>
-            </div>
-            <label class="field"
-              >Selected node<select
-                v-model="selectedNodeId"
-                aria-label="Selected behavior node"
-              >
-                <option value="">Select a node</option>
-                <option
-                  v-for="node in behavior.nodes"
-                  :key="node.id"
-                  :value="node.id"
-                >
-                  {{ node.id }} · {{ node.op || node.component?.packageId }}
-                </option>
-              </select></label
-            ><template v-if="selectedNode"
-              ><fieldset :disabled="readonly || !!busy">
-                <div class="node-identity-fields">
-                  <label class="field"
-                    >Local node ID<input
-                      :value="selectedNode.id"
-                      aria-label="Behavior node ID"
-                      maxlength="64"
-                      @change="renameNode" /></label
-                  ><label class="field"
-                    >X<input
-                      v-model.number="selectedNode.position.x"
-                      type="number"
-                      step="1"
-                      aria-label="Behavior node X" /></label
-                  ><label class="field"
-                    >Y<input
-                      v-model.number="selectedNode.position.y"
-                      type="number"
-                      step="1"
-                      aria-label="Behavior node Y"
-                  /></label>
-                </div>
-                <p class="workbench-help">{{ selectedDescription }}</p>
-                <label v-if="selectedNode.op === 'record_make'" class="field"
-                  >Constructed record type<select
-                    :value="dataRefKey(selectedNode.recordRef)"
-                    aria-label="Constructed record type"
-                    @change="setNodeRecord"
-                  >
-                    <option value="">Select an exact record</option>
-                    <option
-                      v-if="
-                        selectedNode.recordRef &&
-                        !recordChoices.some(
-                          (r) => r.key === dataRefKey(selectedNode!.recordRef),
-                        )
-                      "
-                      :value="dataRefKey(selectedNode.recordRef)"
-                    >
-                      Unresolved: {{ selectedNode.recordRef.record }} @
-                      {{ selectedNode.recordRef.version }}
-                    </option>
-                    <option
-                      v-for="r in recordChoices"
-                      :key="r.key"
-                      :value="r.key"
-                    >
-                      {{ r.label }}
-                    </option>
-                  </select></label
-                >
-                <label v-if="selectedNode.op === 'record_get'" class="field"
-                  >Field to extract<select
-                    v-model="selectedNode.field"
-                    aria-label="Record field to extract"
-                  >
-                    <option value="">Bind a record and select a field</option>
-                    <option
-                      v-if="
-                        selectedNode.field &&
-                        !getFieldChoices.some(
-                          (f) => f.name === selectedNode!.field,
-                        )
-                      "
-                      :value="selectedNode.field"
-                    >
-                      Unresolved: {{ selectedNode.field }}
-                    </option>
-                    <option
-                      v-for="f in getFieldChoices"
-                      :key="f.name"
-                      :value="f.name"
-                    >
-                      {{ f.name }} · {{ f.type }}
-                    </option>
-                  </select></label
-                >
-                <BehaviorBindingEditor
-                  v-for="port in selectedInputs"
-                  :key="selectedNode.id + ':' + port.name"
-                  :model-value="selectedNode.inputs?.[port.name]"
-                  :expected-type="port.type"
-                  :record-ref="port.recordRef"
-                  :contracts="allDataContracts"
-                  :structured="viewed.schemaVersion === 3"
-                  :label="`${selectedNode.id}.${port.name}`"
-                  :inputs="behavior.inputs || []"
-                  :sources="nodeSources"
-                  :disabled="readonly || !!busy"
-                  @update:model-value="
-                    (value) =>
-                      setBinding(
-                        (selectedNode!.inputs ||= {}),
-                        port.name,
-                        value,
-                      )
-                  "
-                />
-              </fieldset>
-              <div v-if="selectedNode.component" class="nested-identity">
-                <code
-                  >{{ selectedNode.component.packageId }} @
-                  {{ selectedNode.component.version }}</code
-                ><small>SHA-256 {{ selectedNode.component.digest }}</small
-                ><button
-                  class="button secondary"
-                  @click="inspectNode(selectedNode.id)"
-                >
-                  Inspect nested definition <ArrowRight :size="14" />
-                </button>
+        <div
+          class="component-studio"
+          :class="{
+            'inspector-hidden': inspectorHidden,
+            'palette-hidden': paletteHidden,
+          }"
+        >
+          <aside v-show="!inspectorHidden" class="component-inspector">
+            <section class="workbench-panel node-inspector">
+              <div class="workbench-panel-heading">
+                <h3>{{ selectedNode ? selectedNode.id : "Node inspector" }}</h3>
+                <span>{{
+                  readonly ? "Pinned / read-only" : "Editable bindings"
+                }}</span>
               </div>
-              <button
-                v-if="!readonly"
-                class="button danger"
-                @click="removeNode"
-                :disabled="!!busy"
+              <template v-if="selectedNode"
+                ><fieldset :disabled="readonly || !!busy">
+                  <div class="node-identity-fields">
+                    <label class="field"
+                      >Local node ID<input
+                        :value="selectedNode.id"
+                        aria-label="Behavior node ID"
+                        maxlength="64"
+                        @change="renameNode" /></label
+                    ><label class="field"
+                      >X<input
+                        v-model.number="selectedNode.position.x"
+                        type="number"
+                        step="1"
+                        aria-label="Behavior node X" /></label
+                    ><label class="field"
+                      >Y<input
+                        v-model.number="selectedNode.position.y"
+                        type="number"
+                        step="1"
+                        aria-label="Behavior node Y"
+                    /></label>
+                  </div>
+                  <p class="workbench-help">{{ selectedDescription }}</p>
+                  <p v-if="nodeIssue()" class="workbench-error">
+                    {{ nodeIssue() }}
+                  </p>
+                  <div class="node-color-controls">
+                    <span>Node color</span
+                    ><button
+                      v-for="color in nodeColors"
+                      :key="color"
+                      type="button"
+                      :style="{ background: color }"
+                      :aria-label="`Set node color ${color}`"
+                      :aria-pressed="
+                        nodeColor(selectedNode, dependencies) === color
+                      "
+                      @click="selectedNode.color = color"
+                    ></button
+                    ><button
+                      class="button quiet"
+                      @click="delete selectedNode.color"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div class="workbench-actions">
+                    <button
+                      class="button secondary"
+                      type="button"
+                      :disabled="behavior.nodes[0]?.id === selectedNode.id"
+                      @click="reorderNode(-1)"
+                    >
+                      Move earlier</button
+                    ><button
+                      class="button secondary"
+                      type="button"
+                      :disabled="behavior.nodes.at(-1)?.id === selectedNode.id"
+                      @click="reorderNode(1)"
+                    >
+                      Move later
+                    </button>
+                  </div>
+                  <h4>Required inputs · {{ selectedInputs.length }}</h4>
+                  <label v-if="selectedNode.op === 'record_make'" class="field"
+                    >Constructed record type<select
+                      :value="dataRefKey(selectedNode.recordRef)"
+                      aria-label="Constructed record type"
+                      @change="setNodeRecord"
+                    >
+                      <option value="">Select an exact record</option>
+                      <option
+                        v-if="
+                          selectedNode.recordRef &&
+                          !recordChoices.some(
+                            (r) =>
+                              r.key === dataRefKey(selectedNode!.recordRef),
+                          )
+                        "
+                        :value="dataRefKey(selectedNode.recordRef)"
+                      >
+                        Unresolved: {{ selectedNode.recordRef.record }} @
+                        {{ selectedNode.recordRef.version }}
+                      </option>
+                      <option
+                        v-for="r in recordChoices"
+                        :key="r.key"
+                        :value="r.key"
+                      >
+                        {{ r.label }}
+                      </option>
+                    </select></label
+                  >
+                  <label v-if="selectedNode.op === 'record_get'" class="field"
+                    >Field to extract<select
+                      v-model="selectedNode.field"
+                      aria-label="Record field to extract"
+                    >
+                      <option value="">Bind a record and select a field</option>
+                      <option
+                        v-if="
+                          selectedNode.field &&
+                          !getFieldChoices.some(
+                            (f) => f.name === selectedNode!.field,
+                          )
+                        "
+                        :value="selectedNode.field"
+                      >
+                        Unresolved: {{ selectedNode.field }}
+                      </option>
+                      <option
+                        v-for="f in getFieldChoices"
+                        :key="f.name"
+                        :value="f.name"
+                      >
+                        {{ f.name }} · {{ f.type }}
+                      </option>
+                    </select></label
+                  >
+                  <BehaviorBindingEditor
+                    v-for="port in selectedInputs"
+                    :key="selectedNode.id + ':' + port.name"
+                    :model-value="selectedNode.inputs?.[port.name]"
+                    :expected-type="port.type"
+                    :record-ref="port.recordRef"
+                    :contracts="allDataContracts"
+                    :structured="viewed.schemaVersion === 3"
+                    :label="`${selectedNode.id}.${port.name}`"
+                    :issue="nodeIssue(port.name)"
+                    :inputs="behavior.inputs || []"
+                    :sources="nodeSources"
+                    :disabled="readonly || !!busy"
+                    @update:model-value="
+                      (value) =>
+                        setBinding(
+                          (selectedNode!.inputs ||= {}),
+                          port.name,
+                          value,
+                        )
+                    "
+                  />
+                </fieldset>
+                <div v-if="selectedNode.component" class="nested-identity">
+                  <code
+                    >{{ selectedNode.component.packageId }} @
+                    {{ selectedNode.component.version }}</code
+                  ><small>SHA-256 {{ selectedNode.component.digest }}</small
+                  ><button
+                    class="button secondary"
+                    @click="inspectNode(selectedNode.id)"
+                  >
+                    Inspect nested definition <ArrowRight :size="14" />
+                  </button>
+                </div>
+                <button
+                  v-if="!readonly"
+                  class="button danger"
+                  @click="removeNode"
+                  :disabled="!!busy"
+                >
+                  <Trash2 :size="13" /> Remove node
+                </button></template
               >
-                <Trash2 :size="13" /> Remove internal node
-              </button></template
-            >
-            <p v-else class="workbench-empty">
-              Select an internal node to inspect its typed sources. A component
-              may also bind inputs or literals directly to public outputs.
-            </p>
-          </section>
-          <section class="workbench-panel">
-            <div class="workbench-panel-heading">
-              <h3>Public output bindings</h3>
-              <span>{{ behavior.outputs?.length || 0 }} outputs</span>
-            </div>
-            <p class="workbench-help">
-              Each output needs one source of exactly its declared type. Every
-              internal node must contribute to an output.
-            </p>
-            <BehaviorBindingEditor
-              v-for="port in behavior.outputs"
-              :key="port.name"
-              :model-value="behavior.bindings?.[port.name]"
-              :expected-type="port.type"
-              :record-ref="port.recordRef"
+              <p v-else class="workbench-empty">
+                Select a node on the canvas to configure its required inputs
+                here. A component may also bind inputs or literals directly to
+                public outputs.
+              </p>
+            </section>
+            <section class="workbench-panel composition-outputs">
+              <div class="workbench-panel-heading">
+                <h3>Public output bindings</h3>
+                <span>{{ behavior.outputs?.length || 0 }} outputs</span>
+              </div>
+              <p class="workbench-help">
+                Each output needs one source of exactly its declared type. Every
+                internal node must contribute to an output.
+              </p>
+              <BehaviorBindingEditor
+                v-for="port in behavior.outputs"
+                :key="port.name"
+                :model-value="behavior.bindings?.[port.name]"
+                :expected-type="port.type"
+                :record-ref="port.recordRef"
+                :contracts="allDataContracts"
+                :structured="viewed.schemaVersion === 3"
+                :label="`Output ${port.name}`"
+                :issue="
+                  issues
+                    .filter((i) =>
+                      i.path.includes(`behavior.bindings.${port.name}`),
+                    )
+                    .map((i) => i.message)
+                    .join(' ')
+                "
+                :inputs="behavior.inputs || []"
+                :sources="sources"
+                :disabled="readonly || !!busy"
+                @update:model-value="
+                  (value) =>
+                    setBinding((behavior.bindings ||= {}), port.name, value)
+                "
+              />
+              <details class="dependency-list">
+                <summary>
+                  {{ usedDependencies.length }} pinned dependency definitions
+                </summary>
+                <button
+                  v-for="lock in usedDependencies"
+                  :key="lockKey(lock)"
+                  @click="
+                    inspected.push(lockKey(lock));
+                    selectedNodeId = '';
+                  "
+                >
+                  <Layers3 :size="13" /><span
+                    >{{ lock.package.id }} @ {{ lock.package.version
+                    }}<small>{{ lock.digest.slice(0, 16) }}</small></span
+                  ><ArrowRight :size="13" />
+                </button>
+              </details>
+            </section>
+          </aside>
+          <div class="component-canvas">
+            <BehaviorGraph
+              :behavior="behavior"
+              :dependencies="dependencies"
+              :primitives="primitives"
               :contracts="allDataContracts"
-              :structured="viewed.schemaVersion === 3"
-              :label="`Output ${port.name}`"
-              :inputs="behavior.inputs || []"
-              :sources="sources"
-              :disabled="readonly || !!busy"
-              @update:model-value="
-                (value) =>
-                  setBinding((behavior.bindings ||= {}), port.name, value)
+              :selected-id="selectedNodeId"
+              :readonly="readonly || !!busy"
+              :invalid-ids="invalidNodeIds"
+              @drop-part="
+                (kind, key, position) => addFromPalette(kind, key, position)
+              "
+              @select="selectCanvasNode"
+              @inspect="inspectNode"
+              @move="
+                (id, position) => {
+                  const n = draft.behavior.nodes.find((node) => node.id === id);
+                  if (n && !readonly && !busy) n.position = position;
+                }
               "
             />
-            <details class="dependency-list">
-              <summary>
-                {{ usedDependencies.length }} pinned dependency definitions
-              </summary>
-              <button
-                v-for="lock in usedDependencies"
-                :key="lockKey(lock)"
-                @click="
-                  inspected.push(lockKey(lock));
-                  selectedNodeId = '';
-                "
-              >
-                <Layers3 :size="13" /><span
-                  >{{ lock.package.id }} @ {{ lock.package.version
-                  }}<small>{{ lock.digest.slice(0, 16) }}</small></span
-                ><ArrowRight :size="13" />
-              </button>
-            </details>
-          </section>
+          </div>
+          <ComponentPalette
+            v-show="!paletteHidden"
+            :primitives="availablePrimitives"
+            :components="nestedChoices"
+            :examples="examples"
+            :disabled="readonly || !!busy"
+            :full="behavior.nodes.length >= 32"
+            @add="addFromPalette"
+            @import="fileInput?.click()"
+            @export="exportBundle"
+            @publish="installDraft"
+          />
         </div>
       </template>
       <div v-else class="interface-grid">
@@ -2597,5 +2785,138 @@ fieldset:disabled {
 .behavior-workbench :deep(textarea) {
   font-size: 12px;
   color: #415d70;
+}
+
+.component-studio {
+  display: grid;
+  grid-template-columns: 280px minmax(360px, 1fr) 260px;
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+.component-studio.inspector-hidden {
+  grid-template-columns: minmax(360px, 1fr) 260px;
+}
+.component-studio.palette-hidden {
+  grid-template-columns: 280px minmax(360px, 1fr);
+}
+.component-studio.inspector-hidden.palette-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+.component-inspector {
+  max-height: 78vh;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+}
+.component-inspector .workbench-panel {
+  margin: 0;
+  padding: 14px;
+}
+/* A sticky parent creates a stacking context below the application rail. */
+.component-canvas:has(.canvas-focus--expanded) {
+  position: static;
+}
+.component-canvas {
+  min-width: 0;
+  position: sticky;
+  top: 12px;
+}
+.component-inspector .node-identity-fields {
+  grid-template-columns: 1fr 64px 64px;
+}
+.component-inspector .node-identity-fields .field:first-child {
+  grid-column: 1 / -1;
+}
+.node-color-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin: 12px 0;
+}
+.node-color-controls > button:not(.button) {
+  width: 21px;
+  height: 21px;
+  border: 2px solid white;
+  border-radius: 50%;
+  outline: 1px solid #d0dce5;
+  cursor: pointer;
+}
+.node-color-controls > button[aria-pressed="true"] {
+  outline: 2px solid #263f56;
+}
+.issue-link {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.canvas-layout-actions small {
+  font-size: 11px;
+  color: #61788a;
+}
+.component-inspector h4 {
+  font-size: 12px;
+  margin: 16px 0 8px;
+}
+@media (max-width: 1250px) {
+  .component-studio {
+    grid-template-columns: 250px minmax(320px, 1fr);
+  }
+  .component-studio > .component-palette {
+    grid-column: 1 / -1;
+    max-height: 360px;
+  }
+  .component-studio.inspector-hidden {
+    grid-template-columns: 1fr;
+  }
+  .component-studio.palette-hidden {
+    grid-template-columns: 250px minmax(320px, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .component-studio,
+  .component-studio.palette-hidden {
+    display: flex;
+    flex-direction: column;
+  }
+  .component-inspector,
+  .component-canvas,
+  .component-studio > .component-palette {
+    width: 100%;
+    max-height: none;
+    position: static;
+  }
+  /* A sticky parent creates a stacking context below the application rail. */
+.component-canvas:has(.canvas-focus--expanded) {
+  position: static;
+}
+.component-canvas {
+    order: 0;
+  }
+  .component-inspector {
+    order: 1;
+  }
+  .component-studio > .component-palette {
+    order: 2;
+  }
+}
+.library-disclosure > summary,
+.workbench-data-contracts > summary {
+  font-size: 12px;
+  cursor: pointer;
+  color: #526f83;
+  padding: 8px 0;
+}
+.workbench-data-contracts {
+  padding: 8px 14px;
+}
+.library-disclosure {
+  margin-bottom: 10px;
 }
 </style>

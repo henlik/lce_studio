@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackEdges } from "../graphPresentation";
 import { computed, ref } from "vue";
 import type { WorkflowDefinition } from "../workflowTypes";
 import CanvasControls from "./CanvasControls.vue";
@@ -11,6 +12,7 @@ const props = defineProps<{
   selected: string;
   disabled?: boolean;
   activeNode?: string;
+  invalidIds?: string[];
 }>();
 const emit = defineEmits<{
   select: [id: string];
@@ -30,27 +32,55 @@ const safeNodes = computed(() =>
     },
   })),
 );
+function linksFor(n: WorkflowDefinition["nodes"][number]) {
+  return [
+    ...(n.next ? [{ target: n.next, label: "next" }] : []),
+    ...(n.branch
+      ? [
+          { target: n.branch.then, label: `${n.branch.variable}: true` },
+          { target: n.branch.else, label: `${n.branch.variable}: false` },
+        ]
+      : []),
+    ...(n.command?.errorNext
+      ? [{ target: n.command.errorNext, label: "command failure" }]
+      : []),
+  ];
+}
+const cyclic = computed(() =>
+  feedbackEdges(
+    safeNodes.value.flatMap((n) =>
+      linksFor(n).map((l, i) => ({
+        from: n.id,
+        to: l.target,
+        id: `${n.id}:${i}`,
+      })),
+    ),
+  ),
+);
+const colors: Record<string, string> = {
+  task: "#2478ba",
+  decision: "#7957bb",
+  command: "#15846a",
+  end: "#526b82",
+};
+const icons: Record<string, string> = {
+  task: "▤",
+  decision: "◇",
+  command: "▣",
+  end: "●",
+};
 const wires = computed(() => {
   const rows: {
     id: string;
     path: string;
     label: string;
+    feedback: boolean;
+    color: string;
     x: number;
     y: number;
   }[] = [];
   for (const n of safeNodes.value) {
-    const links = [
-      ...(n.next ? [{ target: n.next, label: "next" }] : []),
-      ...(n.branch
-        ? [
-            { target: n.branch.then, label: `${n.branch.variable}: true` },
-            { target: n.branch.else, label: `${n.branch.variable}: false` },
-          ]
-        : []),
-      ...(n.command?.errorNext
-        ? [{ target: n.command.errorNext, label: "command failure" }]
-        : []),
-    ];
+    const links = linksFor(n);
     links.forEach((l, i) => {
       const t = safeNodes.value.find((x) => x.id === l.target);
       if (!t) return;
@@ -85,7 +115,21 @@ const wires = computed(() => {
         x = (xx + z) / 2 + 8;
         y = (a + b) / 2 - 6;
       }
-      rows.push({ id: `${n.id}:${i}`, path, label: l.label, x, y });
+      rows.push({
+        id: `${n.id}:${i}`,
+        path,
+        label: l.label,
+        feedback: cyclic.value.has(`${n.id}:${i}`),
+        color: l.label.endsWith(": true")
+          ? "#16846a"
+          : l.label.endsWith(": false")
+            ? "#b5771c"
+            : l.label === "command failure"
+              ? "#b54842"
+              : "#829cac",
+        x,
+        y,
+      });
     });
   }
   return rows;
@@ -202,12 +246,13 @@ function stop() {
           <path
             :d="wire.path"
             fill="none"
-            stroke="#9bb2bf"
+            :stroke="wire.feedback ? '#9746b4' : wire.color"
+            :stroke-dasharray="wire.feedback ? '7 4' : undefined"
             stroke-width="2"
             marker-end="url(#workflow-arrow)"
           />
           <text :x="wire.x" :y="wire.y" class="wire-label">
-            {{ wire.label }}
+            {{ wire.feedback ? "↶ Feedback · " : "" }}{{ wire.label }}
           </text>
         </g>
         <g
@@ -218,7 +263,9 @@ function stop() {
           :class="{
             selected: selected === node.id,
             active: activeNode === node.id,
+            invalid: invalidIds?.includes(node.id),
           }"
+          :style="{ '--node-color': node.color || colors[node.kind] }"
           tabindex="0"
           role="button"
           :aria-label="`Inspect ${node.name}, ${node.kind}`"
@@ -226,7 +273,34 @@ function stop() {
           @keydown.enter="emit('select', node.id)"
           @keydown.space.prevent="emit('select', node.id)"
         >
-          <rect width="200" height="92" rx="10" />
+          <path
+            v-if="node.kind === 'decision'"
+            d="M16 0 H184 L200 16 V76 L184 92 H16 L0 76 V16 Z"
+            class="wf-node-shape"
+          />
+          <rect
+            v-else
+            width="200"
+            height="92"
+            :rx="node.kind === 'end' ? 34 : node.kind === 'command' ? 2 : 10"
+            class="wf-node-shape"
+          />
+          <text
+            x="175"
+            y="24"
+            :fill="node.color || colors[node.kind]"
+            font-size="18"
+          >
+            {{ icons[node.kind] }}
+          </text>
+          <circle cx="0" cy="46" r="4" fill="#2478ba" />
+          <circle
+            v-if="node.kind !== 'end'"
+            cx="200"
+            cy="46"
+            r="4"
+            fill="#c78116"
+          />
           <text x="15" y="23" class="node-kind">
             {{ workflow.entry === node.id ? "ENTRY · " : ""
             }}{{ node.task?.kind || node.kind }}
@@ -329,6 +403,23 @@ function stop() {
 }
 .wf-node:focus rect {
   stroke: #246fbb;
+  stroke-width: 3;
+}
+.wf-node .wf-node-shape {
+  fill: white;
+  stroke: var(--node-color);
+  stroke-width: 1.7;
+}
+.wf-node.selected .wf-node-shape {
+  stroke-width: 3;
+}
+.wf-node.invalid .wf-node-shape {
+  stroke: #c4312d;
+  fill: #fff0ee;
+  stroke-width: 3;
+}
+.wf-node.active .wf-node-shape {
+  fill: #ecfcf5;
   stroke-width: 3;
 }
 </style>

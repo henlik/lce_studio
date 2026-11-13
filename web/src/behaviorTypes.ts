@@ -38,6 +38,7 @@ export interface BehaviorBinding {
   literal?: TypedValue;
 }
 export interface BehaviorNode {
+  color?: string;
   id: string;
   op?: string;
   component?: ComponentRef;
@@ -58,6 +59,7 @@ export interface BehaviorCase {
   expected: Record<string, TypedValue>;
 }
 export interface CompositePackage {
+  designLevel?: "component" | "system";
   schemaVersion: 2 | 3;
   id: string;
   version: string;
