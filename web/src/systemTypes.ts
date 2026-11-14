@@ -10,7 +10,7 @@ export interface DeploymentPlan {id:string; name:string; resources:{id:string;ki
 export interface SystemContract {id:string; revision:string; claims:{id:string;kind:string;description:string}[]; assumptions:{id:string;description:string}[]}
 export interface SystemVerdict {claimId:string;status:string;message:string;evidenceSequences:number[]}
 export interface SystemEvent {sequence:number;kind:string;requestId:string;encounterId?:string;detail?:string}
-export interface SystemCatalogEntry {kind:string;id:string;version:string;name:string;digest:string;source:string;ready:boolean;issue?:string;aspects?:{slot:string;kind:string;id:string;version:string;digest:string}[]}
+export interface SystemCatalogEntry {kernel?:string;kind:string;id:string;version:string;name:string;digest:string;source:string;ready:boolean;issue?:string;aspects?:{slot:string;kind:string;id:string;version:string;digest:string}[]}
 export interface SystemPort extends AspectPort {componentId:string;bound?:boolean}
 export interface SystemResolution {compatibility?:string;ports?:SystemPort[];connections?:{id:string;status:string;message:string}[];dependencies?:{path:string;kind:string;id:string;version:string;digest:string}[];valid:boolean;issues:{path:string;message:string}[];references:(SystemCatalogEntry & {path:string})[]}
 export function emptySystem():SystemDesign {return {schemaVersion:1,id:crypto.randomUUID(),name:'Untitled system',revision:'1.0.0',components:[],connections:[],deploymentPlans:[],contract:{id:'system-contract',revision:'1.0.0',claims:[],assumptions:[]}};}

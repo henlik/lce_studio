@@ -9,9 +9,9 @@ const flow = ref<"top-down" | "bottom-up">("top-down");
 const contexts: Record<string, { kind: string; detail: string }> = {
   system: { kind: "System architecture", detail: "Assemble component references and inspect contracts, deployment bindings and conformance evidence." },
   inspection: { kind: "Reference use case", detail: "Inspect implemented capabilities through independent experiments and manual UX checks." },
-  plan: { kind: "System requirements", detail: "Define the boundary, assumptions and measurable outcomes." },
-  design: { kind: "Application / system model", detail: "Assemble a processing topology for timed simulation." },
-  deployment: { kind: "Deployment view", detail: "Place application instances on computing resources." },
+  plan: { kind: "Simulation requirements", detail: "Define the boundary, assumptions and measurable outcomes." },
+  design: { kind: "Timing simulation model", detail: "Assemble a processing topology for timed simulation." },
+  deployment: { kind: "Deployment simulation", detail: "Place application instances on computing resources." },
   results: { kind: "Experiment evidence", detail: "Inspect the behavior of an exact recorded design." },
   components: { kind: "Reusable pure component", detail: "Compose primitive operations or exact versions of other components." },
   data: { kind: "Reusable data contract", detail: "Define information shared by components at any level." },

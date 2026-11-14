@@ -12,6 +12,7 @@ import (
 
 // CatalogEntry identifies a checked catalog definition, not a deployed binary.
 type CatalogEntry struct {
+	Kernel  string      `json:"kernel,omitempty"`
 	Kind    string      `json:"kind"`
 	ID      string      `json:"id"`
 	Version string      `json:"version"`

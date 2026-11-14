@@ -11,12 +11,13 @@ reference is [PRODUCT_BLUEPRINT.md](PRODUCT_BLUEPRINT.md).
 | Plane | Group | Destinations |
 | --- | --- | --- |
 | Engineering | Components | Interface & behavior, Data, State, Messages, Workflows, Component definitions |
-| Engineering | Design | Requirements, System architecture, Application flow, Databases & brokers (partial blueprint), Deployment planning, Experiments & results, Inspection lab, Open projects, Run history |
+| Engineering | Design | System architecture, Databases & brokers (supporting-services library), Inspection lab |
+| Engineering | Simulation | Timing flow, Simulation requirements, Deployment simulation, Simulation results, Open simulation projects, Simulation history |
 | Engineering | Implementation | Developers & AI agents, Build & sandbox (planned) |
 | Engineering | Assurance & release | Contracts & conformance (opens the system Claims view), Release authority (planned) |
 | Runtime | Observe & verify | Sites & resources, Observer, Runtime verification (planned) |
 | Runtime | Context & adaptation | Contextualisation, Recovery & optimization, Orchestration, Updates & recovery, Disconnected federation (planned) |
-| Shared foundations | Reuse & governance | Local catalog, Community marketplace, Security & trust, Evidence & provenance |
+| Shared foundations | Reuse & governance | Installed component library, Community marketplace, Security & trust, Evidence & provenance |
 
 Available entries open their existing editors. Planned entries and partial
 capabilities without an editor open blueprint details, with no fake execution
@@ -28,13 +29,22 @@ Data, state, messages and workflow editors retain their own saved artifacts and
 draft recovery. Component definitions now link their exact installed versions and open pinned
 aspects with source-component context and a return button. See
 [COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md) for the walkthrough. The system-reference editor and the existing
-application/deployment simulator also retain distinct models under Design.
+application/deployment simulator retain distinct models under Design and Simulation respectively.
 Deployment planning is an engineering simulation, not a live runtime control.
 
-**System architecture → Architecture** includes a collapsible reference library
-on the left. Search exact installed component versions and built-in reference
-adapters. Select a component card before attaching installed data, state, message
-or workflow artifacts. **Check connections** checks catalog identities, transitive dependency integrity
+**Design** opens System architecture directly; its separate disclosure arrow expands
+or collapses navigation. New sessions start there; recovered sessions keep their saved
+workspace. The global **Installed component library** opens this same design library.
+
+**System architecture → Architecture** includes a collapsible design library on the
+left with Components, Supporting services, and Actors & workload sections. Components
+shows installed definitions and reusable behavior packages; kernel metadata keeps
+timing profiles out of this list. Supporting services exposes offline state providers
+and identifies fixed conformance adapters. Actors links to scenario inputs and clearly
+labels the fixed intake client. General identity actors and live service adapters
+are not implied. Advanced artifact attachments remain in a collapsed section.
+Timing profiles open the separate simulator, where a visible return button leads
+back to system design. **Check connections** checks catalog identities, transitive dependency integrity
 and declared port types. Invalid edges are highlighted and issue buttons open
 their inspector. Untyped legacy edges stay explicitly unchecked. See
 [SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md) for the reception-to-consultation
@@ -66,8 +76,8 @@ The studio uses a compact ribbon above each workspace. Data retains its existing
 | Workspace | Main surface | Editing |
 | --- | --- | --- |
 | Plan | Requirements and acceptance criteria | Structure → Requirements → Add requirement |
-| Design | Application canvas | Left library, selected-element inspector, collapsible panels |
-| Deployment | Geographic/resource canvas | Resource library and site/host/link/placement inspector |
+| Timing flow | Simulation canvas | Left library, selected-element inspector, collapsible panels |
+| Deployment simulation | Geographic/resource canvas | Resource library and site/host/link/placement inspector |
 | Experiments | Simulation evidence | Execution, run history and replay controls |
 | Components | Typed interface or composition canvas | Structure for ports; Behavior for component composition; Contract for metadata |
 | Data | Records/entities/relationships canvas | Click cards or connections for local settings |

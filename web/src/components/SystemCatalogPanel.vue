@@ -1,28 +1,34 @@
 <script setup lang="ts">
 import {computed,ref} from 'vue';
 import type {SystemCatalogEntry} from '../systemTypes';
-const props=defineProps<{entries:SystemCatalogEntry[];selectedName?:string;busy:boolean}>();
-const emit=defineEmits<{refresh:[];add:[entry:SystemCatalogEntry];attach:[entry:SystemCatalogEntry]}>();
+const props=defineProps<{entries:SystemCatalogEntry[];selectedName?:string;busy:boolean;section:string;providers:{id:string;kind:string;version:string}[]}>();
+const emit=defineEmits<{refresh:[];add:[entry:SystemCatalogEntry];attach:[entry:SystemCatalogEntry];section:[string];components:[];simulation:[];provider:[];settings:[];execution:[]}>();
 const search=ref('');
-const kinds=['definition','component','data','state','messages','workflow'];
-const filtered=computed(()=>props.entries.filter(e=>(e.name+' '+e.id+' '+e.version).toLowerCase().includes(search.value.toLowerCase())));
+const matches=(name:string)=>name.toLowerCase().includes(search.value.toLowerCase());
+const filtered=computed(()=>props.entries.filter(e=>matches(e.name+' '+e.id+' '+e.version)));
+const groups=computed(()=>props.section==='components'?[
+ {label:'Installed components & systems',items:filtered.value.filter(e=>e.kind==='definition')},
+ {label:'Reusable behavior packages',items:filtered.value.filter(e=>e.kind==='component'&&e.kernel==='composite'&&e.source!=='builtin-adapter')},
+]:[{label:props.section==='actors'?'Reference workload adapters':'Reference service adapters',items:filtered.value.filter(e=>e.source==='builtin-adapter'&&(props.section==='actors'?e.id==='builtin.intake-client':e.id!=='builtin.intake-client'))}]);
+const artifacts=computed(()=>filtered.value.filter(e=>['data','state','messages','workflow'].includes(e.kind)));
+const timing=computed(()=>filtered.value.filter(e=>['service','database','router'].includes(e.kernel||'')));
 </script>
 <template>
- <aside class="system-library" aria-label="System reference library">
-  <div class="library-heading"><strong>Reference library</strong><button :disabled="busy" @click="emit('refresh')">Refresh</button></div>
-  <label>Search definitions<input v-model="search" type="search" placeholder="Name, ID or version"/></label>
-  <p>Exact installed versions and built-in adapters. Select a component to attach data, state, message or workflow references.</p>
-  <p v-if="!filtered.length">No matching definitions. Install a package in its component editor, then refresh.</p>
-  <section v-for="kind in kinds" :key="kind" v-show="filtered.some(e=>e.kind===kind)"><h3>{{kind}}</h3>
-   <article v-for="entry in filtered.filter(e=>e.kind===kind)" :key="entry.kind+entry.id+entry.version">
-    <strong>{{entry.name||entry.id}}</strong><small>{{entry.id}} · {{entry.version}}</small><small>{{entry.source==='builtin-adapter'?'Built-in reference adapter':'Installed package'}}</small>
-    <p v-if="!entry.ready" class="catalog-error">{{entry.issue}}</p>
-    <button v-if="kind==='component'||kind==='definition'" :disabled="!entry.ready||busy" @click="emit('add',entry)">Add component</button>
-    <button v-else :disabled="!entry.ready||busy||!selectedName" @click="emit('attach',entry)">{{selectedName?'Attach to '+selectedName:'Select a component first'}}</button>
-   </article>
-  </section>
+ <aside class="system-library" aria-label="System design library">
+  <div class="library-heading"><strong>Design library</strong><button :disabled="busy" @click="emit('refresh')">Refresh</button></div>
+  <nav class="library-sections" aria-label="Design library sections"><button v-for="tab in [{id:'components',label:'Components'},{id:'services',label:'Supporting services'},{id:'actors',label:'Actors & workload'}]" :key="tab.id" :aria-pressed="section===tab.id" @click="emit('section',tab.id)">{{tab.label}}</button></nav>
+  <label>Search library<input v-model="search" type="search" placeholder="Name, ID or version"/></label>
+  <template v-if="section==='components'"><p>Add exact installed definitions to compose your system. Create or modify their internals in Components.</p><button @click="emit('components')">Open component editor</button></template>
+  <template v-if="section==='services'"><h3>Offline execution providers</h3><p>Providers bind component requirements. They are separate from reusable application components and deployment hardware.</p><article v-for="provider in providers.filter(p=>matches(p.id+' '+p.kind))" :key="provider.id"><strong>{{provider.id}}</strong><small>{{provider.kind}}@{{provider.version}} · Offline model</small><button @click="emit('settings')">Configure bindings & providers</button></article><button :disabled="busy" @click="emit('provider')">Add modeled state provider</button><p>Live PostgreSQL, Redis and broker adapters are not available yet. Deployment resource declarations do not provision these services.</p></template>
+  <template v-if="section==='actors'"><p>Scenario inputs supply requests to executable components. The reference intake client below is limited to the fixed conformance example; it is not a general user or identity system.</p><button @click="emit('execution')">Open execution & scenarios</button><button @click="emit('simulation')">Open simulated workload sources</button></template>
+  <p v-if="section==='components'&&!groups.some(g=>g.items.length)">No matching installed components. Create and install a component, then refresh. Examples are available explicitly from File.</p>
+  <section v-for="group in groups" :key="group.label" v-show="group.items.length"><h3>{{group.label}}</h3><article v-for="entry in group.items" :key="entry.kind+entry.id+entry.version"><strong>{{entry.name||entry.id}}</strong><small>{{entry.id}} · {{entry.version}}</small><small>{{entry.source==='builtin-adapter'?'Fixed conformance adapter':'Installed version'}}</small><p v-if="!entry.ready" class="catalog-error">{{entry.issue}}</p><button :disabled="!entry.ready||busy" @click="emit('add',entry)">{{entry.source==='builtin-adapter'?'Add reference adapter':'Add component'}}</button></article></section>
+  <details v-if="section==='components'&&artifacts.length"><summary>Advanced artifact references ({{artifacts.length}})</summary><p>Prefer owned aspects in a component definition. These existing attachments remain available for compatibility.</p><article v-for="entry in artifacts" :key="entry.kind+entry.id+entry.version"><strong>{{entry.name}}</strong><small>{{entry.kind}} · {{entry.id}}@{{entry.version}}</small><p v-if="!entry.ready" class="catalog-error">{{entry.issue}}</p><button :disabled="!entry.ready||busy||!selectedName" @click="emit('attach',entry)">{{selectedName?'Attach to '+selectedName:'Select a component first'}}</button></article></details>
+  <details v-if="section==='services'"><summary>Timing simulation profiles ({{timing.length}} installed matches)</summary><p>Service, database and router profiles configure the separate timing simulator. They do not implement application components.</p><p v-for="entry in timing" :key="entry.id+entry.version">{{entry.name}} · {{entry.kernel}} · {{entry.version}}</p><button @click="emit('simulation')">Browse timing profiles</button></details>
  </aside>
 </template>
 <style scoped>
+.library-sections{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}.library-sections button[aria-pressed=true]{background:#246c56;color:white}.system-library details{margin-top:14px;font-size:12px}.system-library summary{cursor:pointer;line-height:1.5}
+
 .system-library{background:#fff;border:1px solid #d5e3e9;border-radius:8px;padding:12px;min-width:0;max-height:650px;overflow:auto}.library-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}.system-library label{display:grid;gap:5px;font-size:11px;margin:12px 0}.system-library input{width:100%;box-sizing:border-box;min-width:0;border:1px solid #cadbe3;border-radius:5px;padding:8px}.system-library p{font-size:11px;line-height:1.5;color:#66818e}.system-library h3{text-transform:capitalize;font-size:12px;margin:16px 0 8px}.system-library article{border-top:1px solid #e0e8ed;padding:10px 0;display:grid;gap:6px;overflow-wrap:anywhere;font-size:12px}.system-library small{font-size:10px;color:#66818e}.system-library button{border:1px solid #bdd6ca;border-radius:5px;background:#eff8f3;color:#286b50;padding:7px;font-size:11px;cursor:pointer;white-space:normal}.system-library button:disabled{opacity:.5;cursor:default}.catalog-error{color:#a03a34!important}
 </style>

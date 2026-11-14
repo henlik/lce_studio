@@ -28,13 +28,16 @@ func (s *Store) SystemCatalog(ctx context.Context) ([]system.CatalogEntry, error
 			if strings.HasPrefix(entry.ID, "builtin.") {
 				continue
 			}
-			var identity struct{ ID, Version, Name string }
+			var identity struct{ ID, Version, Name, Kernel string }
 			if err := json.Unmarshal(body, &identity); err != nil {
 				entry.Issue = "Definition cannot be decoded"
 			} else if identity.ID != entry.ID || identity.Version != entry.Version {
 				entry.Issue = "Stored identity does not match definition"
 			}
 			entry.Name = identity.Name
+			if catalog.kind == "component" {
+				entry.Kernel = identity.Kernel
+			}
 			actual, issues, err := systemCatalogDigest(catalog.kind, body)
 			if err != nil {
 				entry.Issue = "Definition cannot be decoded"

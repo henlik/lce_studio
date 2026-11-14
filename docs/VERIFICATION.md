@@ -1,5 +1,31 @@
 # Verification
 
+## Design library and navigation correction — 14 November 2026
+
+- Design opens System architecture, and new sessions start there. Recovered
+  sessions keep their workspace and draft. The global installed-library shortcut
+  opens the design library; Databases & brokers opens its Supporting services tab.
+- The design library separates installed components/definitions, supporting
+  services and actors/workload. Catalog kernel metadata distinguishes reusable
+  behavior packages from timing profiles. Fixed conformance adapters and offline
+  state providers are labelled explicitly; unavailable live integrations are not
+  presented as executable services. Advanced artifact attachments remain accessible.
+- Timing flow, its requirements, deployment simulation, results and history now
+  live under Simulation. The old catalog is labelled Timing profile library, its
+  nodes are simulation blocks, and a visible button returns to system design.
+  Existing project models, saved artifacts and execution semantics are preserved.
+- Vue production build and all 34 frontend tests passed, including the updated
+  canonical workspace navigation checks. Focused Go race tests for System,
+  Definition and Catalog in system/store/server passed against PostgreSQL, together
+  with vet, backend build and the complete live system API acceptance script.
+- Desktop/mobile visual verification remains incomplete: the available system
+  Chromium exits during launch with `socket() failed: Operation not permitted`.
+  Manual checks: select Design from Simulation; open the global installed library;
+  switch all three library sections; add/configure a modeled provider; open the
+  component editor; browse timing profiles; return to Design; inspect narrow layouts.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. This corrects navigation and
+  terminology without adding engine-checkpoint credit. See [STUDIO_NAVIGATION.md](STUDIO_NAVIGATION.md).
+
 ## Shared graph scenarios — 14 November 2026
 
 - Shared scenarios retain isolated state sessions across ordered graph invocations

@@ -103,9 +103,11 @@ const project = ref<Project | null>(null);
 const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
-const view = ref<StudioView>("blueprint");
+const view = ref<StudioView>("system");
 const selectedCapability = ref("");
 const conformanceRequest = ref(0);
+const libraryRequest = ref<{nonce:number;section:string}>();
+function openTimingCatalog(){view.value='design';showCatalog.value=true;}
 const navigationContext = computed(() => capabilityLocation(view.value === 'blueprint' ? selectedCapability.value : workspaceLocation(view.value) || ''));
 const navigationBreadcrumb = computed(() => {
   const context = navigationContext.value;
@@ -119,9 +121,9 @@ function inspectCapability(id = '') {
 function openCapability(id: string) {
   const item = capabilityLocation(id)?.capability;
   if (!item || !canOpenCapability(item)) { inspectCapability(id); return; }
-  if (item.action === 'catalog') {
-    view.value = 'design';
-    showCatalog.value = true;
+  if (item.action === 'catalog' || item.action === 'services') {
+    view.value = 'system';
+    libraryRequest.value={nonce:Date.now(),section:item.action==='services'?'services':'components'};
   } else {
     view.value = item.id === 'conformance' ? 'system' : item.view!;
     if (item.id === 'conformance') conformanceRequest.value++;
@@ -139,7 +141,7 @@ function openDefinitionAspect(request:AspectEditorRequest) {
 }
 function aspectOpened(context:AspectContext){aspectContext.value=context;}
 const inspectionOpened = ref(false);
-const systemOpened = ref(false);
+const systemOpened = ref(true);
 const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
 async function openInspection(item: InspectionCase) {
  if (item.body.project) {
@@ -1100,7 +1102,7 @@ onUnmounted(() => {
           @change="importProject"
         />
       </header>
-      <div v-if="!definitionView" class="project-ribbon">
+      <div v-if="!definitionView" class="project-ribbon"><div class="simulation-context"><span><strong>Timing simulation</strong> · Separate processing and resource model</span><button class="button quiet" @click="openCapability('system-model')">Open system design</button></div>
         <StudioRibbon workspace="project" :active="view" :structure='["plan","deployment"]' :behavior='["design"]' :execution='["results"]' @select="view = $event as typeof view">
           <template #status><DraftStatus :draft="autosave" /></template>
           <template #file>        <div class="topbar-actions">
@@ -1180,7 +1182,7 @@ onUnmounted(() => {
       <div v-if="aspectContext && view===aspectContext.workspace" class="aspect-context-banner"><span>Source component: <strong>{{aspectContext.name}} · {{aspectContext.version}}</strong> / {{aspectContext.slot}}. Install the changed artifact as a new version, then replace its pin in the component definition.</span><button class="button secondary" @click="view='definitions'">Return to component definition</button></div>
       <ComponentDefinitionWorkbench v-if="definitionsOpened" v-show="view==='definitions'" @open-aspect="openDefinitionAspect" />
       <BlueprintWorkbench v-if="view === 'blueprint'" :selected="selectedCapability" @inspect="inspectCapability" @open="openCapability" />
-      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" :conformance-request="conformanceRequest" />
+      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" :conformance-request="conformanceRequest" :library-request="libraryRequest" @components="openCapability('component-context')" @simulation="openTimingCatalog" />
       <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
       <DeliveryWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
       <WorkflowWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
@@ -1229,7 +1231,7 @@ onUnmounted(() => {
             'inspector-collapsed': inspectorCollapsed,
             'canvas-focus--expanded': designExpanded,
           }"
-          aria-label="Application design workspace"
+          aria-label="Timing simulation workspace"
         >
           <aside
             id="design-component-palette"
@@ -1248,12 +1250,12 @@ onUnmounted(() => {
               </button>
             </div>
             <p class="panel-caption">
-              Add a building block.<br />Connect its ports to define flow.
+              Add an abstract timing block.<br />Reusable components are in System design.
             </p>
             <button class="palette-card" @click="addNode('client')">
               <span class="palette-icon client"><Monitor :size="19" /></span
               ><span
-                ><strong>Client</strong><small>Generate requests</small></span
+                ><strong>Workload source</strong><small>Generate simulated requests</small></span
               ><Plus :size="15" /></button
             ><button class="palette-card" @click="addNode('service')">
               <span class="palette-icon service"><Server :size="19" /></span
@@ -1275,14 +1277,14 @@ onUnmounted(() => {
             >
               <span class="palette-icon router"><GitBranch :size="19" /></span
               ><span
-                ><strong>Router</strong><small>Choose one output</small></span
+                ><strong>Routing model</strong><small>Choose one simulated output</small></span
               ><Plus :size="15" />
             </button>
             <button
               class="button secondary full catalog-open-button"
               @click="showCatalog = true"
             >
-              <Box :size="14" /> Component catalog
+              <Box :size="14" /> Timing profile library
             </button>
             <div class="palette-note">
               <GitBranch :size="17" /><strong>{{
@@ -2247,6 +2249,8 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.simulation-context{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;margin-bottom:10px;padding:8px 12px;background:#fff8e5;border:1px solid #e9d8a5;border-radius:6px}
+
 .continuum-example-button {
   margin-top: 10px;
 }

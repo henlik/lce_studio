@@ -43,8 +43,10 @@ Bounded pure and single-command state graphs execute with deterministic token tr
 and exact offline modeled-state provider bindings. Shared graph scenarios retain state
 across repeated commands, faults and restarts with independent expectations. Multi-entry command, feedback/delivery
 scheduling and live provider integration remain unfinished. System architecture currently records references;
-the application flow/deployment simulator still uses its existing project model.
-Grouping them under Design does not silently migrate or merge their data models.
+the timing/deployment simulator uses its existing project model under Simulation.
+Design opens System architecture and its installed library. Library sections distinguish
+components, supporting services and actors/workload. The separate timing-profile library
+retains its existing simulation behavior; these models are not silently merged.
 
 ## Implementation sequence
 
@@ -59,6 +61,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **28%** — Added bounded pure component execution, token traces and saved replayable snapshots. Stateful/provider execution remains unfinished; no additional checkpoint credit.
 - 2026-11-14: **28%** — Added single-command state handoffs and exact modeled-state provider bindings with commit/denial evidence. Multi-command, message/workflow and live-provider integration remain open; no additional checkpoint credit.
 - 2026-11-14: **28%** — Added shared graph scenarios with repeated commands, explicit faults/restarts, blocked transfers and independent expectations. Broader joint-engine and live-provider checkpoints remain open; no additional checkpoint credit.
+- 2026-11-14: **28%** — Corrected Design routing and library categories; separated timing simulation navigation and profiles. UX correction adds no engine checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -76,7 +79,7 @@ Capabilities: Component definitions, System architecture, Databases & brokers.
 
 ### M2. Generalize conformance
 
-Capabilities: Requirements, Deployment planning, Experiments & results, Contracts & conformance.
+Capabilities: Simulation requirements, Deployment simulation, Simulation results, Contracts & conformance.
 
 **Exit gate:** The same scenarios and independent claims evaluate linked models and identifiable implementations.
 
@@ -213,15 +216,6 @@ Own all aspects under one selected, versioned component.
 
 #### Design
 
-**Requirements — Partial** (`requirements`)
-
-Capture intent and measurable acceptance conditions.
-
-- Today: Project requirements and bounded simulation checks are available.
-- Next: Link requirement IDs to system claims, implementation evidence and runtime monitors.
-- Acceptance: A requirement can be traced to its evaluator and the evidence supporting a verdict.
-- Dependencies: System architecture
-
 **System architecture — Partial** (`system-model`)
 
 Assemble exact component references, bindings, contracts and deployment plans.
@@ -229,16 +223,7 @@ Assemble exact component references, bindings, contracts and deployment plans.
 - Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared scenarios record routed values, faults, restarts and independent assertions.
 - Next: Integrate message/workflow engines, multi-entry commands, live providers and feedback/delivery scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
-- Dependencies: Local catalog
-
-**Application flow — Available** (`application-flow`)
-
-Explore processing flows and resource demand.
-
-- Today: The application canvas runs bounded timed processing simulations.
-- Next: Derive demand from actual component behavior instead of a separate timing model.
-- Acceptance: The existing timed simulation preserves routing, retries and independent requirements.
-- Dependencies: None in this inventory.
+- Dependencies: Installed component library
 
 **Databases & brokers — Partial** (`service-bindings`)
 
@@ -249,24 +234,6 @@ Bind component requirements to storage, cache, routing and messaging services.
 - Acceptance: An incompatible provider is rejected and a supported binding executes through its adapter.
 - Dependencies: System architecture, Component definitions
 
-**Deployment planning — Partial** (`deployment-model`)
-
-Model sites, compute resources, networks and placement before deployment.
-
-- Today: Hosts, links, geographic placement, outages and resource experiments are available in the timed model.
-- Next: Link unified designs and add calibrated replication, consistency, battery and multi-hop network models.
-- Acceptance: A site outage produces traceable application consequences and reports unmet placement assumptions.
-- Dependencies: System architecture
-
-**Experiments & results — Partial** (`experiments`)
-
-Test workload, resource and failure scenarios against a design.
-
-- Today: Timed simulation runs, trace replay and results are stored for the application model.
-- Next: Use shared scenarios across component behavior, data, messages and deployment.
-- Acceptance: One reproducible scenario links a deployment event to its application-level outcome.
-- Dependencies: Deployment planning, System architecture
-
 **Inspection lab — Available** (`inspection`)
 
 Explore existing capabilities with independent reference exercises.
@@ -275,6 +242,44 @@ Explore existing capabilities with independent reference exercises.
 - Next: Add each new integrated capability to the inspection pack.
 - Acceptance: Expected rejection is distinguished from successful execution and missing evidence.
 - Dependencies: None in this inventory.
+
+#### Simulation
+
+**Timing flow — Available** (`application-flow`)
+
+Explore processing flows and resource demand.
+
+- Today: The application canvas runs bounded timed processing simulations.
+- Next: Derive demand from actual component behavior instead of a separate timing model.
+- Acceptance: The existing timed simulation preserves routing, retries and independent requirements.
+- Dependencies: None in this inventory.
+
+**Simulation requirements — Partial** (`requirements`)
+
+Capture intent and measurable acceptance conditions.
+
+- Today: Project requirements and bounded simulation checks are available.
+- Next: Link requirement IDs to system claims, implementation evidence and runtime monitors.
+- Acceptance: A requirement can be traced to its evaluator and the evidence supporting a verdict.
+- Dependencies: System architecture
+
+**Deployment simulation — Partial** (`deployment-model`)
+
+Model sites, compute resources, networks and placement before deployment.
+
+- Today: Hosts, links, geographic placement, outages and resource experiments are available in the timed model.
+- Next: Link unified designs and add calibrated replication, consistency, battery and multi-hop network models.
+- Acceptance: A site outage produces traceable application consequences and reports unmet placement assumptions.
+- Dependencies: System architecture
+
+**Simulation results — Partial** (`experiments`)
+
+Test workload, resource and failure scenarios against a design.
+
+- Today: Timed simulation runs, trace replay and results are stored for the application model.
+- Next: Use shared scenarios across component behavior, data, messages and deployment.
+- Acceptance: One reproducible scenario links a deployment event to its application-level outcome.
+- Dependencies: Deployment simulation, System architecture
 
 #### Implementation
 
@@ -402,7 +407,7 @@ Cross-cutting capabilities used by both planes; security work starts before runt
 
 #### Reuse & governance
 
-**Local catalog — Partial** (`local-catalog`)
+**Installed component library — Partial** (`local-catalog`)
 
 Install and reuse exact component packages.
 
@@ -418,7 +423,7 @@ Publish, discover and review reusable components.
 - Today: No remote community publishing service is connected.
 - Next: Add package provenance, review, compatibility metadata and trust policies.
 - Acceptance: A package is verified before installation and its permissions are visible.
-- Dependencies: Local catalog, Security & trust, Release authority
+- Dependencies: Installed component library, Security & trust, Release authority
 
 **Security & trust — Partial** (`security`)
 

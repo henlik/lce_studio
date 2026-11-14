@@ -49,8 +49,10 @@ Bounded pure and single-command state graphs execute with deterministic token tr
 and exact offline modeled-state provider bindings. Shared graph scenarios retain state
 across repeated commands, faults and restarts with independent expectations. Multi-entry command, feedback/delivery
 scheduling and live provider integration remain unfinished. System architecture currently records references;
-the application flow/deployment simulator still uses its existing project model.
-Grouping them under Design does not silently migrate or merge their data models.
+the timing/deployment simulator uses its existing project model under Simulation.
+Design opens System architecture and its installed library. Library sections distinguish
+components, supporting services and actors/workload. The separate timing-profile library
+retains its existing simulation behavior; these models are not silently merged.
 
 ## Implementation sequence
 
