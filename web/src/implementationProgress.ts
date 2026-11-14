@@ -7,7 +7,7 @@ export const progressMilestones:ProgressMilestone[]=[
   gate('shared-model','Persist the shared design, contract and separate deployment schema.','internal/system/types.go','internal/store/systems_test.go'),
   gate('direct-resolution','Reject missing or changed direct catalog references before a run.','internal/system/resolution_test.go'),
   gate('aspect-ownership','Install immutable component definitions with pinned aspects and open their editors in context.','internal/store/definitions_test.go','docs/COMPONENT_DEFINITIONS.md'),
-  gate('compatible-closure','Validate full dependency closures and compatible ports across aspects.'),
+  gate('compatible-closure','Validate full dependency closures and compatible ports across aspects.','internal/store/system_compatibility_test.go','internal/system/connections_test.go','docs/SYSTEM_CONNECTIONS.md'),
   gate('joint-execution','Execute connected component aspects and typed provider bindings together.')
  ]},
  {id:'M2',weight:20,checkpoints:[
@@ -66,6 +66,7 @@ export const roadmapProgress=calculateProgress(progressMilestones);
 export const progressHistory=[
  {date:'2026-11-14',percentage:18,reason:'Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.'},
  {date:'2026-11-14',percentage:23,reason:'Versioned component ownership and contextual aspect editing (+5 percentage points).'},
- {date:'2026-11-14',percentage:23,reason:'Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.'}
+ {date:'2026-11-14',percentage:23,reason:'Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.'},
+ {date:'2026-11-14',percentage:28,reason:'Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).'}
 ];
 export const progressMethod='Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.';

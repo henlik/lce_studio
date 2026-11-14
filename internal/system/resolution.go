@@ -27,9 +27,13 @@ type ResolvedReference struct {
 	CatalogEntry
 }
 type Resolution struct {
-	Valid      bool                    `json:"valid"`
-	Issues     []model.ValidationIssue `json:"issues"`
-	References []ResolvedReference     `json:"references"`
+	Valid         bool                    `json:"valid"`
+	Issues        []model.ValidationIssue `json:"issues"`
+	References    []ResolvedReference     `json:"references"`
+	Ports         []InstancePort          `json:"ports,omitempty"`
+	Dependencies  []Dependency            `json:"dependencies,omitempty"`
+	Connections   []ConnectionCheck       `json:"connections,omitempty"`
+	Compatibility string                  `json:"compatibility,omitempty"`
 }
 
 // BuiltinCatalog is a reserved adapter namespace. Its digest identifies the

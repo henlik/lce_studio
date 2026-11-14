@@ -38,19 +38,21 @@ Component Data, State, Messages and Workflows are now grouped under Components.
 Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
-Joint execution and system-wide connection compatibility remain unfinished. System architecture currently records references;
+System-wide typed connections and dependency closures are now checked.
+Joint execution, scheduling and provider compatibility remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 
 ## Implementation sequence
 
-**Weighted implementation: 23%**
+**Weighted implementation: 28%**
 
 Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.
 
 - 2026-11-14: **18%** — Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.
 - 2026-11-14: **23%** — Versioned component ownership and contextual aspect editing (+5 percentage points).
 - 2026-11-14: **23%** — Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.
+- 2026-11-14: **28%** — Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).
 
 ### M1. Connect the engineering model
 
@@ -58,12 +60,12 @@ Capabilities: Component definitions, System architecture, Databases & brokers.
 
 **Exit gate:** A selected component owns its aspects, references resolve, and compatible system connections execute.
 
-**Milestone progress: 60% · roadmap weight: 25%**
+**Milestone progress: 80% · roadmap weight: 25%**
 
 - [x] Persist the shared design, contract and separate deployment schema. Evidence: [internal/system/types.go](../internal/system/types.go), [internal/store/systems_test.go](../internal/store/systems_test.go).
 - [x] Reject missing or changed direct catalog references before a run. Evidence: [internal/system/resolution_test.go](../internal/system/resolution_test.go).
 - [x] Install immutable component definitions with pinned aspects and open their editors in context. Evidence: [internal/store/definitions_test.go](../internal/store/definitions_test.go), [docs/COMPONENT_DEFINITIONS.md](../docs/COMPONENT_DEFINITIONS.md).
-- [ ] Validate full dependency closures and compatible ports across aspects.
+- [x] Validate full dependency closures and compatible ports across aspects. Evidence: [internal/store/system_compatibility_test.go](../internal/store/system_compatibility_test.go), [internal/system/connections_test.go](../internal/system/connections_test.go), [docs/SYSTEM_CONNECTIONS.md](../docs/SYSTEM_CONNECTIONS.md).
 - [ ] Execute connected component aspects and typed provider bindings together.
 
 ### M2. Generalize conformance
@@ -199,7 +201,7 @@ Compose tasks, decisions, owned commands and handoffs.
 Own all aspects under one selected, versioned component.
 
 - Today: Immutable component manifests own digest-pinned aspects, inspect dependency closures and validate explicit typed aspect links.
-- Next: Check connections across system instances and execute linked behavior under one component boundary.
+- Next: Execute linked behavior under one component boundary with explicit scheduling and input completeness.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
@@ -218,8 +220,8 @@ Capture intent and measurable acceptance conditions.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: The shared system schema, editor, persistence, checked direct catalog references and evidence snapshots are available.
-- Next: Lock full dependency closures, verify compatible ports and execute linked engines together.
+- Today: System designs persist typed port connections, check transitive dependency closures and nominal data compatibility, and distinguish untyped legacy edges.
+- Next: Execute linked engines together and validate provider capabilities, required inputs and scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Local catalog
 
@@ -399,7 +401,7 @@ Cross-cutting capabilities used by both planes; security work starts before runt
 Install and reuse exact component packages.
 
 - Today: Installed packages and built-in adapters can be selected in System architecture; direct references are resolved by exact version with content integrity checks.
-- Next: Pin resolved digests in reusable manifests and verify complete dependency closures across designs.
+- Next: Extend verified model closures to implementation provenance, signed distribution and remote catalogs.
 - Acceptance: Missing or changed packages cannot silently substitute for a pinned dependency.
 - Dependencies: None in this inventory.
 

@@ -34,9 +34,12 @@ Deployment planning is an engineering simulation, not a live runtime control.
 **System architecture → Architecture** includes a collapsible reference library
 on the left. Search exact installed component versions and built-in reference
 adapters. Select a component card before attaching installed data, state, message
-or workflow artifacts. **Resolve references** checks direct catalog identities and
-content digests and links errors to the relevant inspector fields. Structural
-validation, reference resolution and execution support are separate checks.
+or workflow artifacts. **Check connections** checks catalog identities, transitive dependency integrity
+and declared port types. Invalid edges are highlighted and issue buttons open
+their inspector. Untyped legacy edges stay explicitly unchecked. See
+[SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md) for the reception-to-consultation
+exercise. Structural validation, static compatibility and execution support are
+separate checks.
 
 ## Workspace ribbons
 

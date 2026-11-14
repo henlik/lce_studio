@@ -16,12 +16,13 @@ arbitrary generated software.
 
 The existing workspaces and their saved artifacts remain available. This schema
 provides a common reference layer; it does not merge or rewrite their execution
-engines. Structural validation alone does not resolve references. **Resolve references**
-checks direct component and artifact references against the installed catalogs,
-using exact versions and recomputed content digests. The reserved `builtin.`
-namespace identifies the reference adapter declarations. Resolution does not
-establish inter-component port compatibility, complete external dependency
-closure, or implementation availability.
+engines. Structural validation alone does not resolve references. **Check connections**
+checks exact references, inspected artifact dependency closures and explicitly
+typed connections. The reserved `builtin.` namespace identifies the fixed
+reference adapter declarations. Legacy untyped edges remain valid references
+but have incomplete compatibility status. Static checks do not establish
+implementation availability, provider semantics or joint execution. See
+[SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md) for the separate typed exercise.
 
 ## The first executable claims
 
@@ -77,7 +78,7 @@ isolates the reference records and is removed after the experiment.
 3. Choose **File → Load reception example**.
 4. Inspect the component cards in **Architecture**. Select a card to inspect its
    exact definition version and bindings in the canvas settings.
-5. Use **Resolve references** to check the example's built-in adapter identities.
+5. Use **Check connections** to check the example's built-in adapter identities.
    The Architecture view also has a searchable, collapsible reference library.
    Add installed component versions, or select a component and attach installed
    data/state/message/workflow artifacts. Unresolved definitions remain editable
@@ -136,7 +137,7 @@ does not mean that the faulty implementation conforms.
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/systems/catalog` | List checked installed definitions and built-in adapters |
-| `POST /api/systems/resolve` | Resolve direct references in a design body |
+| `POST /api/systems/resolve` | Resolve references, dependency closures and declared port types |
 | `GET /api/systems/example` | Retrieve the reference design explicitly |
 | `GET /api/systems` | List saved system designs |
 | `GET /api/systems/{id}` | Retrieve the latest saved design |

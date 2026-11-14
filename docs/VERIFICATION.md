@@ -1,5 +1,36 @@
 # Verification
 
+## System-wide static compatibility — 14 November 2026
+
+- Optional source/target aspect ports are preserved in system design persistence
+  and imports. Typed edges are scoped to exact component instances and check
+  direction, scalar or nominal record identity and single-producer inputs.
+  Internally bound manifest inputs reject additional external producers.
+- System resolution inspects direct behavior roots, owned manifest aspects and
+  legacy attachments, including transitive and embedded dependencies. Conflicting
+  content for one artifact identity across instances is rejected. Untyped legacy
+  connections remain readable with explicit `incomplete`/`untyped` status; they
+  do not receive a typed compatibility verdict.
+- Interface inspection works independently of unfinished claims, connections and
+  deployment data. It returns no whole-system validity verdict. UI changes clear
+  stale port options; full checks reject stale response snapshots.
+- The explicit reception-to-consultation exercise installs three reusable synthetic
+  record-boundary packages atomically. Matching encounter contracts pass; version
+  mismatch, missing/wrong endpoints and multiple producers fail. The fixed
+  conformance runner rejects this static fixture as an unsupported implementation.
+- Full Go race tests (`go test -race -count=1 ./...`), vet, backend build, Vue
+  production build, all 28 frontend tests and live PostgreSQL/API acceptance passed.
+  Acceptance retains seven conformance scenarios and adds fixture installation,
+  positive/negative typed links, incomplete-draft inspection, legacy disclosure
+  and typed design round-trip persistence. Vite retains its large-chunk warning.
+- Browser interaction and mobile visual checks remain outstanding. The manual
+  exercise and exact limitations are in [SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md).
+- Roadmap v1 is **28%**, previously **23%** (+5 points), with M1 **80%**. The
+  compatibility/closure checkpoint is accepted within the declared static model;
+  joint execution and provider bindings remain unfinished. No execution ordering,
+  liveness, required-input completeness, clinical correctness, deployment readiness
+  or formal proof is claimed by a compatible connection.
+
 ## Manifest compatibility and dependency inspection — 14 November 2026
 
 - Optional immutable aspect links declare source and target slot/interface/port.

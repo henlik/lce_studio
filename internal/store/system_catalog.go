@@ -119,5 +119,5 @@ func (s *Store) ResolveSystem(ctx context.Context, design system.SystemDesign) (
 	if err != nil {
 		return system.Resolution{}, err
 	}
-	return system.Resolve(design, entries), nil
+	return s.resolveSystemCompatibility(ctx, design, entries)
 }

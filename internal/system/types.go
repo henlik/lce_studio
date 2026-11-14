@@ -34,10 +34,12 @@ type ComponentInstance struct {
 	Bindings   []Binding     `json:"bindings"`
 }
 type Connection struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Kind   string `json:"kind"`
+	ID         string          `json:"id"`
+	Source     string          `json:"source"`
+	Target     string          `json:"target"`
+	Kind       string          `json:"kind"`
+	SourcePort *AspectEndpoint `json:"sourcePort,omitempty"`
+	TargetPort *AspectEndpoint `json:"targetPort,omitempty"`
 }
 type Resource struct {
 	ID   string `json:"id"`

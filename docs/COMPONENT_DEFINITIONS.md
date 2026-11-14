@@ -49,7 +49,8 @@ composition mechanisms still support nested reusable components.
     references** verifies the manifest and expands its owned aspect references.
     A design can be saved before it resolves; unresolved references block runs.
 12. Use **Product blueprint → Implementation sequence** to inspect remaining
-    system-wide compatibility, joint-execution and release work. The conformance runner still
+    joint-execution and release work. Static system compatibility is described in
+    [SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md). The conformance runner still
     accepts only the bounded built-in reception experiment; this manifest does
     not make arbitrary systems executable or deployable.
 
@@ -107,7 +108,8 @@ It is a type-checking exercise, not a recommended access-control architecture.
 
 Limits: checks cover declared manifest links, not every unconnected required
 input, trigger ordering, task response bindings, cycles between aspects, delivery
-semantics, system-instance connections or provider capabilities. This is not an
+semantics or provider capabilities. System-instance connections are checked
+separately in System architecture. This is not an
 execution plan. Component definitions still cannot be nested. Reports are bounded
 at 4096 dependency occurrences and manifests at 128 links.
 
@@ -139,8 +141,9 @@ Definitions allow 1–32 aspects; the local catalog allows 200 definition versio
 
 ## Implementation percentage policy
 
-The product blueprint and footer display **roadmap v1 progress: 23%**, up from
-an explicitly reconstructed **18% baseline**. M1 is 60%; M2 is 40%; M3–M6 are 0%.
+The product blueprint and footer display **roadmap v1 progress: 28%**, up from
+**23%** after completing static system compatibility. The original reconstructed
+baseline was 18%. M1 is 80%; M2 is 40%; M3–M6 are 0%.
 Weights are 25%, 20%, 20%, 15%, 10%, 10%, respectively. Each milestone has five
 binary acceptance checkpoints, equally weighted within that milestone.
 
@@ -149,9 +152,10 @@ test coverage, production readiness or a prediction of delivery time. Existing
 standalone editors are foundations; menus do not earn completion credit. Security,
 provenance, general execution and autonomous runtime gates remain incomplete.
 
-The compatibility increment keeps the score at **23% (+0 points)**. Manifest-level
-checks are implemented, but the M1 compatibility checkpoint remains open until
-system-wide connections are checked. M1 remains 60%; joint execution is separate.
+The earlier manifest-only increment kept the score at 23%. The completed
+system-wide static checks now earn **+5 percentage points**. See
+[SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md) for the acceptance exercise and limits.
+Joint execution remains a separate unfinished checkpoint.
 
 For every implementation increment:
 

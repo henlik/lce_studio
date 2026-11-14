@@ -27,6 +27,19 @@ func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, entries)
+	case path == "/interfaces":
+		if !method(w, r, http.MethodPost) {
+			return
+		}
+		var design system.SystemDesign
+		if !decode(w, r, &design) || !s.systemStoreReady(w) {
+			return
+		}
+		inspection, err := s.store.InspectSystemPorts(r.Context(), design)
+		if s.storageError(w, err, "System interfaces") {
+			return
+		}
+		respond(w, 200, inspection)
 	case path == "/resolve":
 		if !method(w, r, http.MethodPost) {
 			return
@@ -40,6 +53,19 @@ func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, resolution)
+	case path == "/connection-example":
+		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
+			return
+		}
+		example, err := s.store.InstallConnectionExample(r.Context())
+		if errors.Is(err, store.ErrComponentConflict) || errors.Is(err, store.ErrCatalogFull) {
+			fail(w, 409, err.Error(), nil)
+			return
+		}
+		if s.storageError(w, err, "Connection example") {
+			return
+		}
+		respond(w, 200, example)
 	case path == "/example":
 		if method(w, r, http.MethodGet) {
 			respond(w, 200, system.ReceptionExample())

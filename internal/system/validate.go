@@ -67,9 +67,17 @@ func Validate(d SystemDesign) model.Validation {
 			add(field.path, "Value is required")
 		}
 	}
+	if len(d.Components) > 64 || len(d.Connections) > 256 {
+		add("components", "A system supports at most 64 instances and 256 connections")
+		return model.Validation{Valid: false, Issues: issues}
+	}
 	components := map[string]bool{}
 	for i, c := range d.Components {
 		p := fmt.Sprintf("components[%d]", i)
+		if len(c.Artifacts) > 32 {
+			add(p+".artifacts", "At most 32 attached artifacts are supported")
+			continue
+		}
 		if strings.TrimSpace(c.ID) == "" || components[c.ID] {
 			add(p+".id", "Component instance IDs must be nonempty and unique")
 		}
@@ -166,6 +174,17 @@ func Validate(d SystemDesign) model.Validation {
 			add(p+".id", "Connection IDs must be nonempty and unique")
 		}
 		connections[c.ID] = true
+		if (c.SourcePort == nil) != (c.TargetPort == nil) {
+			add(p, "Choose both source and target ports, or leave both untyped")
+		}
+		for _, endpoint := range []struct {
+			name string
+			port *AspectEndpoint
+		}{{"sourcePort", c.SourcePort}, {"targetPort", c.TargetPort}} {
+			if endpoint.port != nil && (endpoint.port.Slot == "" || endpoint.port.Interface == "" || endpoint.port.Port == "" || len(endpoint.port.Slot) > 120 || len(endpoint.port.Interface) > 400 || len(endpoint.port.Port) > 200) {
+				add(p+"."+endpoint.name, "Choose a named aspect slot, interface and port")
+			}
+		}
 		if !components[c.Source] {
 			add(p+".source", "Unknown source component")
 		}

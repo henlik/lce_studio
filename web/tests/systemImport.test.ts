@@ -41,3 +41,15 @@ test('system import distinguishes component packages from unified definitions',(
  const invalid=JSON.parse(JSON.stringify(design));invalid.components[0].definition.kind='data';
  assert.throws(()=>parseSystemImport(JSON.stringify(invalid)));
 });
+
+test('typed system ports roundtrip and partial or malformed endpoint objects are rejected',()=>{
+ const d=emptySystem();
+ d.connections=[{id:'handoff',source:'reception',target:'consultation',kind:'data',sourcePort:{slot:'root',interface:'outputs',port:'encounter'},targetPort:{slot:'root',interface:'inputs',port:'encounter'}}];
+ assert.deepEqual(parseSystemImport(JSON.stringify(d)),d);
+ for(const malformed of [null,{},'encounter',{slot:'root',interface:'inputs',port:1}]){
+  const candidate=JSON.parse(JSON.stringify(d));candidate.connections[0].targetPort=malformed;
+  assert.throws(()=>parseSystemImport(JSON.stringify(candidate)));
+ }
+ const missing=JSON.parse(JSON.stringify(d));delete missing.connections[0].targetPort;
+ assert.throws(()=>parseSystemImport(JSON.stringify(missing)));
+});

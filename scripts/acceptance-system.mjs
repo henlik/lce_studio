@@ -93,3 +93,18 @@ await request('/definitions','POST',wrongLink,422);
 const duplicateProducer=structuredClone(linked);duplicateProducer.links.push({...duplicateProducer.links[0],id:'second'});
 assert.equal((await request('/definitions/validate','POST',duplicateProducer)).valid,false);
 console.log('PASS typed aspect links, dependency inspection, direction checks and multiple-producer rejection');
+
+const connectionFixture=await request('/connection-example','POST',{});
+const connectionReport=await request('/resolve','POST',connectionFixture.design);
+assert.equal(connectionReport.valid,true);assert.equal(connectionReport.compatibility,'checked');assert.equal(connectionReport.ports.length,4);
+assert.ok(connectionReport.dependencies.some(d=>d.id==='example.encounter-contract'));
+const mismatchReport=await request('/resolve','POST',connectionFixture.mismatch);
+assert.equal(mismatchReport.valid,false);assert.equal(mismatchReport.compatibility,'invalid');assert.ok(mismatchReport.issues.some(i=>i.path==='connections[0].targetPort'));
+const incomplete=structuredClone(connectionFixture.design);incomplete.contract.claims=[];delete incomplete.connections[0].targetPort;
+assert.equal((await request('/interfaces','POST',incomplete)).ports.length,4);
+const legacyReport=await request('/resolve','POST',await request('/example'));
+assert.equal(legacyReport.compatibility,'incomplete');assert.equal(legacyReport.connections[0].status,'untyped');
+await request('/conformance','POST',{design:connectionFixture.design},422);
+await request('/'+connectionFixture.design.id,'PUT',connectionFixture.design);
+assert.deepEqual(await request('/'+connectionFixture.design.id),connectionFixture.design);
+console.log('PASS reception-to-consultation typed connections, contract-version rejection, incomplete-draft port inspection and legacy disclosure');
