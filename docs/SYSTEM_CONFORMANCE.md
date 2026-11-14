@@ -69,7 +69,7 @@ isolates the reference records and is removed after the experiment.
 ## Reproduce in the studio
 
 1. Start the studio and PostgreSQL using the setup in [README.md](../README.md).
-2. Open **System design** in the main navigation. A new design starts empty;
+2. Open **Engineering plane → Design → System architecture** in the navigation. A new design starts empty;
    example components are not inserted automatically.
 3. Choose **File → Load reception example**.
 4. Inspect the component cards in **Architecture**. Select a card to inspect its

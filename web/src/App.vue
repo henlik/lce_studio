@@ -4,6 +4,9 @@ import { useWorkspaceDraft } from "./composables/useWorkspaceDraft";
 import { useActionFeedback } from "./composables/useNotifications";
 import DraftStatus from "./components/DraftStatus.vue";
 import StudioNotifications from "./components/StudioNotifications.vue";
+import StudioNavigation from "./components/StudioNavigation.vue";
+import {capabilityLocation, workspaceLocation, canOpenCapability, type StudioView} from "./studioBlueprint";
+const BlueprintWorkbench = defineAsyncComponent(() => import("./components/BlueprintWorkbench.vue"));
 import {
   computed,
   defineAsyncComponent,
@@ -97,19 +100,31 @@ const project = ref<Project | null>(null);
 const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
-const view = ref<
-  | "design"
-  | "plan"
-  | "deployment"
-  | "results"
-  | "components"
-  | "data"
-  | "state"
-  | "messages"
-  | "workflows"
-  | "inspection"
-  | "system"
->("design");
+const view = ref<StudioView>("blueprint");
+const selectedCapability = ref("");
+const conformanceRequest = ref(0);
+const navigationContext = computed(() => capabilityLocation(view.value === 'blueprint' ? selectedCapability.value : workspaceLocation(view.value) || ''));
+const navigationBreadcrumb = computed(() => {
+  const context = navigationContext.value;
+  return context ? `${context.plane.label} / ${context.group.label} / ${context.capability.label}` : 'Product blueprint / Engineering, runtime and shared foundations';
+});
+function inspectCapability(id = '') {
+  selectedCapability.value = id;
+  view.value = 'blueprint';
+  closeMobileNavigation();
+}
+function openCapability(id: string) {
+  const item = capabilityLocation(id)?.capability;
+  if (!item || !canOpenCapability(item)) { inspectCapability(id); return; }
+  if (item.action === 'catalog') {
+    view.value = 'design';
+    showCatalog.value = true;
+  } else {
+    view.value = item.id === 'conformance' ? 'system' : item.view!;
+    if (item.id === 'conformance') conformanceRequest.value++;
+  }
+  closeMobileNavigation();
+}
 const inspectionOpened = ref(false);
 const systemOpened = ref(false);
 const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
@@ -131,7 +146,7 @@ const definitionView = computed(
     view.value === "data" ||
     view.value === "state" ||
     view.value === "messages" ||
-    view.value === "workflows" || view.value === "inspection" || view.value === "system",
+    view.value === "workflows" || view.value === "inspection" || view.value === "system" || view.value === "blueprint",
 );
 watch(view, (next) => {
   if (next === "system") systemOpened.value = true;
@@ -533,6 +548,7 @@ async function loadProject(p: Project) {
     return;
   await action("open", async () => {
     adopt(await api<Project>(`/projects/${encodeURIComponent(p.id)}`));
+    view.value = "design";
     showProjects.value = false;
     await refreshRuns();
     notify("Project opened");
@@ -948,6 +964,7 @@ watch(replaySpeed, () => {
 const autosave = useWorkspaceDraft("project", {
   project,
   view,
+  selectedCapability,
   saved,
   pristineProjectStamp,
   railCollapsed,
@@ -993,7 +1010,7 @@ onUnmounted(() => {
         <a
           class="brand"
           href="#"
-          @click.prevent="view = 'design'"
+          @click.prevent="inspectCapability()"
           aria-label="Software Studio home"
           ><span class="brand-mark"><Box :size="24" /></span
           ><span
@@ -1019,115 +1036,7 @@ onUnmounted(() => {
           />
         </button>
       </div>
-      <div class="rail-section">WORKSPACE</div>
-      <nav
-        class="main-nav"
-        aria-label="Workspace"
-        @click="closeMobileNavigation"
-      >
-        <button
-          :class="{ active: view === 'plan' }"
-          @click="view = 'plan'"
-          aria-label="Plan workspace"
-          title="Plan"
-        >
-          <FileCheck2 :size="18" /><span>Plan</span
-          ><span class="nav-number">01</span>
-        </button>
-        <button
-          :class="{ active: view === 'design' }"
-          @click="view = 'design'"
-          aria-label="Design workspace"
-          title="Design"
-        >
-          <GitBranch :size="18" /><span>Design</span
-          ><span class="nav-number">02</span>
-        </button>
-        <button
-          :class="{ active: view === 'deployment' }"
-          @click="view = 'deployment'"
-          aria-label="Deployment workspace"
-          title="Deployment"
-        >
-          <Server :size="18" /><span>Deployment</span
-          ><span class="nav-number">03</span>
-        </button>
-        <button
-          :class="{ active: view === 'results' }"
-          @click="view = 'results'"
-          aria-label="Experiments workspace"
-          title="Experiments"
-        >
-          <FlaskConical :size="18" /><span>Experiments</span
-          ><span class="nav-number">04</span>
-        </button>
-        <button
-          :class="{ active: view === 'components' }"
-          @click="view = 'components'"
-          aria-label="Components workspace"
-          title="Components"
-        >
-          <Layers3 :size="18" /><span>Components</span
-          ><span class="nav-number">05</span>
-        </button>
-        <button
-          :class="{ active: view === 'data' }"
-          @click="view = 'data'"
-          aria-label="Data workspace"
-          title="Data"
-        >
-          <Database :size="18" /><span>Data</span
-          ><span class="nav-number">06</span>
-        </button>
-        <button
-          :class="{ active: view === 'state' }"
-          @click="view = 'state'"
-          aria-label="State workspace"
-          title="State"
-        >
-          <RotateCcw :size="18" /><span>State</span
-          ><span class="nav-number">07</span>
-        </button>
-        <button
-          :class="{ active: view === 'messages' }"
-          @click="view = 'messages'"
-          aria-label="Messages workspace"
-          title="Messages"
-        >
-          <Send :size="18" /><span>Messages</span
-          ><span class="nav-number">08</span>
-        </button>
-        <button
-          :class="{ active: view === 'workflows' }"
-          @click="view = 'workflows'"
-          aria-label="Workflows workspace"
-          title="Workflows"
-        >
-          <GitBranch :size="18" /><span>Workflows</span
-          ><span class="nav-number">09</span>
-        </button>
-        <button :class="{active:view === 'system'}" @click="view = 'system'" aria-label="System design" title="System design"><Layers3 :size="18" /><span>System design</span><span class="nav-number">11</span></button>
-        <button :class="{active:view === 'inspection'}" @click="view = 'inspection'" aria-label="Inspection lab" title="Inspection lab"><FlaskConical :size="18" /><span>Inspection lab</span><span class="nav-number">10</span></button>
-      </nav>
-      <div class="rail-divider" />
-      <button
-        class="rail-action"
-        @click="showProjects = true"
-        aria-label="Open projects"
-        title="Projects"
-      >
-        <FolderOpen :size="17" /><span class="rail-action-label">Projects</span
-        ><span class="rail-count">{{ projects.length }}</span>
-      </button>
-      <button
-        class="rail-action"
-        @click="showRunHistory = true"
-        aria-label="Open run history"
-        title="Run history"
-      >
-        <Activity :size="17" /><span class="rail-action-label">Run history</span
-        ><span class="rail-count">{{ runs.length }}</span>
-      </button>
+      <StudioNavigation :view="view" :selected-capability="selectedCapability" :collapsed="railCollapsed" @select="openCapability" @blueprint="inspectCapability()" @expand="railCollapsed = false" @projects="showProjects = true; closeMobileNavigation()" @history="showRunHistory = true; closeMobileNavigation()" />
       <div class="rail-bottom">
         <span class="small-logo"><Layers3 :size="17" /></span
         ><strong>Make the model work.</strong>
@@ -1150,35 +1059,7 @@ onUnmounted(() => {
     <main class="main-shell">
       <header class="topbar">
         <div class="project-heading">
-          <span class="breadcrumb"
-            >{{
-              view === "system" ? "System" : view === "inspection" ? "Inspection" : view === "workflows"
-                ? "Workflows"
-                : view === "messages"
-                  ? "Messages"
-                  : view === "state"
-                    ? "State"
-                    : view === "data"
-                      ? "Data"
-                      : view === "components"
-                        ? "Components"
-                        : "Projects"
-            }}
-            <span>/</span>
-            {{
-              view === "system" ? "Design, contracts & conformance" : view === "inspection" ? "Regional care ecosystem" : view === "workflows"
-                ? "Tasks, decisions & handoffs"
-                : view === "messages"
-                  ? "Typed delivery & acknowledgements"
-                  : view === "state"
-                    ? "Owned state & transitions"
-                    : view === "data"
-                      ? "Data contracts"
-                      : view === "components"
-                        ? "Behavior definitions"
-                        : "Engineering workspace"
-            }}</span
-          >
+          <span class="breadcrumb">{{navigationBreadcrumb}}</span>
           <div class="project-title">
             <input
               v-if="project && !definitionView"
@@ -1186,21 +1067,7 @@ onUnmounted(() => {
               aria-label="Project name"
               maxlength="120"
             />
-            <h1 v-else>
-              {{
-                view === "system" ? "System workbench" : view === "inspection" ? "Inspection lab" : view === "workflows"
-                  ? "Workflow workbench"
-                  : view === "messages"
-                    ? "Messages workbench"
-                    : view === "state"
-                      ? "State workbench"
-                      : view === "data"
-                        ? "Data workbench"
-                        : view === "components"
-                          ? "Component workbench"
-                          : "Software Studio"
-              }}
-            </h1>
+            <h1 v-else>{{ view === 'blueprint' ? (navigationContext?.capability.label || 'Product blueprint') : navigationContext?.capability.label || 'Software Studio' }}</h1>
             <span
               class="dirty-dot"
               v-if="dirty && !definitionView"
@@ -1295,7 +1162,8 @@ onUnmounted(() => {
         </ul>
       </div>
 
-      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" />
+      <BlueprintWorkbench v-if="view === 'blueprint'" :selected="selectedCapability" @inspect="inspectCapability" @open="openCapability" />
+      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" :conformance-request="conformanceRequest" />
       <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
       <DeliveryWorkbench :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
       <WorkflowWorkbench :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
@@ -2215,8 +2083,10 @@ onUnmounted(() => {
       <footer class="statusbar">
         <span
           ><span class="status-indicator" />{{
-            definitionView
-              ? "Definition workspace"
+            view === "blueprint"
+              ? "Blueprint · implementation scope and next steps"
+              : definitionView
+              ? "Engineering definition workspace"
               : validation?.valid
                 ? "Model validated"
                 : dirty

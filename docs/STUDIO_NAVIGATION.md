@@ -1,5 +1,37 @@
 # Canvas-first studio navigation
 
+## Product navigation
+
+The sidebar is a collapsible hierarchy. **Product blueprint** shows capabilities,
+current scope, remaining work, dependencies and acceptance conditions. Its
+**Implementation sequence** tab describes six milestone gates. The sidebar and
+blueprint use one catalog in `web/src/studioBlueprint.ts`; the complete generated
+reference is [PRODUCT_BLUEPRINT.md](PRODUCT_BLUEPRINT.md).
+
+| Plane | Group | Destinations |
+| --- | --- | --- |
+| Engineering | Components | Interface & behavior, Data, State, Messages, Workflows, Unified component context (planned) |
+| Engineering | Design | Requirements, System architecture, Application flow, Databases & brokers (partial blueprint), Deployment planning, Experiments & results, Inspection lab, Open projects, Run history |
+| Engineering | Implementation | Developers & AI agents, Build & sandbox (planned) |
+| Engineering | Assurance & release | Contracts & conformance (opens the system Claims view), Release authority (planned) |
+| Runtime | Observe & verify | Sites & resources, Observer, Runtime verification (planned) |
+| Runtime | Context & adaptation | Contextualisation, Recovery & optimization, Orchestration, Updates & recovery, Disconnected federation (planned) |
+| Shared foundations | Reuse & governance | Local catalog, Community marketplace, Security & trust, Evidence & provenance |
+
+Available entries open their existing editors. Planned entries and partial
+capabilities without an editor open blueprint details, with no fake execution
+button. Expanding a collapsed plane reveals its groups; selecting an editor
+automatically opens its parent group. On mobile, choosing a destination closes
+the sidebar. Breadcrumbs retain plane, group and workspace context.
+
+Data, state, messages and workflow editors retain their own saved artifacts and
+draft recovery. They are now grouped under Components; shared ownership by one
+selected component remains planned. The system-reference editor and the existing
+application/deployment simulator also retain distinct models under Design.
+Deployment planning is an engineering simulation, not a live runtime control.
+
+## Workspace ribbons
+
 The studio uses a compact ribbon above each workspace. Data retains its existing ribbon; Components, State, Messages, Workflows, project views and Inspection Lab use the shared ribbon.
 
 ## Common controls

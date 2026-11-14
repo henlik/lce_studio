@@ -11,11 +11,13 @@ import CanvasInspector from './CanvasInspector.vue';
 interface Trace {events:SystemEvent[];verdicts:SystemVerdict[]}
 interface Report {experiment:string;designId:string;designRevision:string;contractId:string;contractRevision:string;passed:boolean;limitations:string[];scenarios:{id:string;name:string;expectedStatus:string;passed:boolean;model:Trace;implementation:Trace}[]}
 interface Evidence {id:string;createdAt:string;design:SystemDesign;report:Report}
+const props = defineProps<{conformanceRequest?: number}>();
 const draft=ref<SystemDesign>(emptySystem());
 const importInput=ref<HTMLInputElement|null>(null);
 const recovery=useWorkspaceDraft('system',{draft});
 const tab=ref('Architecture'), selected=ref(''), panel=ref(''), library=ref<SystemDesign[]>([]), evidence=ref<Evidence|null>(null), history=ref<Evidence[]>([]);
 const busy=ref(''),notice=ref(''),error=ref(''),validation=ref<Validation|null>(null);
+watch(()=>props.conformanceRequest, value=>{if(value){tab.value='Claims';panel.value='';}},{immediate:true});
 useActionFeedback('system',busy,notice,error);
 const selectedComponent=computed(()=>draft.value.components.find(c=>c.id===selected.value));
 const selectedIndex=computed(()=>draft.value.components.findIndex(c=>c.id===selected.value));

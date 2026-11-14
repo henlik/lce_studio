@@ -1,5 +1,22 @@
 # Verification
 
+## Engineering/runtime navigation and blueprint — 14 November 2026
+
+- Hierarchical navigation preserves all eleven existing workspace destinations,
+  groups component aspects under Engineering → Components and system planning
+  under Engineering → Design, and adds planned runtime/foundation destinations.
+- The shared capability catalog contains 29 scoped entries: 7 available,
+  9 partial and 13 planned. Each entry includes current scope, next work,
+  dependencies and an acceptance condition; six milestone gates describe the
+  implementation sequence. These counts do not measure product completion.
+- Frontend production build and 21 frontend tests pass. New checks cover existing
+  route reachability, planned-runtime non-executability, dependency integrity and
+  the distinction between independent artifact editors and unified ownership.
+- Existing backend behavior is unchanged. The prior full backend/conformance
+  verification is recorded below. Interactive browser/mobile verification remains
+  outstanding because Chromium startup was blocked by the environment's socket
+  permissions in this session.
+
 ## Unified system and reception conformance increment — 14 November 2026
 
 Verified with PostgreSQL 17.11, Go 1.25.5 and Node.js 24.22.1.

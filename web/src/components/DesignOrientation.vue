@@ -7,6 +7,7 @@ const open = ref(false);
 const guideId = "design-hierarchy-" + useId().replace(/:/g, "");
 const flow = ref<"top-down" | "bottom-up">("top-down");
 const contexts: Record<string, { kind: string; detail: string }> = {
+  system: { kind: "System architecture", detail: "Assemble component references and inspect contracts, deployment bindings and conformance evidence." },
   inspection: { kind: "Reference use case", detail: "Inspect implemented capabilities through independent experiments and manual UX checks." },
   plan: { kind: "System requirements", detail: "Define the boundary, assumptions and measurable outcomes." },
   design: { kind: "Application / system model", detail: "Assemble a processing topology for timed simulation." },
@@ -67,7 +68,10 @@ const levels = [
         Combining primitives produces a composite component. Creating a new
         engine primitive requires implementing its semantics; drawing a box does
         not create one. Data, State, Messages and Deployment are design views,
-        not additional levels.
+        not additional levels. Data, state, messages and workflows are authored
+        under Engineering → Components. System assembly, deployment planning and
+        experiments are under Engineering → Design. Runtime is reserved for
+        observing and managing actual deployments.
       </p>
       <div class="orientation-flow" role="group" aria-label="Design flow guidance">
         <button :aria-pressed="flow === 'top-down'" @click="flow = 'top-down'">Top-down flow</button>
@@ -87,8 +91,11 @@ const levels = [
         Workflows assemble explicit human or adapter tasks, pure decisions and
         owned commands behind a reusable contract. Their exact dependencies can
         be inspected down to primitive operations. Data, state, message and timed
-        deployment experiments retain separate artifacts; a common system tree,
-        generated applications and live service adapters remain future work.
+        deployment experiments retain separate artifacts. The shared system
+        reference model and reception conformance adapter are available, while
+        unified component ownership, catalog resolution, generated applications
+        and live orchestration remain future work. The Product blueprint tracks
+        these boundaries and acceptance conditions.
       </p>
     </div>
   </section>
