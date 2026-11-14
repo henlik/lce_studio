@@ -161,8 +161,8 @@ Capture intent and measurable acceptance conditions.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: The shared system schema, structured editor, PostgreSQL persistence and evidence snapshots are available.
-- Next: Resolve catalog definitions, verify compatible ports and execute linked engines together.
+- Today: The shared system schema, editor, persistence, checked direct catalog references and evidence snapshots are available.
+- Next: Lock full dependency closures, verify compatible ports and execute linked engines together.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Local catalog
 
@@ -341,8 +341,8 @@ Cross-cutting capabilities used by both planes; security work starts before runt
 
 Install and reuse exact component packages.
 
-- Today: The local catalog and portable bundles work; the unified system resolver is not connected.
-- Next: Resolve component and aspect references by version and digest across designs.
+- Today: Installed packages and built-in adapters can be selected in System architecture; direct references are resolved by exact version with content integrity checks.
+- Next: Pin resolved digests in reusable manifests and verify complete dependency closures across designs.
 - Acceptance: Missing or changed packages cannot silently substitute for a pinned dependency.
 - Dependencies: None in this inventory.
 
@@ -368,7 +368,7 @@ Enforce identity, authorization, isolation and trustworthy changes by default.
 
 Trace intent through implementation, release and runtime decisions.
 
-- Today: Runs store design and contract snapshots with hashes; release provenance is not yet recorded.
+- Today: Runs store design/contract snapshots and resolved reference digests; release provenance is not yet recorded.
 - Next: Link source revisions, build artifacts, signatures and runtime observations with retention policies.
 - Acceptance: Every deployed release and adaptation can be traced to its authority and supporting evidence.
 - Dependencies: Contracts & conformance, Security & trust

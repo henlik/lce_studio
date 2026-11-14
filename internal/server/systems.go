@@ -16,6 +16,28 @@ import (
 func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/systems")
 	switch {
+	case path == "/catalog":
+		if !method(w, r, http.MethodGet) || !s.systemStoreReady(w) {
+			return
+		}
+		entries, err := s.store.SystemCatalog(r.Context())
+		if s.storageError(w, err, "System catalog") {
+			return
+		}
+		respond(w, 200, entries)
+	case path == "/resolve":
+		if !method(w, r, http.MethodPost) {
+			return
+		}
+		var design system.SystemDesign
+		if !decode(w, r, &design) || !s.systemStoreReady(w) {
+			return
+		}
+		resolution, err := s.store.ResolveSystem(r.Context(), design)
+		if s.storageError(w, err, "System catalog") {
+			return
+		}
+		respond(w, 200, resolution)
 	case path == "/example":
 		if method(w, r, http.MethodGet) {
 			respond(w, 200, system.ReceptionExample())
@@ -147,6 +169,16 @@ func (s *Server) systemConformance(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
+	resolution, err := s.store.ResolveSystem(ctx, request.Design)
+	if err != nil {
+		log.Printf("system catalog resolution: %v", err)
+		fail(w, 503, "System catalog is unavailable. Conformance execution did not start.", nil)
+		return
+	}
+	if !resolution.Valid {
+		fail(w, 422, "Resolve missing or invalid definitions before conformance execution.", resolution.Issues)
+		return
+	}
 	report, err := s.store.RunSystemConformance(ctx, request.Design)
 	if err != nil {
 		if errors.Is(err, conformance.ErrUnsupportedDesign) {
@@ -167,6 +199,7 @@ func (s *Server) systemConformance(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "Could not encode experiment evidence.", nil)
 		return
 	}
+	evidence.Resolution = &resolution
 	if s.storageError(w, s.store.SaveSystemEvidence(ctx, evidence), "System evidence") {
 		return
 	}

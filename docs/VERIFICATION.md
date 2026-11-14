@@ -1,5 +1,24 @@
 # Verification
 
+## Direct system catalog resolution — 14 November 2026
+
+- System references resolve by exact kind, ID and version across component,
+  data, state, message and workflow catalogs. Typed content digests and definition
+  validity are checked. The built-in adapter namespace cannot be shadowed by
+  installed packages.
+- Tests cover all five installed kinds, missing versions, wrong kinds, ambiguous
+  identities, content tampering, missing artifact error paths and unavailable
+  storage. Unresolved references cannot start conformance execution; incomplete
+  designs remain saveable as structurally valid drafts.
+- New conformance evidence records resolved identities and digests. Older runs
+  remain readable without this metadata. The reference library exposes installed
+  definitions and explicit attachment to a selected component instance.
+- Full Go race tests, vet, backend build and live system API acceptance passed.
+  Frontend production build and all 21 frontend tests passed. Browser visual
+  verification remains outstanding under the previously recorded restriction.
+- This checks direct reference availability/integrity, not complete external
+  dependency closure, connection type compatibility or executable provenance.
+
 ## Engineering/runtime navigation and blueprint — 14 November 2026
 
 - Hierarchical navigation preserves all eleven existing workspace destinations,

@@ -16,9 +16,12 @@ arbitrary generated software.
 
 The existing workspaces and their saved artifacts remain available. This schema
 provides a common reference layer; it does not merge or rewrite their execution
-engines. A locally valid artifact reference is not evidence that its referenced
-catalog definition exists, that the implementation uses it, or that two ports
-have compatible types.
+engines. Structural validation alone does not resolve references. **Resolve references**
+checks direct component and artifact references against the installed catalogs,
+using exact versions and recomputed content digests. The reserved `builtin.`
+namespace identifies the reference adapter declarations. Resolution does not
+establish inter-component port compatibility, complete external dependency
+closure, or implementation availability.
 
 ## The first executable claims
 
@@ -74,22 +77,29 @@ isolates the reference records and is removed after the experiment.
 3. Choose **File → Load reception example**.
 4. Inspect the component cards in **Architecture**. Select a card to inspect its
    exact definition version and bindings in the canvas settings.
-5. Open **Claims**. Read the four supported evaluators and the declared
+5. Use **Resolve references** to check the example's built-in adapter identities.
+   The Architecture view also has a searchable, collapsible reference library.
+   Add installed component versions, or select a component and attach installed
+   data/state/message/workflow artifacts. Unresolved definitions remain editable
+   and saveable as drafts, but cannot pass the conformance preflight.
+   Leave the example unchanged for this walkthrough: the current execution
+   adapter requires its exact reference topology, even when other designs resolve.
+6. Open **Claims**. Read the four supported evaluators and the declared
    assumptions. The descriptions explain intent; the evaluator kind determines
    what is executed.
-6. Open **Deployment**. Inspect the local compute resource, PostgreSQL resource,
+7. Open **Deployment**. Inspect the local compute resource, PostgreSQL resource,
    and component placements. These declarations do not provision infrastructure.
-7. Choose **Validate**, then **Save system**. Invalid definitions are linked to
+8. Choose **Validate**, then **Save system**. Invalid definitions are linked to
    their fields. Save stores the latest design in PostgreSQL; browser draft
    recovery also protects in-progress edits.
-8. Choose **Run reception conformance**. Wait for the bounded experiment to
+9. Choose **Run reception conformance**. Wait for the bounded experiment to
    finish; it needs a PostgreSQL role permitted to create an isolated schema.
-9. Open **Evidence**. Compare the separate **Model** and **Go implementation**
+10. Open **Evidence**. Compare the separate **Model** and **Go implementation**
    verdicts for each scenario and expand **Execution trace**.
-10. Check that the faulty-deduplication case has a violated implementation claim
+11. Check that the faulty-deduplication case has a violated implementation claim
     and that the missing-evidence case is inconclusive. Their expected detection
     makes the experiment check pass; it does not make the faulty code conform.
-11. Change a claim description or design name. The displayed result should be
+12. Change a claim description or design name. The displayed result should be
     identified as belonging to an earlier snapshot. Use **Evidence history** to
     reopen a saved run without treating it as evidence for the edited design.
 
@@ -125,6 +135,8 @@ does not mean that the faulty implementation conforms.
 
 | Endpoint | Purpose |
 | --- | --- |
+| `GET /api/systems/catalog` | List checked installed definitions and built-in adapters |
+| `POST /api/systems/resolve` | Resolve direct references in a design body |
 | `GET /api/systems/example` | Retrieve the reference design explicitly |
 | `GET /api/systems` | List saved system designs |
 | `GET /api/systems/{id}` | Retrieve the latest saved design |
@@ -138,8 +150,10 @@ The conformance API uses the server's configured PostgreSQL connection; clients
 cannot supply a database connection string. An unavailable database produces an
 execution error, not a fabricated simulation result.
 
-Each saved experiment contains its design snapshot, contract, report, creation
-time, and hashes of the design and contract. Later design edits do not rewrite
+Each new saved experiment contains its design snapshot, contract, report, creation
+time, hashes of the design and contract, and resolved reference identities/digests.
+Older evidence records without resolution metadata remain readable. Resolution
+metadata identifies definitions, not an executable or signed build. Later design edits do not rewrite
 earlier stored evidence. The system-design record itself stores the latest saved
 draft under its ID; its revision field is not an immutable release registry.
 These hashes identify recorded content, not signed release authorization or

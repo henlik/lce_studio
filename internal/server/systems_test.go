@@ -60,6 +60,9 @@ func TestSystemsAPIAndConformanceEvidence(t *testing.T) {
 	if evidence.ID == "" || evidence.DesignHash == "" || evidence.Design.ID != design.ID {
 		t.Fatalf("missing provenance: %#v", evidence)
 	}
+	if evidence.Resolution == nil || !evidence.Resolution.Valid || len(evidence.Resolution.References) != 2 {
+		t.Fatalf("missing catalog evidence: %+v", evidence.Resolution)
+	}
 	if w := req(t, s, "GET", "/api/systems/evidence/"+evidence.ID, nil); w.Code != 200 {
 		t.Fatalf("evidence: %d %s", w.Code, w.Body.String())
 	}
@@ -81,5 +84,27 @@ func TestSystemsAPIAndConformanceEvidence(t *testing.T) {
 	}
 	if w := req(t, s, "POST", "/api/systems/conformance", map[string]any{"design": design}); w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("closed database simulated success: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSystemResolutionAPISeparatesStructureFromCatalog(t *testing.T) {
+	s := testServer(t)
+	d := system.ReceptionExample()
+	if w := req(t, s, "GET", "/api/systems/catalog", nil); w.Code != 200 {
+		t.Fatalf("catalog: %d %s", w.Code, w.Body.String())
+	}
+	d.Components[1].Artifacts = []system.ArtifactRef{{Kind: "data", ID: "missing.data", Version: "1.0.0"}}
+	w := req(t, s, "POST", "/api/systems/validate", d)
+	var structure model.Validation
+	if err := json.Unmarshal(w.Body.Bytes(), &structure); err != nil || !structure.Valid {
+		t.Fatal("valid reference syntax must remain saveable as a draft")
+	}
+	w = req(t, s, "POST", "/api/systems/resolve", d)
+	var resolved system.Resolution
+	if err := json.Unmarshal(w.Body.Bytes(), &resolved); err != nil || w.Code != 200 || resolved.Valid || resolved.Issues[0].Path != "components[1].artifacts[0]" {
+		t.Fatalf("resolution: %s %v", w.Body.String(), err)
+	}
+	if w := req(t, s, "POST", "/api/systems/conformance", map[string]any{"design": d}); w.Code != 422 {
+		t.Fatalf("unresolved reference executed: %d", w.Code)
 	}
 }

@@ -17,11 +17,21 @@ async function request(path, method = 'GET', body, status = 200) {
 const design = await request('/example');
 design.id = `acceptance.${randomUUID()}`;
 assert.equal((await request('/validate', 'POST', design)).valid, true);
+const resolution=await request('/resolve','POST',design);
+assert.equal(resolution.valid,true);
+assert.equal(resolution.references.length,2);
+assert.ok(resolution.references.every(r=>r.digest.length===64&&r.source==='builtin-adapter'));
+const missing=structuredClone(design);
+missing.components[1].artifacts.push({kind:'data',id:'missing.reference',version:'1.0.0'});
+assert.equal((await request('/validate','POST',missing)).valid,true);
+assert.equal((await request('/resolve','POST',missing)).valid,false);
+await request('/conformance','POST',{design:missing},422);
 await request(`/${design.id}`, 'PUT', design);
 assert.deepEqual(await request(`/${design.id}`), design);
 const evidence = await request('/conformance', 'POST', { design });
 assert.equal(evidence.report.passed, true);
 assert.deepEqual(evidence.design, design);
+assert.deepEqual(evidence.resolution,resolution);
 assert.equal(evidence.report.scenarios.length, 7);
 const scenario = id => evidence.report.scenarios.find(s => s.id === id);
 for (const id of ['normal', 'lost-response', 'concurrent-duplicates', 'restart', 'database-unavailable']) {

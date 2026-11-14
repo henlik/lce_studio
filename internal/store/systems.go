@@ -21,6 +21,7 @@ type SystemEvidence struct {
 	ContractHash string              `json:"contractHash"`
 	Design       system.SystemDesign `json:"design"`
 	Report       conformance.Report  `json:"report"`
+	Resolution   *system.Resolution  `json:"resolution,omitempty"`
 }
 
 func initializeSystems(ctx context.Context, tx *sql.Tx) error {

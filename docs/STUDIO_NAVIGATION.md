@@ -30,6 +30,13 @@ selected component remains planned. The system-reference editor and the existing
 application/deployment simulator also retain distinct models under Design.
 Deployment planning is an engineering simulation, not a live runtime control.
 
+**System architecture → Architecture** includes a collapsible reference library
+on the left. Search exact installed component versions and built-in reference
+adapters. Select a component card before attaching installed data, state, message
+or workflow artifacts. **Resolve references** checks direct catalog identities and
+content digests and links errors to the relevant inspector fields. Structural
+validation, reference resolution and execution support are separate checks.
+
 ## Workspace ribbons
 
 The studio uses a compact ribbon above each workspace. Data retains its existing ribbon; Components, State, Messages, Workflows, project views and Inspection Lab use the shared ribbon.
