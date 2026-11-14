@@ -5,15 +5,15 @@ This release changes the component-authoring workflow and adds browser draft rec
 ## Build a component with the palette
 
 1. Open **Components → New definition**. Define its identity and use **Typed interface** to add public inputs and outputs. New definitions remain empty.
-2. Open **Composition**. Search the **Component library** on the right. Expand **Primitives**, **Components**, or **Systems**. Cards identify built-in examples and workspace definitions.
-3. Drag a card onto the canvas, or select its **+ Add** button. The inserted node is selected and its inspector opens on the left.
+2. Open **Composition**. Search the **Component library** on the left. Expand **Primitives**, **Components**, or **Systems**. Cards identify built-in examples and workspace definitions.
+3. Drag a card onto the canvas, or select its **+ Add** button. The inserted node is selected and its inspector opens on the right.
 4. Give the node a useful local ID. Under **Required inputs**, bind each port to a compatible public input, a node output, or a typed literal. Missing bindings are visibly marked; adding a node no longer silently supplies false/zero literals.
 5. Bind each public output in the inspector. Automatic typed routing stays in place: changing a binding draws its wire and restricts available sources to compatible types. Moving a node does not change what it computes.
 6. Drag nodes to arrange them, choose a node color, use **Move earlier / Move later**, or choose **Auto-arrange** to lay them out by dependency. Order changes affect presentation; dependencies determine execution.
 7. Select **Validate composition**. Invalid nodes and required inputs are highlighted. Use **Fix →** beside an issue to select its node or open the relevant editor, then validate again.
 8. Use **Evaluate & test** to supply inputs and independent expected outputs. Publish a tested version using **Install bundle**, or **Reuse & sharing → Publish to this studio**. Export its bundle for reuse in another studio.
 
-**Hide inspector**, **Hide library**, the main navigation collapse control, and **Expand** on the graph provide more drawing space. On narrower screens the panels stack below/above the canvas rather than hiding required fields.
+**Hide inspector**, **Hide library**, the main navigation collapse control, and **Expand** on the graph provide more drawing space. The layout follows the available workspace width: on wide screens the library sits left of the canvas and the inspector sits on the right; at intermediate widths the inspector moves below the canvas, and in narrow workspaces both panels stack beneath it. Required fields remain accessible. In the application designer, narrow screens start with both panels collapsed; their toolbar buttons open one panel at a time. Choosing a workspace closes the expanded phone navigation.
 
 ## Visual conventions
 
@@ -60,3 +60,5 @@ A public community marketplace is not connected in 0.8.1. Before exposing one, a
 ## Verification record
 
 The change is checked with the existing Go/model/API acceptance suites, graph-cycle unit tests and browser interactions. Manual checks cover drag/drop and button insertion, required bindings, reordering without changing connections, validation-to-inspector navigation, version publication and System reuse, reload restoration including unsent reception task responses, and stale-tab conflict resolution with a preserved checkpoint. Browser checks use synthetic definitions and patient identifiers.
+
+The responsive layout correction was checked at viewport widths of 320, 390, 600, 768, 820, 1024, 1280 and 1440 pixels. Checks cover the component library remaining accessible, panel hide/show combinations with the main sidebar expanded, no page-level horizontal overflow, phone and desktop canvas expansion/restoration, and the application designer inspector opening at a usable width. The populated hospital reception workflow definition and task forms were also checked at 320 pixels.

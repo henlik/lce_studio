@@ -178,8 +178,18 @@ function toggleInspector(force?: boolean) {
     paletteCollapsed.value = true;
   designLayoutChanged();
 }
+function closeMobileNavigation() {
+  if (window.matchMedia("(max-width: 600px)").matches)
+    railCollapsed.value = true;
+}
 function updateResponsive() {
-  compactCanvas.value = window.matchMedia("(max-width: 850px)").matches;
+  const compact = window.matchMedia("(max-width: 850px)").matches;
+  if (compact && !compactCanvas.value) {
+    paletteCollapsed.value = true;
+    inspectorCollapsed.value = true;
+  }
+  compactCanvas.value = compact;
+  closeMobileNavigation();
 }
 watch(view, (next) => {
   if (next !== "design") restoreDesign(false);
@@ -932,6 +942,11 @@ const autosave = useWorkspaceDraft("project", {
 useActionFeedback("Project", busy, notice, error);
 onMounted(async () => {
   await autosave.ready;
+  updateResponsive();
+  if (compactCanvas.value) {
+    paletteCollapsed.value = true;
+    inspectorCollapsed.value = true;
+  }
   connect();
   window.addEventListener("beforeunload", beforeUnload);
   window.addEventListener("resize", updateResponsive);
@@ -988,7 +1003,11 @@ onUnmounted(() => {
         </button>
       </div>
       <div class="rail-section">WORKSPACE</div>
-      <nav class="main-nav" aria-label="Workspace">
+      <nav
+        class="main-nav"
+        aria-label="Workspace"
+        @click="closeMobileNavigation"
+      >
         <button
           :class="{ active: view === 'plan' }"
           @click="view = 'plan'"
@@ -1238,10 +1257,7 @@ onUnmounted(() => {
         </div>
         <ul>
           <li v-for="(issue, i) in validation.issues" :key="i">
-            <button
-              class="issue-link"
-              @click="focusProjectIssue(issue.path)"
-            >
+            <button class="issue-link" @click="focusProjectIssue(issue.path)">
               <code>{{ issue.path }}</code> {{ issue.message }}
               <strong>Fix →</strong>
             </button>

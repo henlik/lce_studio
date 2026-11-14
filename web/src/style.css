@@ -23,6 +23,16 @@
 body {
   margin: 0;
 }
+fieldset {
+  min-inline-size: 0;
+}
+.field {
+  min-width: 0;
+}
+.studio-shell,
+.main-shell > * {
+  min-width: 0;
+}
 button,
 input,
 textarea,
@@ -2014,7 +2024,7 @@ code,
     grid-template-columns: minmax(240px, 1fr) 240px;
     position: relative;
   }
-  .component-palette {
+  .design-workspace > .component-palette {
     display: none;
   }
   .component-palette.mobile-open {
@@ -2854,6 +2864,7 @@ code,
   .design-workspace > .inspector {
     display: block;
     position: absolute;
+    grid-area: auto;
     top: 50px;
     bottom: 65px;
     width: min(280px, calc(100% - 16px));
@@ -2910,6 +2921,7 @@ code,
     flex: 1;
     min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     margin: 0;
     gap: 3px;
     align-items: center;

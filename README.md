@@ -2,7 +2,7 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
-Version **0.8.1** adds a searchable right-side component palette, a left-side binding inspector, visual node/pin/feedback conventions, validation navigation, action notifications and automatic browser draft recovery with protection against conflicting edits from multiple tabs. See [visual authoring and recovery](docs/STUDIO_UX.md) for the workflow and its limits. Portable bundles and publishing to the local catalog are available; a public community marketplace is still planned.
+Version **0.8.1** adds a searchable left-side component palette, a right-side binding inspector, visual node/pin/feedback conventions, validation navigation, action notifications and automatic browser draft recovery with protection against conflicting edits from multiple tabs. See [visual authoring and recovery](docs/STUDIO_UX.md) for the workflow and its limits. Portable bundles and publishing to the local catalog are available; a public community marketplace is still planned.
 
 Executable task workflows connect human/adapter tasks, exact pure decisions and owned-state commands; follow automatic branches, interrupt an active task, and retain complete experiment evidence. The **Workflows** workspace includes hospital reception and a service-desk reuse example. See [the reception replication guide](docs/HOSPITAL_RECEPTION_REPLICATION.md).
 

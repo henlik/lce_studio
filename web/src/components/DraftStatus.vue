@@ -78,13 +78,17 @@ defineProps<{ draft: WorkspaceDraft }>();
   background: #eff6ff;
 }
 .recovery-choice {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
   display: flex;
   gap: 8px;
   align-items: center;
   font-size: 11px;
 }
 .recovery-choice select {
-  max-width: 260px;
+  min-width: 0;
+  max-width: min(260px, 100%);
   font-size: 11px;
 }
 </style>

@@ -168,7 +168,7 @@ An importable [EntryRoute bundle](../examples/composites/reception-entry-route.j
 2. Set ID `health.reception.entry-route` and name `Entry route`. Keep the definition local until tested.
 3. In **Typed interface**, add inputs `assessmentRecorded:boolean` and `emergencyIdentified:boolean`.
 4. Add outputs `route:string` and `routineAllowed:boolean`.
-5. In **Composition**, use the right-side **Component library → Primitives** to drag or add two Select nodes, one Not node and one And node. Select each placed node and configure its required bindings in the left inspector. Bind the graph as follows:
+5. In **Composition**, use the left-side **Component library → Primitives** to drag or add two Select nodes, one Not node and one And node. Select each placed node and configure its required bindings in the right inspector. Bind the graph as follows:
 
 | Node | Operation and bindings |
 | --- | --- |

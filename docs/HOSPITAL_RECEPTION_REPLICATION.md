@@ -125,7 +125,7 @@ Keep a new definition ID for your own independently maintained version, for exam
 
 Open each exported decision in **Components**. Review its typed interface, Composition graph and test cases.
 
-In 0.8.1, add parts from the **Component library** on the right: drag a card onto the canvas or click **+ Add**. Select the placed node to configure its **Required inputs** in the left inspector. Missing bindings stay empty and are marked explicitly. Bind public outputs below the node inspector. **Validate composition → Fix →** brings you back to an invalid node. Drafts restore after reload in the same browser and URL; see [the authoring and recovery guide](STUDIO_UX.md).
+In 0.8.1, add parts from the **Component library** on the left: drag a card onto the canvas or click **+ Add**. Select the placed node to configure its **Required inputs** in the right inspector. Missing bindings stay empty and are marked explicitly. Bind public outputs below the node inspector. **Validate composition → Fix →** brings you back to an invalid node. Drafts restore after reload in the same browser and URL; see [the authoring and recovery guide](STUDIO_UX.md).
 
 The reference package includes small decisions for:
 

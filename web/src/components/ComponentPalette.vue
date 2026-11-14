@@ -82,7 +82,7 @@ function drag(e: DragEvent, kind: string, key: string) {
     /></label>
     <p class="palette-help">
       Drag onto the canvas or select + Add. Select a placed node to configure it
-      on the left.
+      on the right.
     </p>
     <p v-if="full" class="palette-help">
       This definition has reached its 32-node limit. Extract reusable parts into

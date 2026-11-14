@@ -744,7 +744,7 @@ function insertNode(node: Omit<BehaviorNode, "position">) {
   });
   pendingPosition = undefined;
   inspectorHidden.value = false;
-  notice.value = `Added ${node.id}. Configure its required inputs in the left inspector.`;
+  notice.value = `Added ${node.id}. Configure its required inputs in the right inspector.`;
   selectedNodeId.value = node.id;
   tab.value = "compose";
   inspected.value = [];
@@ -1548,7 +1548,45 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
             'palette-hidden': paletteHidden,
           }"
         >
-          <aside v-show="!inspectorHidden" class="component-inspector">
+          <ComponentPalette
+            v-show="!paletteHidden"
+            :primitives="availablePrimitives"
+            :components="nestedChoices"
+            :examples="examples"
+            :disabled="readonly || !!busy"
+            :full="behavior.nodes.length >= 32"
+            @add="addFromPalette"
+            @import="fileInput?.click()"
+            @export="exportBundle"
+            @publish="installDraft"
+          />
+          <div class="component-canvas">
+            <BehaviorGraph
+              :behavior="behavior"
+              :dependencies="dependencies"
+              :primitives="primitives"
+              :contracts="allDataContracts"
+              :selected-id="selectedNodeId"
+              :readonly="readonly || !!busy"
+              :invalid-ids="invalidNodeIds"
+              @drop-part="
+                (kind, key, position) => addFromPalette(kind, key, position)
+              "
+              @select="selectCanvasNode"
+              @inspect="inspectNode"
+              @move="
+                (id, position) => {
+                  const n = draft.behavior.nodes.find((node) => node.id === id);
+                  if (n && !readonly && !busy) n.position = position;
+                }
+              "
+            />
+          </div>
+          <aside
+            v-show="!inspectorHidden"
+            class="component-inspector"
+            aria-label="Component inspector"
+          >
             <section class="workbench-panel node-inspector">
               <div class="workbench-panel-heading">
                 <h3>{{ selectedNode ? selectedNode.id : "Node inspector" }}</h3>
@@ -1780,40 +1818,6 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
               </details>
             </section>
           </aside>
-          <div class="component-canvas">
-            <BehaviorGraph
-              :behavior="behavior"
-              :dependencies="dependencies"
-              :primitives="primitives"
-              :contracts="allDataContracts"
-              :selected-id="selectedNodeId"
-              :readonly="readonly || !!busy"
-              :invalid-ids="invalidNodeIds"
-              @drop-part="
-                (kind, key, position) => addFromPalette(kind, key, position)
-              "
-              @select="selectCanvasNode"
-              @inspect="inspectNode"
-              @move="
-                (id, position) => {
-                  const n = draft.behavior.nodes.find((node) => node.id === id);
-                  if (n && !readonly && !busy) n.position = position;
-                }
-              "
-            />
-          </div>
-          <ComponentPalette
-            v-show="!paletteHidden"
-            :primitives="availablePrimitives"
-            :components="nestedChoices"
-            :examples="examples"
-            :disabled="readonly || !!busy"
-            :full="behavior.nodes.length >= 32"
-            @add="addFromPalette"
-            @import="fileInput?.click()"
-            @export="exportBundle"
-            @publish="installDraft"
-          />
         </div>
       </template>
       <div v-else class="interface-grid">
@@ -2200,6 +2204,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
   padding: 22px 30px 28px;
   background: #f5f8fa;
   min-width: 0;
+  container: component-workbench / inline-size;
 }
 .workbench-intro {
   display: flex;
@@ -2280,6 +2285,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
 }
 .workbench-draft-bar strong,
 .workbench-draft-bar code {
+  overflow-wrap: anywhere;
   display: block;
 }
 .workbench-draft-bar strong {
@@ -2787,40 +2793,54 @@ fieldset:disabled {
   color: #415d70;
 }
 
+/* Size against the actual workspace, including the navigation rail. */
 .component-studio {
   display: grid;
-  grid-template-columns: 280px minmax(360px, 1fr) 260px;
+  grid-template-areas: "library canvas inspector";
+  grid-template-columns: 250px minmax(0, 1fr) 280px;
   gap: 12px;
   align-items: start;
   margin-top: 12px;
 }
-.component-studio.inspector-hidden {
-  grid-template-columns: minmax(360px, 1fr) 260px;
+.component-studio > * {
+  min-width: 0;
+  max-width: 100%;
 }
-.component-studio.palette-hidden {
-  grid-template-columns: 280px minmax(360px, 1fr);
-}
-.component-studio.inspector-hidden.palette-hidden {
-  grid-template-columns: minmax(0, 1fr);
+.component-studio > .component-palette {
+  grid-area: library;
 }
 .component-inspector {
+  grid-area: inspector;
   max-height: 78vh;
   overflow: auto;
   display: grid;
   gap: 12px;
 }
+.component-canvas {
+  grid-area: canvas;
+  min-width: 0;
+  position: sticky;
+  top: 12px;
+}
+.component-studio.inspector-hidden {
+  grid-template-areas: "library canvas";
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+.component-studio.palette-hidden {
+  grid-template-areas: "canvas inspector";
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.component-studio.inspector-hidden.palette-hidden {
+  grid-template-areas: "canvas";
+  grid-template-columns: minmax(0, 1fr);
+}
 .component-inspector .workbench-panel {
   margin: 0;
   padding: 14px;
 }
-/* A sticky parent creates a stacking context below the application rail. */
+/* Keep the expanded graph out of its sticky parent's stacking context. */
 .component-canvas:has(.canvas-focus--expanded) {
   position: static;
-}
-.component-canvas {
-  min-width: 0;
-  position: sticky;
-  top: 12px;
 }
 .component-inspector .node-identity-fields {
   grid-template-columns: 1fr 64px 64px;
@@ -2864,46 +2884,51 @@ fieldset:disabled {
   font-size: 12px;
   margin: 16px 0 8px;
 }
-@media (max-width: 1250px) {
+@container component-workbench (max-width: 960px) {
   .component-studio {
-    grid-template-columns: 250px minmax(320px, 1fr);
-  }
-  .component-studio > .component-palette {
-    grid-column: 1 / -1;
-    max-height: 360px;
+    grid-template-areas: "library canvas" "library inspector";
+    grid-template-columns: 220px minmax(0, 1fr);
   }
   .component-studio.inspector-hidden {
-    grid-template-columns: 1fr;
+    grid-template-areas: "library canvas";
+    grid-template-columns: 220px minmax(0, 1fr);
   }
   .component-studio.palette-hidden {
-    grid-template-columns: 250px minmax(320px, 1fr);
+    grid-template-areas: "canvas" "inspector";
+    grid-template-columns: minmax(0, 1fr);
   }
-}
-@media (max-width: 800px) {
-  .component-studio,
-  .component-studio.palette-hidden {
-    display: flex;
-    flex-direction: column;
+  .component-studio.inspector-hidden.palette-hidden {
+    grid-template-areas: "canvas";
   }
-  .component-inspector,
-  .component-canvas,
-  .component-studio > .component-palette {
-    width: 100%;
-    max-height: none;
+  .component-canvas {
     position: static;
   }
-  /* A sticky parent creates a stacking context below the application rail. */
-.component-canvas:has(.canvas-focus--expanded) {
-  position: static;
 }
-.component-canvas {
-    order: 0;
+@container component-workbench (max-width: 620px) {
+  .component-studio,
+  .component-studio.inspector-hidden,
+  .component-studio.palette-hidden,
+  .component-studio.inspector-hidden.palette-hidden {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .component-inspector {
-    order: 1;
+  .component-studio {
+    grid-template-areas: "canvas" "library" "inspector";
+  }
+  .component-studio.inspector-hidden {
+    grid-template-areas: "canvas" "library";
+  }
+  .component-studio.palette-hidden {
+    grid-template-areas: "canvas" "inspector";
+  }
+  .component-studio.inspector-hidden.palette-hidden {
+    grid-template-areas: "canvas";
   }
   .component-studio > .component-palette {
-    order: 2;
+    max-height: 360px;
+  }
+  .component-inspector {
+    max-height: none;
+    overflow: visible;
   }
 }
 .library-disclosure > summary,
