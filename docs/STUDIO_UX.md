@@ -24,12 +24,26 @@ This release changes the component-authoring workflow and adds browser draft rec
 | Pure system composition | Double border, system icon, and Systems catalog group |
 | Input pin | Blue |
 | Output pin | Amber |
-| Feedback edge | Purple, dashed, with an explicit workflow feedback label |
+| Feedback edge | Purple dashed return arrow in workflows; cyclic wire in pure components |
 | Validation error | Red outline and text / error marker |
 
 Color is supplementary: shapes, labels and error text also identify meaning. A feedback edge belongs to an actual directed cycle; drawing an ordinary wire from right to left does not make it feedback. Pure component cycles are highlighted but still fail validation. Use owned state or an explicit workflow loop for behavior over time. Workflow feedback remains bounded by the existing execution limits.
 
 Set **Definition identity & description → Design level → System · pure composition** to classify a pure composition as a system. The classification does not add state or human tasks. Systems with those responsibilities are authored in State, Messages and Workflows. Workflow steps also have colors and presentation-order controls in their inspector; their target routes remain explicit.
+
+## Reading workflow flow and token travel
+
+Open **Workflows → Definition & hierarchy**. The graph starts in **Flow ↓** mode: the entry is at the top, ordinary routes move down, branches split into lanes and merges wait for their forward predecessors in the drawing. The hierarchy uses this same flow order. Purple dashed loop returns run outside the node lanes. This arrangement is a visual projection; it does not schedule parallel execution.
+
+- **Readable size** shows legible cards in a scrollable canvas. **Fit** shows the whole graph; large workflows become an overview. **Go to start** returns to the entry. Selecting a hierarchy step brings it into view.
+- Route labels show the boolean condition, command failure, or interrupt. Select a route label to jump to its target. Interrupt chips above the graph locate their targets without drawing a line from every possible waiting task.
+- **Manual** shows the existing saved positions and permits dragging. **Save flow arrangement** copies the automatic coordinates into the draft for autosave/export. It changes presentation coordinates and therefore the definition digest, but not routes, bindings, node order or execution rules. Merely switching views does not edit the definition.
+
+After **Run independent scenario**, open **Execution evidence → Token journey**. Use **Previous**, **Next**, the **Recorded visit** selector, or **Latest position**. The blue token identifies the selected recorded visit; its departure is blue, and earlier travel is green. Each repeated visit through a loop is listed separately. The status header identifies the final/current position of the recorded run, independently of the selected replay visit.
+
+**Interactive tasks** includes the same journey for its exact running experiment. Submitting a response advances the experiment; browsing its journey only inspects evidence. Accepted emergency signals show a distinct interrupt jump, including the cancelled task. Rejected signals and replayed receipts do not invent another token movement. Earlier immutable evidence always uses its recorded workflow snapshot, even after the draft is edited.
+
+The journey is a sequential view of the existing bounded workflow engine, not a parallel-token scheduler or wall-clock animation. It adds no clinical decisions or live integrations.
 
 ## Autosave and recovery
 
@@ -62,3 +76,7 @@ A public community marketplace is not connected in 0.8.1. Before exposing one, a
 The change is checked with the existing Go/model/API acceptance suites, graph-cycle unit tests and browser interactions. Manual checks cover drag/drop and button insertion, required bindings, reordering without changing connections, validation-to-inspector navigation, version publication and System reuse, reload restoration including unsent reception task responses, and stale-tab conflict resolution with a preserved checkpoint. Browser checks use synthetic definitions and patient identifiers.
 
 The responsive layout correction was checked at viewport widths of 320, 390, 600, 768, 820, 1024, 1280 and 1440 pixels. Checks cover the component library remaining accessible, panel hide/show combinations with the main sidebar expanded, no page-level horizontal overflow, phone and desktop canvas expansion/restoration, and the application designer inspector opening at a usable width. The populated hospital reception workflow definition and task forms were also checked at 320 pixels.
+
+Workflow flow/token checks cover deterministic branch and merge layout, loop returns, non-overlapping placement of the 57-step reception workflow, repeated task activations, exact branch selection when targets coincide, command failure versus business denial, and accepted interrupt assignments.
+
+Browser verification includes routine reception and emergency-after-reservation independent runs, step replay and interrupt highlighting, waiting-task position, manual dragging and reload restoration, direct branch navigation, overview/readable sizing, and 320/390/768/1024-pixel layouts with phone expansion. The emergency scenario was rerun successfully after saving presentation coordinates.

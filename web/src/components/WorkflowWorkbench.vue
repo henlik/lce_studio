@@ -851,6 +851,10 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
       :data-catalog="dataCatalog"
       :primitives="primitives"
       :disabled="!!busy"
+      @arranged="
+        notice =
+          'Flow arrangement applied to the draft. Autosave will retain the positions.'
+      "
       @load-decision="loadDecision"
       @load-machine="loadMachine"
       @embed-data="embedData"

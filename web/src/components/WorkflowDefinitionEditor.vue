@@ -39,6 +39,7 @@ import StateTypeSelect from "./StateTypeSelect.vue";
 import TypedValueEditor from "./TypedValueEditor.vue";
 import DeliveryPositionEditor from "./DeliveryPositionEditor.vue";
 import WorkflowCanvas from "./WorkflowCanvas.vue";
+import { workflowFlowLayout } from "../workflowPresentation";
 import WorkflowBindingsEditor from "./WorkflowBindingsEditor.vue";
 import WorkflowAssignEditor from "./WorkflowAssignEditor.vue";
 import WorkflowInspect from "./WorkflowInspect.vue";
@@ -53,6 +54,7 @@ const props = defineProps<{
   issues?: ValidationIssue[];
 }>();
 const emit = defineEmits<{
+  arranged: [];
   "load-decision": [key: string];
   "load-machine": [key: string];
   "embed-data": [key: string];
@@ -74,6 +76,17 @@ watch(
     inspectCommand.value = null;
   },
 );
+const flowNodes = computed(() =>
+  workflowFlowLayout(props.workflow).order.map((id) =>
+    props.workflow.nodes.find((n) => n.id === id)!,
+  ),
+);
+function arrange(positions: Record<string, { x: number; y: number }>) {
+  if (props.disabled) return;
+  for (const n of props.workflow.nodes)
+    if (positions[n.id]) n.position = { ...positions[n.id] };
+  emit("arranged");
+}
 const booleans = computed(() =>
   props.workflow.variables.filter((v) => v.type === "boolean"),
 );
@@ -287,7 +300,7 @@ function inspectNode(n: WorkflowNode) {
           {{ workflow.name || "Workflow root"
           }}<small>ROOT · {{ workflow.nodes.length }} steps</small></button
         ><button
-          v-for="n in workflow.nodes"
+          v-for="n in flowNodes"
           :key="stateUIKey(n)"
           :class="{ active: selected === n.id }"
           @click="
@@ -305,8 +318,12 @@ function inspectNode(n: WorkflowNode) {
         :selected="selected"
         :invalid-ids="invalidIds"
         :disabled="disabled"
-        @select="selected = $event"
+        @select="
+          selected = $event;
+          inspectorOpen = true;
+        "
         @move="move"
+        @arrange="arrange"
       />
       <aside v-show="inspectorOpen" class="wf-inspector">
         <section v-show="!selected">

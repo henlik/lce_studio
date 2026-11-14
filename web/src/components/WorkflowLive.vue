@@ -12,6 +12,7 @@ import {
 import { freshStateName } from "../stateTypes";
 import WorkflowValuesEditor from "./WorkflowValuesEditor.vue";
 import StateValueMap from "./StateValueMap.vue";
+import WorkflowJourney from "./WorkflowJourney.vue";
 const props = defineProps<{
   workflow: WorkflowDefinition;
   inputs: Record<string, TypedValue>;
@@ -200,6 +201,11 @@ const lastEvent = computed(() => props.session?.scenario.events.at(-1));
         Continuation uses its original exact workflow. Restart explicitly to use
         your newer draft.
       </p>
+      <WorkflowJourney
+        :workflow="session.workflow.workflow"
+        :result="session.result"
+        :scenario="session.scenario"
+      />
       <section class="wf-panel">
         <div class="wf-actions">
           <strong

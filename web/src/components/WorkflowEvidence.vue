@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { downloadWorkflow, type WorkflowRun } from "../workflowTypes";
 import StateValueMap from "./StateValueMap.vue";
+import WorkflowJourney from "./WorkflowJourney.vue";
 const props = defineProps<{
   record: WorkflowRun;
   stale: boolean;
@@ -84,6 +85,12 @@ const step = computed(() => props.record.result.steps[selected.value]),
         }}</pre>
       </details>
     </section>
+    <WorkflowJourney
+      :workflow="record.workflow.workflow"
+      :result="record.result"
+      :scenario="record.scenario"
+      v-model:index="selected"
+    />
     <section class="wf-panel">
       <h3>Final workflow state</h3>
       <div class="wf-grid">

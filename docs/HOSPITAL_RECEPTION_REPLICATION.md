@@ -226,3 +226,12 @@ go run ./cmd/workflowcheck --run examples/reception/scenarios/service-desk.run.j
 ```
 
 The exporter serializes declared expectations; it does not run the workflow to manufacture them. Run `go test ./internal/model ./internal/workflow` and the live `scripts/acceptance-reception.mjs` suite after editing. The service-desk example reuses exact ticket and slot-owner locks in a nonclinical workflow.
+
+## Follow the reception token
+
+1. Open **Workflows → Definition & hierarchy**. Use **Flow ↓** to read from initial screening downward; select a branch label to follow its target. **Readable size** and **Expand** keep the step names legible.
+2. Run the **Routine existing patient** independent scenario. In **Execution evidence → Token journey**, choose visit 2, `entryRoute`: the departure reads `emergencyIdentified = false → screeningGate`. Use **Next** to follow each recorded visit.
+3. Run **Emergency after reservation fences late physician response**. In the journey, select **Physician accepts consultation · interrupted**. Its departure is `Interrupt · escalateEmergency → beginEmergency`, followed by ticket cancellation, reservation release and the emergency receiving handoff.
+4. Open **Interactive tasks** to see the latest waiting position beside the same journey. Browsing visits does not send responses; use the existing task form and **Submit response & continue** to advance the experiment.
+
+**Flow ↓** is a view of the actual route structure. Use **Manual** for custom placement; **Save flow arrangement** stores the automatic positions in your draft.
