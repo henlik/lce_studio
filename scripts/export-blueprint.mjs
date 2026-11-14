@@ -2,6 +2,8 @@
 import {writeFileSync} from 'node:fs';
 import {blueprint, milestones, capabilityLocation, statusLabels} from '../web/src/studioBlueprint.ts';
 
+import {roadmapProgress, progressHistory, progressMethod} from '../web/src/implementationProgress.ts';
+
 let doc = `# LCE Studio implementation blueprint
 
 The studio separates engineering authority from deployed execution. This is the
@@ -39,19 +41,26 @@ both planes. Security work starts with the engineering model, before autonomous
 runtime execution is introduced.
 
 Component Data, State, Messages and Workflows are now grouped under Components.
-Their artifacts remain independently versioned. Selecting one component does not
-yet automatically select all its aspects: the unified component-context feature
-tracks this work explicitly. System architecture currently records references;
+Their artifacts remain independently versioned. Component definitions now own
+named aspect pins and open exact artifacts in their editors with return context.
+Joint execution and cross-aspect compatibility remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 
 ## Implementation sequence
 
 `;
+doc += `**Weighted implementation: ${roadmapProgress.total}%**\n\n${progressMethod}\n\n`;
+for (const h of progressHistory) doc += `- ${h.date}: **${h.percentage}%** — ${h.reason}\n`;
+doc += '\n';
 for (const m of milestones) {
   doc += `### ${m.id}. ${m.name}\n\n`;
   doc += `Capabilities: ${m.features.map(id=>capabilityLocation(id).capability.label).join(', ')}.\n\n`;
   doc += `**Exit gate:** ${m.gate}\n\n`;
+  const progress=roadmapProgress.milestones.find(p=>p.id===m.id);
+  doc += `**Milestone progress: ${progress.percentage}% · roadmap weight: ${progress.weight}%**\n\n`;
+  for (const c of progress.checkpoints) doc += `- [${c.done?'x':' '}] ${c.acceptance}${c.done ? ' Evidence: '+c.evidence.map(e=>`[${e}](../${e})`).join(', ')+'.' : ''}\n`;
+  doc += '\n';
 }
 doc += `Runtime findings return to engineering as evidence and proposed changes.
 Source modifications, schema migrations and updated policies pass through the

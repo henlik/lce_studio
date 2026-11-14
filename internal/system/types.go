@@ -13,6 +13,7 @@ type SystemDesign struct {
 	Contract        Contract            `json:"contract"`
 }
 type DefinitionRef struct {
+	Kind    string `json:"kind,omitempty"`
 	ID      string `json:"id"`
 	Version string `json:"version"`
 }

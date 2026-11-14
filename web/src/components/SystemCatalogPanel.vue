@@ -4,7 +4,7 @@ import type {SystemCatalogEntry} from '../systemTypes';
 const props=defineProps<{entries:SystemCatalogEntry[];selectedName?:string;busy:boolean}>();
 const emit=defineEmits<{refresh:[];add:[entry:SystemCatalogEntry];attach:[entry:SystemCatalogEntry]}>();
 const search=ref('');
-const kinds=['component','data','state','messages','workflow'];
+const kinds=['definition','component','data','state','messages','workflow'];
 const filtered=computed(()=>props.entries.filter(e=>(e.name+' '+e.id+' '+e.version).toLowerCase().includes(search.value.toLowerCase())));
 </script>
 <template>
@@ -17,7 +17,7 @@ const filtered=computed(()=>props.entries.filter(e=>(e.name+' '+e.id+' '+e.versi
    <article v-for="entry in filtered.filter(e=>e.kind===kind)" :key="entry.kind+entry.id+entry.version">
     <strong>{{entry.name||entry.id}}</strong><small>{{entry.id}} · {{entry.version}}</small><small>{{entry.source==='builtin-adapter'?'Built-in reference adapter':'Installed package'}}</small>
     <p v-if="!entry.ready" class="catalog-error">{{entry.issue}}</p>
-    <button v-if="kind==='component'" :disabled="!entry.ready||busy" @click="emit('add',entry)">Add component</button>
+    <button v-if="kind==='component'||kind==='definition'" :disabled="!entry.ready||busy" @click="emit('add',entry)">Add component</button>
     <button v-else :disabled="!entry.ready||busy||!selectedName" @click="emit('attach',entry)">{{selectedName?'Attach to '+selectedName:'Select a component first'}}</button>
    </article>
   </section>

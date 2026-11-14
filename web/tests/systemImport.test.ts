@@ -33,3 +33,11 @@ test('API nil slices normalize without accepting malformed scalar fields',()=>{
  assert.throws(()=>normalizeSystemResponse({...design,components:[{}]}));
  assert.throws(()=>normalizeSystemResponse({...design,connections:'bad'}));
 });
+
+test('system import distinguishes component packages from unified definitions',()=>{
+ const design=emptySystem();
+ design.components.push({id:'intake',name:'Intake',definition:{kind:'definition',id:'hospital.reception',version:'1.0.0'},artifacts:[],bindings:[]});
+ assert.deepEqual(parseSystemImport(JSON.stringify(design)),design);
+ const invalid=JSON.parse(JSON.stringify(design));invalid.components[0].definition.kind='data';
+ assert.throws(()=>parseSystemImport(JSON.stringify(invalid)));
+});

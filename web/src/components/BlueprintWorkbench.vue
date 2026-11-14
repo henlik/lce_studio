@@ -2,6 +2,7 @@
 import {computed, nextTick, ref, watch} from 'vue';
 import {ArrowRight, CheckCircle2, CircleDashed, CircleDot} from 'lucide-vue-next';
 import {blueprint, capabilities, capabilityLocation, canOpenCapability, milestones, statusLabels, type CapabilityStatus} from '../studioBlueprint';
+import {roadmapProgress, progressHistory, progressMethod} from '../implementationProgress';
 const props = defineProps<{selected: string}>();
 const emit = defineEmits<{inspect:[id:string]; open:[id:string]}>();
 const query = ref('');
@@ -28,6 +29,7 @@ function clearFilters(){query.value='';status.value='all';planeFilter.value='all
     <div><span class="eyebrow">LCE STUDIO · IMPLEMENTATION BLUEPRINT</span><h2>From engineering intent to verified operation</h2><p>Engineering defines and authorizes. Runtime observes and adapts within that authority. Shared foundations support both planes.</p></div>
     <div class="status-counts" aria-label="Capability counts"><span v-for="(count,key) in counts" :key="key" :class="key"><component :is="statusIcons[key]" :size="15"/>{{count}} {{statusLabels[key]}}</span></div>
   </header>
+  <section class="scope-note" aria-label="Roadmap implementation progress"><strong>Implementation: {{roadmapProgress.total}}% · roadmap v1</strong><progress :value="roadmapProgress.total" max="100" style="display:block;width:100%;margin:10px 0" :aria-label="`Roadmap implementation ${roadmapProgress.total}%`"/><p>{{progressMethod}}</p><p v-for="entry in progressHistory" :key="entry.reason">{{entry.date}} · {{entry.percentage}}% — {{entry.reason}}</p></section>
   <p class="scope-note"><strong>Scope matters.</strong> Available means usable within the stated scope. Partial means an implemented foundation with integration still needed. Planned means no working control yet. These are capability counts, not a percentage of product completion.</p>
 
   <section v-if="focused" ref="detail" class="capability-detail" aria-label="Capability detail" tabindex="-1">
@@ -51,7 +53,7 @@ function clearFilters(){query.value='';status.value='all';planeFilter.value='all
   </template>
   <section v-else class="milestones" aria-label="Implementation sequence">
     <p class="scope-note"><strong>Security is cross-cutting:</strong> define identity, isolation and release authority from the first milestone. Each gate requires evidence; no milestone is marked complete merely because its menu exists.</p>
-    <article v-for="milestone in milestones" :key="milestone.id" class="milestone"><span class="milestone-id">{{milestone.id}}</span><div><h3>{{milestone.name}}</h3><div class="dependencies"><button v-for="id in milestone.features" :key="id" @click="emit('inspect',id)">{{capabilityLocation(id)?.capability.label}} · {{statusLabels[capabilityLocation(id)!.capability.status]}}</button></div><p><strong>Exit gate:</strong> {{milestone.gate}}</p></div></article>
+    <article v-for="milestone in milestones" :key="milestone.id" class="milestone"><span class="milestone-id">{{milestone.id}}</span><div><h3>{{milestone.name}} · {{roadmapProgress.milestones.find(m=>m.id===milestone.id)?.percentage}}%</h3><p>Roadmap weight: {{roadmapProgress.milestones.find(m=>m.id===milestone.id)?.weight}}%</p><ul><li v-for="checkpoint in roadmapProgress.milestones.find(m=>m.id===milestone.id)?.checkpoints" :key="checkpoint.id">{{checkpoint.done ? '✓ Accepted' : '○ Remaining'}} — {{checkpoint.acceptance}}<small v-if="checkpoint.done" style="display:block;overflow-wrap:anywhere">Evidence: {{checkpoint.evidence.join(', ')}}</small></li></ul><div class="dependencies"><button v-for="id in milestone.features" :key="id" @click="emit('inspect',id)">{{capabilityLocation(id)?.capability.label}} · {{statusLabels[capabilityLocation(id)!.capability.status]}}</button></div><p><strong>Exit gate:</strong> {{milestone.gate}}</p></div></article>
     <p class="scope-note">Runtime findings return to engineering as evidence and proposed changes. New code, policies and schema migrations must pass the implementation and release gates; a runtime planner cannot rewrite its own authority.</p>
   </section>
 </section>

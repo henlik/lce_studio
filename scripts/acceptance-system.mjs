@@ -50,3 +50,28 @@ const invalid = structuredClone(design);
 invalid.contract.claims[0].kind = 'arbitrary-code';
 assert.equal((await request('/validate', 'POST', invalid)).valid, false);
 console.log('PASS unified system persistence, seven conformance scenarios, immutable evidence, and unsupported claim rejection');
+
+// Ownership manifests use real installed artifacts, without claiming they execute jointly.
+const examplesResponse=await fetch(`${base}/api/data/examples`);
+assert.equal(examplesResponse.status,200);
+const dataExamples=await examplesResponse.json();
+const contract=dataExamples[0].contract;
+const installedResponse=await fetch(`${base}/api/data/contracts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(contract)});
+assert.ok([200,201].includes(installedResponse.status),await installedResponse.text());
+const entry=(await request('/catalog')).find(e=>e.kind==='data'&&e.id===contract.contract.id&&e.version===contract.contract.version);
+assert.ok(entry?.ready);
+const definition={schemaVersion:1,id:`acceptance.definition-${randomUUID()}`,version:'1.0.0',name:'Reception ownership',description:'Synthetic ownership acceptance',aspects:[{slot:'patients',kind:entry.kind,id:entry.id,version:entry.version,digest:entry.digest}]};
+assert.equal((await request('/definitions/validate','POST',definition)).valid,true);
+const installed=await request('/definitions','POST',definition);
+assert.deepEqual(await request('/definitions','POST',definition),installed);
+const editor=await request('/definitions/aspect','POST',definition.aspects[0]);
+assert.equal(editor.workspace,'data');assert.deepEqual(editor.body.contract,contract);
+await request('/definitions','POST',{...definition,name:'Cannot overwrite'},409);
+const invalidPin=structuredClone(definition);invalidPin.aspects[0].digest='0'.repeat(64);
+await request('/definitions','POST',invalidPin,422);
+const composed=structuredClone(design);composed.components[0].definition={kind:'definition',id:definition.id,version:definition.version};
+const composedResolution=await request('/resolve','POST',composed);
+assert.equal(composedResolution.valid,true);assert.equal(composedResolution.references.length,3);
+assert.equal(composedResolution.references[1].digest,entry.digest);
+await request('/conformance','POST',{design:composed},422);
+console.log('PASS immutable ownership, exact aspect editor payload, expanded resolution and unsupported joint execution rejection');

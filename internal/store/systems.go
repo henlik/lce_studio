@@ -29,6 +29,10 @@ func initializeSystems(ctx context.Context, tx *sql.Tx) error {
  CREATE TABLE IF NOT EXISTS system_designs (
  id TEXT PRIMARY KEY, body JSON NOT NULL, updated_at TIMESTAMPTZ NOT NULL
  );
+ CREATE TABLE IF NOT EXISTS component_definitions (
+ id TEXT NOT NULL,version TEXT NOT NULL,digest TEXT NOT NULL,body JSON NOT NULL,
+ PRIMARY KEY(id,version)
+ );
  CREATE TABLE IF NOT EXISTS system_evidence (
  id TEXT PRIMARY KEY, system_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, body JSON NOT NULL
  );

@@ -1,5 +1,29 @@
 # Verification
 
+## Versioned component ownership and roadmap progress — 14 November 2026
+
+- Component definitions own 1–32 named exact aspect references. PostgreSQL versions
+  are immutable, idempotent on identical installation and integrity-checked before
+  system resolution. System evidence can expand a manifest into its pinned aspects.
+- Automated tests exercise behavior, data, state, messages and workflow editor
+  payloads; version conflicts; invalid/missing pins; manifest tampering; old and new
+  reference kinds; and preservation of unsupported joint-execution rejection.
+- Go race tests (`go test -race -count=1 ./...`), vet, backend build, Vue production
+  build and all 25 frontend tests passed. The live API acceptance passed both the
+  existing seven conformance scenarios and the new ownership/editor/resolution
+  checks against real PostgreSQL. Vite still reports its existing large-chunk warning.
+- Editor handoffs now wait for an editor's loading action and consume each request
+  once. The source-component banner and return navigation are implemented. Browser
+  interaction and mobile visual verification remain outstanding; this environment's
+  previously recorded Chromium socket restriction prevented browser verification.
+- Roadmap v1 progress is **23%**, from a retrospectively recorded **18% baseline**:
+  M1 60%, M2 40%, M3–M6 0%. The UI and generated blueprint use one weighted checkpoint
+  source. Tests require evidence for accepted gates and keep the score/history aligned.
+  This is a scoped planning estimate, not test coverage or production readiness.
+- Limits: no cross-aspect compatibility proof, joint engine execution, signed
+  publisher identity, general implementation sandbox or live autonomous controller.
+  The manual walkthrough is [COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md).
+
 ## Direct system catalog resolution — 14 November 2026
 
 - System references resolve by exact kind, ID and version across component,

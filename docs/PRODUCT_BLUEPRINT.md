@@ -35,19 +35,34 @@ both planes. Security work starts with the engineering model, before autonomous
 runtime execution is introduced.
 
 Component Data, State, Messages and Workflows are now grouped under Components.
-Their artifacts remain independently versioned. Selecting one component does not
-yet automatically select all its aspects: the unified component-context feature
-tracks this work explicitly. System architecture currently records references;
+Their artifacts remain independently versioned. Component definitions now own
+named aspect pins and open exact artifacts in their editors with return context.
+Joint execution and cross-aspect compatibility remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 
 ## Implementation sequence
 
+**Weighted implementation: 23%**
+
+Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.
+
+- 2026-11-14: **18%** — Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.
+- 2026-11-14: **23%** — Versioned component ownership and contextual aspect editing (+5 percentage points).
+
 ### M1. Connect the engineering model
 
-Capabilities: Unified component context, System architecture, Databases & brokers.
+Capabilities: Component definitions, System architecture, Databases & brokers.
 
 **Exit gate:** A selected component owns its aspects, references resolve, and compatible system connections execute.
+
+**Milestone progress: 60% · roadmap weight: 25%**
+
+- [x] Persist the shared design, contract and separate deployment schema. Evidence: [internal/system/types.go](../internal/system/types.go), [internal/store/systems_test.go](../internal/store/systems_test.go).
+- [x] Reject missing or changed direct catalog references before a run. Evidence: [internal/system/resolution_test.go](../internal/system/resolution_test.go).
+- [x] Install immutable component definitions with pinned aspects and open their editors in context. Evidence: [internal/store/definitions_test.go](../internal/store/definitions_test.go), [docs/COMPONENT_DEFINITIONS.md](../docs/COMPONENT_DEFINITIONS.md).
+- [ ] Validate full dependency closures and compatible ports across aspects.
+- [ ] Execute connected component aspects and typed provider bindings together.
 
 ### M2. Generalize conformance
 
@@ -55,11 +70,27 @@ Capabilities: Requirements, Deployment planning, Experiments & results, Contract
 
 **Exit gate:** The same scenarios and independent claims evaluate linked models and identifiable implementations.
 
+**Milestone progress: 40% · roadmap weight: 20%**
+
+- [x] Run and persist the bounded reception model/Go/PostgreSQL comparison. Evidence: [internal/conformance/run_test.go](../internal/conformance/run_test.go).
+- [x] Distinguish a deliberate defect from missing observation evidence. Evidence: [scripts/acceptance-system.mjs](../scripts/acceptance-system.mjs).
+- [ ] Evaluate user-defined designs through identifiable implementation adapters.
+- [ ] Apply shared workload and failure scenarios across linked engines.
+- [ ] Validate resource, network, power and consistency assumptions against measurements.
+
 ### M3. Build and authorize releases
 
 Capabilities: Developers & AI agents, Build & sandbox, Release authority.
 
 **Exit gate:** An isolated build produces an identifiable, authorized artifact with verified provenance and evidence.
+
+**Milestone progress: 0% · roadmap weight: 20%**
+
+- [ ] Enforce identities, tenant boundaries and scoped implementation permissions.
+- [ ] Link developer and agent changes to approved design revisions.
+- [ ] Run reproducible builds within enforced isolation and resource budgets.
+- [ ] Bind source, build artifacts and evidence with verifiable provenance.
+- [ ] Reject unauthorized or nonconforming signed releases.
 
 ### M4. Observe real execution
 
@@ -67,17 +98,41 @@ Capabilities: Sites & resources, Observer, Runtime verification.
 
 **Exit gate:** Runtime evidence detects violations, changed assumptions and observation gaps without taking corrective actions.
 
+**Milestone progress: 0% · roadmap weight: 15%**
+
+- [ ] Discover authenticated resources and distinguish stale capacity.
+- [ ] Collect correlated execution metadata within an overhead budget.
+- [ ] Buffer observations offline and explicitly report loss.
+- [ ] Evaluate live claims and changing assumptions with three-state verdicts.
+- [ ] Validate observer and monitor behavior under real failures.
+
 ### M5. Evaluate adaptation in shadow mode
 
 Capabilities: Contextualisation, Recovery & optimization.
 
 **Exit gate:** Proposed adaptations respect policies and are evaluated before automatic execution is enabled.
 
+**Milestone progress: 0% · roadmap weight: 10%**
+
+- [ ] Track context freshness, uncertainty and supporting evidence.
+- [ ] Generate costed recovery and optimization alternatives.
+- [ ] Reject plans outside engineering delegation.
+- [ ] Evaluate proposed changes before activating them.
+- [ ] Demonstrate cooldowns and stable decisions under changing load.
+
 ### M6. Enable bounded autonomy
 
 Capabilities: Orchestration, Updates & recovery, Disconnected federation.
 
 **Exit gate:** Approved recovery and upgrades remain safe through retries, partitions and reconnection.
+
+**Milestone progress: 0% · roadmap weight: 10%**
+
+- [ ] Execute bounded idempotent actions with fencing.
+- [ ] Verify staged upgrades, schema compatibility and recovery limits.
+- [ ] Enforce disconnected authority scope and expiry.
+- [ ] Reconcile returning sites without silent conflict loss.
+- [ ] Pass end-to-end security and recovery trials across constrained sites.
 
 Runtime findings return to engineering as evidence and proposed changes.
 Source modifications, schema migrations and updated policies pass through the
@@ -137,13 +192,13 @@ Compose tasks, decisions, owned commands and handoffs.
 - Acceptance: Reception and service-desk reference workflows run with independently checked expectations.
 - Dependencies: Interface & behavior, State
 
-**Unified component context — Planned** (`component-context`)
+**Component definitions — Partial** (`component-context`)
 
 Own all aspects under one selected, versioned component.
 
-- Today: The editors above remain independent artifacts; menu grouping does not bind them automatically.
-- Next: Introduce an aspect manifest, ownership rules, navigation into referenced definitions and compatibility checks.
-- Acceptance: Selecting Reception exposes only its linked data, state, messages and workflows; a new version preserves exact dependencies.
+- Today: Versioned component manifests own named, digest-pinned aspect references. Installed versions are immutable and reusable in system designs.
+- Next: Add compatibility checks across aspects and execute linked behavior under one component boundary.
+- Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
 #### Design
@@ -182,7 +237,7 @@ Bind component requirements to storage, cache, routing and messaging services.
 - Today: The system model records resource references; actual providers are not provisioned.
 - Next: Add typed provider capabilities and executable PostgreSQL, cache and broker adapters.
 - Acceptance: An incompatible provider is rejected and a supported binding executes through its adapter.
-- Dependencies: System architecture, Unified component context
+- Dependencies: System architecture, Component definitions
 
 **Deployment planning — Partial** (`deployment-model`)
 

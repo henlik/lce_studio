@@ -4,6 +4,9 @@ import { useWorkspaceDraft } from "./composables/useWorkspaceDraft";
 import { useActionFeedback } from "./composables/useNotifications";
 import DraftStatus from "./components/DraftStatus.vue";
 import StudioNotifications from "./components/StudioNotifications.vue";
+import type {AspectContext,AspectEditorRequest} from "./definitionTypes";
+import {roadmapProgress} from "./implementationProgress";
+const ComponentDefinitionWorkbench = defineAsyncComponent(() => import("./components/ComponentDefinitionWorkbench.vue"));
 import StudioNavigation from "./components/StudioNavigation.vue";
 import {capabilityLocation, workspaceLocation, canOpenCapability, type StudioView} from "./studioBlueprint";
 const BlueprintWorkbench = defineAsyncComponent(() => import("./components/BlueprintWorkbench.vue"));
@@ -125,6 +128,16 @@ function openCapability(id: string) {
   }
   closeMobileNavigation();
 }
+const definitionsOpened = ref(false);
+const aspectContext = ref<AspectContext|null>(null);
+function openDefinitionAspect(request:AspectEditorRequest) {
+  const workspace=request.workspace;
+  if(!['components','data','state','messages','workflows'].includes(workspace))return;
+  aspectContext.value=null;
+  inspectionRequests.value[workspace]={nonce:Date.now(),body:{...request.body,aspectContext:request.context}};
+  view.value=workspace as StudioView;
+}
+function aspectOpened(context:AspectContext){aspectContext.value=context;}
 const inspectionOpened = ref(false);
 const systemOpened = ref(false);
 const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
@@ -146,9 +159,11 @@ const definitionView = computed(
     view.value === "data" ||
     view.value === "state" ||
     view.value === "messages" ||
-    view.value === "workflows" || view.value === "inspection" || view.value === "system" || view.value === "blueprint",
+    view.value === "definitions" || view.value === "workflows" || view.value === "inspection" || view.value === "system" || view.value === "blueprint",
 );
 watch(view, (next) => {
+  if (next === "definitions") definitionsOpened.value = true;
+  if (aspectContext.value && next !== aspectContext.value.workspace) aspectContext.value = null;
   if (next === "system") systemOpened.value = true;
   if (next === "inspection") inspectionOpened.value = true;
   if (next === "components") workbenchOpened.value = true;
@@ -1162,14 +1177,16 @@ onUnmounted(() => {
         </ul>
       </div>
 
+      <div v-if="aspectContext && view===aspectContext.workspace" class="aspect-context-banner"><span>Source component: <strong>{{aspectContext.name}} · {{aspectContext.version}}</strong> / {{aspectContext.slot}}. Install the changed artifact as a new version, then replace its pin in the component definition.</span><button class="button secondary" @click="view='definitions'">Return to component definition</button></div>
+      <ComponentDefinitionWorkbench v-if="definitionsOpened" v-show="view==='definitions'" @open-aspect="openDefinitionAspect" />
       <BlueprintWorkbench v-if="view === 'blueprint'" :selected="selectedCapability" @inspect="inspectCapability" @open="openCapability" />
       <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" :conformance-request="conformanceRequest" />
       <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
-      <DeliveryWorkbench :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
-      <WorkflowWorkbench :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
-      <StateWorkbench :inspection-request="inspectionRequests.state" v-if="stateOpened" v-show="view === 'state'" />
-      <DataWorkbench :inspection-request="inspectionRequests.data" v-if="dataOpened" v-show="view === 'data'" />
-      <BehaviorWorkbench :inspection-request="inspectionRequests.components"
+      <DeliveryWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
+      <WorkflowWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
+      <StateWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.state" v-if="stateOpened" v-show="view === 'state'" />
+      <DataWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.data" v-if="dataOpened" v-show="view === 'data'" />
+      <BehaviorWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.components"
         v-if="workbenchOpened"
         v-show="view === 'components'"
       />
@@ -2094,7 +2111,7 @@ onUnmounted(() => {
                   : "Workspace ready"
           }}</span
         ><span
-          >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
+          >Roadmap {{roadmapProgress.total}}% <span class="footer-dot">·</span> Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
           <span class="footer-dot">·</span> v0.8.1</span
         >
       </footer>

@@ -16,6 +16,8 @@ import (
 func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/systems")
 	switch {
+	case path == "/definitions" || path == "/definitions/validate" || path == "/definitions/aspect":
+		s.definitionsAPI(w, r, path)
 	case path == "/catalog":
 		if !method(w, r, http.MethodGet) || !s.systemStoreReady(w) {
 			return

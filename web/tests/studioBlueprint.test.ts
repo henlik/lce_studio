@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {blueprint, capabilities, capabilityLocation, workspaceLocation, canOpenCapability, milestones} from '../src/studioBlueprint.ts';
 
 test('all existing editors retain one canonical destination under the intended parent', () => {
-  const groups = {components:['components','data','state','messages','workflows'],design:['plan','system','design','deployment','results','inspection']};
+  const groups = {components:['definitions','components','data','state','messages','workflows'],design:['plan','system','design','deployment','results','inspection']};
   for (const [group, views] of Object.entries(groups)) for (const view of views) {
     const matches = capabilities.filter(c => c.view === view);
     assert.equal(matches.length, 1, view);
@@ -44,7 +44,7 @@ test('the blueprint has unique identities and resolvable acyclic dependencies an
 });
 
 test('integration foundations stay distinct from existing artifact editors', () => {
-  assert.equal(capabilityLocation('component-context')!.capability.status,'planned');
+  assert.equal(capabilityLocation('component-context')!.capability.status,'partial');
   assert.equal(capabilityLocation('system-model')!.capability.status,'partial');
   assert.equal(capabilityLocation('conformance')!.capability.status,'partial');
   assert.equal(canOpenCapability(capabilityLocation('conformance')!.capability),true);

@@ -74,6 +74,9 @@ func Validate(d SystemDesign) model.Validation {
 			add(p+".id", "Component instance IDs must be nonempty and unique")
 		}
 		components[c.ID] = true
+		if c.Definition.Kind != "" && c.Definition.Kind != "component" && c.Definition.Kind != "definition" {
+			add(p+".definition.kind", "Choose a component package or a unified definition")
+		}
 		if strings.TrimSpace(c.Definition.ID) == "" {
 			add(p+".definition.id", "Definition ID is required")
 		}

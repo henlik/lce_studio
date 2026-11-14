@@ -12,14 +12,15 @@ import (
 
 // CatalogEntry identifies a checked catalog definition, not a deployed binary.
 type CatalogEntry struct {
-	Kind    string `json:"kind"`
-	ID      string `json:"id"`
-	Version string `json:"version"`
-	Name    string `json:"name"`
-	Digest  string `json:"digest"`
-	Source  string `json:"source"`
-	Ready   bool   `json:"ready"`
-	Issue   string `json:"issue,omitempty"`
+	Kind    string      `json:"kind"`
+	ID      string      `json:"id"`
+	Version string      `json:"version"`
+	Name    string      `json:"name"`
+	Digest  string      `json:"digest"`
+	Source  string      `json:"source"`
+	Ready   bool        `json:"ready"`
+	Issue   string      `json:"issue,omitempty"`
+	Aspects []AspectRef `json:"aspects,omitempty"`
 }
 type ResolvedReference struct {
 	Path string `json:"path"`
@@ -82,9 +83,24 @@ func Resolve(design SystemDesign, installed []CatalogEntry) Resolution {
 			return
 		}
 		result.References = append(result.References, ResolvedReference{Path: path, CatalogEntry: entry})
+		if kind == "definition" {
+			for j, a := range entry.Aspects {
+				child, ok := index[key(a.Kind, a.ID, a.Version)]
+				childPath := fmt.Sprintf("%s.aspects[%d]", path, j)
+				if !ok || !child.Ready || child.Digest != a.Digest {
+					result.Issues = append(result.Issues, model.ValidationIssue{Path: childPath, Message: "Owned aspect is missing, invalid or differs from its pinned digest"})
+					continue
+				}
+				result.References = append(result.References, ResolvedReference{Path: childPath, CatalogEntry: child})
+			}
+		}
 	}
 	for i, component := range design.Components {
-		resolve(fmt.Sprintf("components[%d].definition", i), "component", component.Definition.ID, component.Definition.Version)
+		kind := component.Definition.Kind
+		if kind == "" {
+			kind = "component"
+		}
+		resolve(fmt.Sprintf("components[%d].definition", i), kind, component.Definition.ID, component.Definition.Version)
 		for j, artifact := range component.Artifacts {
 			resolve(fmt.Sprintf("components[%d].artifacts[%d]", i, j), artifact.Kind, artifact.ID, artifact.Version)
 		}

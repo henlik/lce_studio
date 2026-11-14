@@ -10,7 +10,7 @@ reference is [PRODUCT_BLUEPRINT.md](PRODUCT_BLUEPRINT.md).
 
 | Plane | Group | Destinations |
 | --- | --- | --- |
-| Engineering | Components | Interface & behavior, Data, State, Messages, Workflows, Unified component context (planned) |
+| Engineering | Components | Interface & behavior, Data, State, Messages, Workflows, Component definitions |
 | Engineering | Design | Requirements, System architecture, Application flow, Databases & brokers (partial blueprint), Deployment planning, Experiments & results, Inspection lab, Open projects, Run history |
 | Engineering | Implementation | Developers & AI agents, Build & sandbox (planned) |
 | Engineering | Assurance & release | Contracts & conformance (opens the system Claims view), Release authority (planned) |
@@ -25,8 +25,9 @@ automatically opens its parent group. On mobile, choosing a destination closes
 the sidebar. Breadcrumbs retain plane, group and workspace context.
 
 Data, state, messages and workflow editors retain their own saved artifacts and
-draft recovery. They are now grouped under Components; shared ownership by one
-selected component remains planned. The system-reference editor and the existing
+draft recovery. Component definitions now link their exact installed versions and open pinned
+aspects with source-component context and a return button. See
+[COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md) for the walkthrough. The system-reference editor and the existing
 application/deployment simulator also retain distinct models under Design.
 Deployment planning is an engineering simulation, not a live runtime control.
 
