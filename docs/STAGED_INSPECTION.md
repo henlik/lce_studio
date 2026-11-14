@@ -76,6 +76,13 @@ Use a disposable database for acceptance testing. Tests intentionally create imm
 
 ## Limits
 
+For unified system executions, also follow [SYSTEM_REPLAY.md](SYSTEM_REPLAY.md).
+The **Verify replay** action is in the System architecture Execution perspective,
+separate from this lab's recorded workflow-visit playback. Inspect an exactly
+reproduced failed scenario and confirm its independent expectations remain failed.
+The API acceptance suite exercises pure, state and shared execution replays; the
+automated inspection pack does not imply that it runs these unified-system checks.
+
 The pack is a collection of independent experiments for one inspection story. The workflow engine does not drive the message engine or timed infrastructure engine. A simulated edge outage does not automatically interrupt an interactive workflow session. These integrations are not claimed.
 
 No production clinical adapters, authentication/authorization enforcement, public marketplace, real deployment, multihop network routing, battery/solar model or automatic migration is introduced. Synthetic patient/actor IDs are test values. Exact access-policy comparisons are decisions, not an identity or authentication service.

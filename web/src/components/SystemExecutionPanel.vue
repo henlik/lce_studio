@@ -7,6 +7,7 @@ import {useWorkspaceDraft} from '../composables/useWorkspaceDraft';
 import {useActionFeedback} from '../composables/useNotifications';
 import DraftStatus from './DraftStatus.vue';
 import SystemScenarioEditor from './SystemScenarioEditor.vue';
+import SystemReplayPanel from './SystemReplayPanel.vue';
 const props=defineProps<{design:SystemDesign}>();
 const formKey=(p:ExecutionInput)=>JSON.stringify([props.design.id,inputKey(p)]);
 const emit=defineEmits<{locate:[path:string]}>();
@@ -62,6 +63,7 @@ function download(){if(!evidence.value)return;const url=URL.createObjectURL(new 
  </section>
  <SystemScenarioEditor v-if="ready&&preparation&&preparation.plan.tasks.some(t=>t.state)" :key="design.id" :plan="preparation.plan" :design="design" @result="result=>{evidence=result;step=0}"/>
  <section v-if="evidence" class="trace-view"><h3>Token trace · {{evidence.report.mode}}</h3><p>The trace uses saved inputs. Editing the form affects only the next run.</p><p v-if="stale" class="scope">Saved evidence belongs to a different design snapshot. The trace below uses that snapshot.</p>
+  <SystemReplayPanel :evidence="evidence" :disabled="!!busy"/>
   <section v-if="evidence.report.scenario"><h4>{{!evidence.report.scenario.verified?'Unverified: no expectations supplied':evidence.report.scenario.passed?'Scenario expectations passed':'Scenario expectations failed'}}</h4><p>These are scenario assertions, not system contract claim verdicts. The trace uses the saved scenario; editor changes affect the next run.</p><p v-for="(a,i) in evidence.report.scenario.assertions" :key="i" :class="{error:!a.passed}">{{a.passed?'✓':'✗'}} {{a.path}} · {{a.message}}</p><details><summary>Saved scenario and final owner snapshots</summary><pre>{{JSON.stringify({scenario:evidence.scenario,final:evidence.report.scenario.final},null,2)}}</pre></details></section><div class="actions"><button :disabled="step===0" @click="step--">Previous</button><input aria-label="Trace step" type="range" min="0" :max="evidence.report.events.length-1" v-model.number="step"/><button :disabled="step>=evidence.report.events.length-1" @click="step++">Next</button><span aria-live="polite">{{step+1}} / {{evidence.report.events.length}} · {{current?.scenarioStep?'Scenario step '+current.scenarioStep+' · ':''}}{{current?.kind}}</span><button @click="download">Export execution</button></div>
   <div class="task-strip"><button v-for="task in orderedTasks" :key="task.id" :class="{active:activeTask===task.id}" @click="step=Math.max(0,evidence!.report.events.findIndex(e=>e.taskId===task.id&&e.kind==='started'&&e.scenarioStep===current?.scenarioStep))"><strong>{{task.name}}</strong><small>{{task.slot}} · {{evidence.report.results.find(r=>r.taskId===task.id&&r.scenarioStep===current?.scenarioStep)?.operations}} operations</small></button></div>
   <div class="link-strip"><p v-for="link in evidence.plan.links" :key="link.id" :class="{active:current?.linkId===link.id}">{{name(link.source)}} / {{link.output}} → {{name(link.target)}} / {{link.input}}</p></div>

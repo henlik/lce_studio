@@ -15,6 +15,10 @@ func (s *Server) systemExecutionAPI(w http.ResponseWriter, r *http.Request, path
 	if !s.systemStoreReady(w) {
 		return
 	}
+	if strings.HasPrefix(path, "/execution-replays/") || (strings.HasPrefix(path, "/executions/") && strings.HasSuffix(path, "/replays")) {
+		s.systemReplayAPI(w, r, path)
+		return
+	}
 	if path == "/executions" {
 		if !method(w, r, http.MethodGet) {
 			return

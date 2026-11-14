@@ -23,11 +23,14 @@ type ExecutionPreparation struct {
 	DesignHash string            `json:"designHash"`
 }
 type SystemExecution struct {
-	Scenario  *systemrun.Scenario `json:"scenario,omitempty"`
-	ID        string              `json:"id"`
-	CreatedAt string              `json:"createdAt"`
-	Design    system.SystemDesign `json:"design"`
-	Inputs    []systemrun.Inputs  `json:"inputs"`
+	SnapshotVersion int                 `json:"snapshotVersion,omitempty"`
+	PlanHash        string              `json:"planHash,omitempty"`
+	ReportHash      string              `json:"reportHash,omitempty"`
+	Scenario        *systemrun.Scenario `json:"scenario,omitempty"`
+	ID              string              `json:"id"`
+	CreatedAt       string              `json:"createdAt"`
+	Design          system.SystemDesign `json:"design"`
+	Inputs          []systemrun.Inputs  `json:"inputs"`
 	ExecutionPreparation
 	InputHash string           `json:"inputHash"`
 	Report    systemrun.Report `json:"report"`
@@ -243,6 +246,7 @@ func (s *Store) executeSystem(ctx context.Context, id string, d system.SystemDes
 		return SystemExecution{}, fmt.Errorf("%w: %v", ErrPureExecution, err)
 	}
 	e := SystemExecution{ID: id, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), Design: d, Inputs: inputs, ExecutionPreparation: p, InputHash: executionHash(inputs), Report: report}
+	e.SnapshotVersion, e.PlanHash, e.ReportHash = 1, executionHash(p.Plan), executionHash(report)
 	if scenario != nil {
 		e.Scenario = scenario
 		e.InputHash = executionHash(scenario)

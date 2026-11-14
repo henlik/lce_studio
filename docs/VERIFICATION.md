@@ -1,5 +1,40 @@
 # Verification
 
+## Saved system execution replay verification — 14 November 2026
+
+- The Execution perspective now verifies saved pure, state and shared-scenario
+  reports using their pinned snapshots without querying current artifact catalogs.
+  Source identity, design/input hashes, new plan/report hashes, engine/mode support
+  and re-derived schedule/input requirements are checked before replay.
+- Separate immutable verification records retain source snapshot identity,
+  verifier version, checks, replay report and up to 32 deterministic JSON-pointer
+  differences with bounded previews. Matched, mismatched and unverified results
+  have distinct UI labels; failed or unverified scenario assertions are never
+  promoted by exact reproduction. History and JSON export are available.
+- Legacy snapshots remain replayable with an explicit missing-plan/report-hash
+  limitation. Unknown snapshot/engine versions and unsupported claim semantics
+  remain unverified. No signatures, live implementation checks or contract verdicts
+  are introduced. The API rejects client-supplied replacement inputs/plans.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL. After the final
+  source-identity check and additional unverified-scenario regression, focused
+  replay/state/API race tests passed again. `go vet ./...`, backend build, Vue
+  production build, all 34 frontend tests and the live system API acceptance
+  suite passed. Vite retains its existing chunk-size warning.
+- Negative checks cover changed identities/content, missing hashes, changed
+  scheduling metadata, unavailable engines, invalid pinned definitions, incomplete
+  inputs, report differences, bounded previews, immutable attempts, cancellation,
+  missing records, invalid bodies and shared execution-capacity rejection.
+  Catalog-removal tests reproduce pure, state, successful/failed/unverified
+  scenarios; stored negative verification outcomes remain inspectable.
+- Browser/mobile interaction checks remain unverified because system Chromium
+  cannot open its required Unix socket in this environment. Manual checklist:
+  open a saved execution; Verify replay; inspect original failed assertions;
+  reopen Previous verifications after reload; export; switch executions during
+  a pending request; inspect narrow-screen controls and mismatch tables.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. This makes reproducibility
+  accessible, without completing joint engine or implementation-conformance gates.
+  Walkthrough and API contract: [SYSTEM_REPLAY.md](SYSTEM_REPLAY.md).
+
 ## Design library and navigation correction — 14 November 2026
 
 - Design opens System architecture, and new sessions start there. Recovered

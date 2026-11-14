@@ -35,6 +35,46 @@ func TestPureSystemExecutionAPI(t *testing.T) {
 	if w = req(t, s, "GET", "/api/systems/executions?systemId="+example.Design.ID, nil); w.Code != 200 {
 		t.Fatal(w.Code)
 	}
+	replayPath := "/api/systems/executions/" + e.ID + "/replays"
+	w = req(t, s, "POST", replayPath, map[string]any{})
+	var replay store.SystemReplay
+	if err := json.Unmarshal(w.Body.Bytes(), &replay); err != nil || w.Code != 200 || replay.Status != "matched" || replay.ExecutionID != e.ID {
+		t.Fatal(w.Code, w.Body.String(), err)
+	}
+	if w = req(t, s, "GET", "/api/systems/execution-replays/"+replay.ID, nil); w.Code != 200 {
+		t.Fatal(w.Code)
+	}
+	if w = req(t, s, "GET", replayPath, nil); w.Code != 200 {
+		t.Fatal(w.Code)
+	}
+	if w = req(t, s, "POST", replayPath, map[string]any{"inputs": inputs}); w.Code != 400 {
+		t.Fatal("replay input override accepted", w.Code)
+	}
+	if w = req(t, s, "POST", replayPath, json.RawMessage("null")); w.Code != 400 {
+		t.Fatal("null replay request accepted", w.Code)
+	}
+	if w = req(t, s, "DELETE", replayPath, nil); w.Code != 405 {
+		t.Fatal(w.Code)
+	}
+	if w = req(t, s, "POST", "/api/systems/executions/missing/replays", map[string]any{}); w.Code != 404 {
+		t.Fatal(w.Code)
+	}
+	if w = req(t, s, "GET", "/api/systems/executions/missing/replays", nil); w.Code != 404 {
+		t.Fatal(w.Code)
+	}
+	if w = req(t, s, "GET", "/api/systems/execution-replays/missing", nil); w.Code != 404 {
+		t.Fatal(w.Code)
+	}
+	for i := 0; i < cap(s.runs); i++ {
+		s.runs <- struct{}{}
+	}
+	w = req(t, s, "POST", replayPath, map[string]any{})
+	for i := 0; i < cap(s.runs); i++ {
+		<-s.runs
+	}
+	if w.Code != 429 {
+		t.Fatal("replay ignored execution capacity", w.Code)
+	}
 	if w = req(t, s, "POST", "/api/systems/execution/run", map[string]any{"design": example.Design}); w.Code != 422 {
 		t.Fatal("missing inputs", w.Code)
 	}

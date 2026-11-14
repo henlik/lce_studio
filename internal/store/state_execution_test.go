@@ -61,6 +61,13 @@ func TestConnectedStateProviderPersistenceAndPortableReplay(t *testing.T) {
 	if err != nil || failed.Report.Scenario.Passed {
 		t.Fatal("failed verdict not recordable", err)
 	}
+	for i := range scenario.Steps {
+		scenario.Steps[i].ExpectedStatuses = nil
+	}
+	unverified, err := s.ExecuteSystemScenario(ctx, "unverified-expectation", e.Design, scenario)
+	if err != nil || unverified.Report.Scenario.Verified || unverified.Report.Scenario.Passed {
+		t.Fatal("missing expectations promoted to pass", err)
+	}
 	scenario.Steps[0].Calls = nil
 	if _, err = s.ExecuteSystemScenario(ctx, "malformed-scenario", e.Design, scenario); err == nil {
 		t.Fatal("bad envelope accepted")
@@ -90,5 +97,14 @@ func TestConnectedStateProviderPersistenceAndPortableReplay(t *testing.T) {
 	replay, err := systemrun.Run(ctx, saved.Plan, saved.Inputs)
 	if err != nil || !reflect.DeepEqual(replay, saved.Report) {
 		t.Fatal("portable replay", err)
+	}
+	for _, execution := range []SystemExecution{saved, stored, failed, unverified} {
+		proof, err := s.ReplaySystemExecution(ctx, "verify-"+execution.ID, execution.ID)
+		if err != nil || proof.Status != "matched" || proof.Report == nil || !reflect.DeepEqual(*proof.Report, execution.Report) {
+			t.Fatalf("state/scenario verification %+v %v", proof, err)
+		}
+		if execution.ID == failed.ID && proof.Report.Scenario.Passed {
+			t.Fatal("reproducing a failed scenario promoted it to passing")
+		}
 	}
 }

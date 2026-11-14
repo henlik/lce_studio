@@ -165,3 +165,16 @@ const invalidScenario=structuredClone(sharedScenario);delete invalidScenario.ste
 await request('/execution/run','POST',{design:stateFixture.design,scenario:invalidScenario},422);
 await request('/execution/run','POST',{design:stateFixture.design,scenario:sharedScenario,inputs:stateInputs},400);
 console.log('PASS shared-scenario state continuity, blocked reply transfers, independent failed verdicts and immutable snapshots');
+
+for(const source of [execution,stateRun,sharedRun,wrongRun]){
+ assert.equal(source.snapshotVersion,1);assert.equal(source.planHash.length,64);assert.equal(source.reportHash.length,64);
+ const replay=await request('/executions/'+source.id+'/replays','POST',{});
+ assert.equal(replay.status,'matched');assert.equal(replay.executionId,source.id);assert.equal(replay.report.claimsEvaluated,false);
+ assert.deepEqual(replay.report,source.report);assert.equal(replay.recordedReportHash,replay.replayedReportHash);
+ assert.deepEqual(await request('/execution-replays/'+replay.id),replay);
+ assert.ok((await request('/executions/'+source.id+'/replays')).some(r=>r.id===replay.id));
+ assert.deepEqual(await request('/executions/'+source.id),source);
+}
+await request('/executions/'+execution.id+'/replays','POST',{inputs:executionInputs},400);
+await request('/executions/missing/replays','POST',{},404);
+console.log('PASS immutable catalog-independent replay verification for pure, state, shared and failed scenarios');

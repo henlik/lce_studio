@@ -90,7 +90,9 @@ compatible. `claimsEvaluated` remains false: scenario assertions are not impleme
 conformance or system-contract verdicts.
 
 `systemrun.RunScenario(ctx, saved.Plan, *saved.Scenario)` replays without catalog
-queries. UI/API replay and signed provenance remain future work.
+queries. **Verify replay** now repeats this check through the UI/API, preserving
+failed and unverified scenario outcomes; see [SYSTEM_REPLAY.md](SYSTEM_REPLAY.md).
+Signed provenance remains future work.
 
 Bounds: 1–64 steps, 256 total task activations, 1 MiB scenario, shared 4096-operation
 and invocation budgets, state receipt/effect limits, 2 MiB trace, 4 MiB report and

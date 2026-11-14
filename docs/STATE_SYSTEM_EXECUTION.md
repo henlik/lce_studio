@@ -90,8 +90,9 @@ bindings, and does not infer provider behavior from a resource's name.
   sessions share receipt/effect budgets. PostgreSQL saves studio evidence only.
 - State reports identify `system-dataflow-2`; existing pure graphs keep
   `system-pure-1` and their report shape. Exact machine/provider definitions are
-  saved with the plan. Catalog-free Go replay is tested; UI/API replay and signed
-  provenance are not implemented. Claims remain unevaluated.
+  saved with the plan. Catalog-free replay is available through **Verify replay**
+  in the UI/API; see [SYSTEM_REPLAY.md](SYSTEM_REPLAY.md). Signed provenance is
+  not implemented. Claims remain unevaluated.
 
 ## Progress and verification boundary
 

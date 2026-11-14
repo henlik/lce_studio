@@ -35,6 +35,8 @@ func initializeSystems(ctx context.Context, tx *sql.Tx) error {
  );
  CREATE TABLE IF NOT EXISTS system_executions (id TEXT PRIMARY KEY,system_id TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL,body JSON NOT NULL);
  CREATE INDEX IF NOT EXISTS system_executions_created ON system_executions(system_id,created_at DESC,id DESC);
+ CREATE TABLE IF NOT EXISTS system_execution_replays (id TEXT PRIMARY KEY,execution_id TEXT NOT NULL REFERENCES system_executions(id),created_at TIMESTAMPTZ NOT NULL,body JSON NOT NULL);
+ CREATE INDEX IF NOT EXISTS system_execution_replays_created ON system_execution_replays(execution_id,created_at DESC,id DESC);
  CREATE TABLE IF NOT EXISTS system_evidence (
  id TEXT PRIMARY KEY, system_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, body JSON NOT NULL
  );

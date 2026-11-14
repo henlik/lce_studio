@@ -99,8 +99,10 @@ The Go `internal/systemrun.Run(ctx, snapshot.Plan, snapshot.Inputs)` entry point
 replay the portable plan without querying the installed catalog. It re-derives
 and validates order and required inputs rather than trusting saved scheduling
 metadata. Regression tests delete the catalog before replaying and compare the
-entire resulting report. Replay through the UI/API or across future engine versions
-is not yet provided; exported snapshots are not signed provenance.
+entire resulting report. **Verify replay** now provides this comparison through
+the UI/API and retains separate immutable verification evidence; follow
+[SYSTEM_REPLAY.md](SYSTEM_REPLAY.md). New snapshots also retain plan/report hashes.
+Unsupported future engines remain unverified; exported snapshots are not signed provenance.
 
 ## API
 
