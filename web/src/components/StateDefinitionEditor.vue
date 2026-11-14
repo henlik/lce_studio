@@ -30,6 +30,7 @@ import StateTypeSelect from "./StateTypeSelect.vue";
 import StatePortEditor from "./StatePortEditor.vue";
 import StateBindingEditor from "./StateBindingEditor.vue";
 import StateDiagram from "./StateDiagram.vue";
+import CanvasInspector from "./CanvasInspector.vue";
 import TypedValueEditor from "./TypedValueEditor.vue";
 const props = defineProps<{
   machine: StateMachine;
@@ -44,18 +45,23 @@ const emit = defineEmits<{
   "import-handler": [index: number];
   "embed-data": [key: string];
 }>();
+const settings = ref<'slots'|'effects'|'commands'|null>(null);
+const selectedSlot = ref<number|null>(null), selectedEffect = ref<number|null>(null);
 const editorRoot = ref<HTMLElement | null>(null);
 function focusIssue(issue: ValidationIssue) {
   const command = issue.path.match(/commands\[(\d+)\]/),
-    slot = issue.path.match(/state\[(\d+)\]/);
-  if (command) selected.value = Number(command[1]);
+    slot = issue.path.match(/state\[(\d+)\]/), effect = issue.path.match(/effects\[(\d+)\]/);
+  if (command) { selected.value = Number(command[1]); settings.value='commands'; }
+  if (slot) { selectedSlot.value=Number(slot[1]); settings.value='slots'; }
+  if (!command && !slot && effect) { selectedEffect.value=Number(effect[1]); settings.value='effects'; }
+  if (!command && !slot && !effect) settings.value=null;
   focusField(
     editorRoot.value,
     command
       ? '[aria-label="State command name"]'
       : slot
         ? `[aria-label="State slot ${Number(slot[1]) + 1} name"]`
-        : '[aria-label="State machine ID"]',
+        : effect ? `[aria-label="Effect ${Number(effect[1]) + 1} name"]` : '[aria-label="State machine ID"]',
   );
 }
 defineExpose({ focusIssue });
@@ -66,6 +72,7 @@ watch(
   () => props.machine,
   () => {
     selected.value = 0;
+    settings.value=null; selectedSlot.value=null; selectedEffect.value=null;
     handler.value = "";
   },
 );
@@ -75,6 +82,7 @@ const decision = computed(() =>
 );
 const outputs = computed(() => decision.value?.behavior.outputs || []);
 function addSlot() {
+  settings.value='slots'; selectedSlot.value=props.machine.state.length;
   props.machine.state.push({
     name: freshStateName(
       "state",
@@ -91,6 +99,7 @@ function setType(slot: StateSlot, shape: ValueShape) {
   else delete slot.recordRef;
 }
 function addCommand() {
+  settings.value='commands';
   props.machine.commands.push({
     name: freshStateName(
       "Command",
@@ -112,6 +121,7 @@ function addCommand() {
   selected.value = props.machine.commands.length - 1;
 }
 function addEffect() {
+  settings.value='effects'; selectedEffect.value=props.machine.effects.length;
   props.machine.effects.push({
     name: freshStateName(
       "Effect",
@@ -143,97 +153,19 @@ function booleanOutputs() {
 </script>
 <template>
   <div ref="editorRoot" class="state-definition">
-    <details class="state-panel">
-      <summary>Machine identity and description</summary>
-      <fieldset :disabled="disabled">
-        <div class="state-grid">
-          <label class="field"
-            >Namespaced ID<input
-              v-model="machine.id"
-              aria-label="State machine ID" /></label
-          ><label class="field"
-            >Version<input
-              v-model="machine.version"
-              aria-label="State machine version" /></label
-          ><label class="field"
-            >Display name<input
-              v-model="machine.name"
-              aria-label="State machine name" /></label
-          ><label class="field"
-            >Author<input
-              v-model="machine.author"
-              aria-label="State machine author" /></label
-          ><label class="field"
-            >License<input
-              v-model="machine.license"
-              aria-label="State machine license" /></label
-          ><label class="field"
-            >Description<textarea
-              v-model="machine.description"
-              aria-label="State machine description"
-            />
-          </label>
-        </div>
-      </fieldset>
-    </details>
-    <details class="state-panel">
-      <summary>
-        Exact data contracts · {{ contracts.length }} available from machine and
-        handlers
-      </summary>
-      <p class="state-help">
-        Handler bundle types are available automatically. Add a machine-owned
-        contract for additional state or payload types.
-      </p>
-      <div class="state-actions">
-        <label class="field"
-          >Installed data contract<select
-            v-model="dataSelection"
-            aria-label="State data contract"
-            :disabled="disabled"
-          >
-            <option value="">Select an exact version</option>
-            <option
-              v-for="l in dataCatalog"
-              :key="dataKey(l)"
-              :value="dataKey(l)"
-            >
-              {{ l.contract.id }} @ {{ l.contract.version }}
-            </option>
-          </select></label
-        ><button
-          class="button secondary"
-          :disabled="
-            disabled || !dataSelection || machine.dataContracts.length >= 8
-          "
-          @click="emit('embed-data', dataSelection)"
-        >
-          Embed state data contract
-        </button>
-      </div>
-      <div
-        v-for="(l, i) in machine.dataContracts"
-        :key="dataKey(l)"
-        class="state-lock"
-      >
-        <code
-          >{{ l.contract.id }} @ {{ l.contract.version }} ·
-          {{ l.digest.slice(0, 12) }}</code
-        ><button
-          class="button quiet"
-          :disabled="disabled"
-          @click="machine.dataContracts.splice(i, 1)"
-        >
-          Remove machine lock
-        </button>
-      </div>
-    </details>
+    <div class="canvas-author-tools">
+      <button class="button secondary" @click="settings='slots'; selectedSlot=null">Owned state</button>
+      <button class="button secondary" @click="settings='effects'; selectedEffect=null">Effects</button>
+      <button class="button secondary" @click="settings='commands'">Commands</button>
+    </div>
     <StateDiagram
       :machine="machine"
       :selected="selected"
-      @select="selected = $event"
-    />
-    <section class="state-panel">
+      @select="selected = $event; settings='commands'"
+      @slot="selectedSlot=$event; settings='slots'" @effect="selectedEffect=$event; settings='effects'"
+    >
+      <CanvasInspector v-if="settings" :title="settings === 'commands' ? 'Command settings' : settings === 'slots' ? 'Owned state settings' : 'Effect settings'" @close="settings=null">
+    <section v-show="settings === 'slots'" class="state-panel">
       <div class="state-panel-heading">
         <h3>Owned state</h3>
         <button
@@ -251,7 +183,7 @@ function booleanOutputs() {
       </p>
       <fieldset :disabled="disabled">
         <article
-          v-for="(slot, i) in machine.state"
+          v-for="(slot, i) in machine.state" v-show="selectedSlot === null || selectedSlot === i"
           :key="stateUIKey(slot)"
           class="state-card"
         >
@@ -297,7 +229,7 @@ function booleanOutputs() {
         </article>
       </fieldset>
     </section>
-    <section class="state-panel">
+    <section v-show="settings === 'effects'" class="state-panel">
       <div class="state-panel-heading">
         <h3>Effect declarations</h3>
         <button
@@ -314,7 +246,7 @@ function booleanOutputs() {
       </p>
       <fieldset :disabled="disabled">
         <article
-          v-for="(effect, i) in machine.effects"
+          v-for="(effect, i) in machine.effects" v-show="selectedEffect === null || selectedEffect === i"
           :key="stateUIKey(effect)"
           class="state-card"
         >
@@ -333,7 +265,7 @@ function booleanOutputs() {
         </article>
       </fieldset>
     </section>
-    <section class="state-panel">
+    <section v-show="settings === 'commands'" class="state-panel">
       <div class="state-panel-heading">
         <h3>Command handlers</h3>
         <button
@@ -702,5 +634,92 @@ function booleanOutputs() {
         Validate before running.
       </p>
     </section>
+      </CanvasInspector>
+    </StateDiagram>
+    <details class="state-panel">
+      <summary>Machine identity and description</summary>
+      <fieldset :disabled="disabled">
+        <div class="state-grid">
+          <label class="field"
+            >Namespaced ID<input
+              v-model="machine.id"
+              aria-label="State machine ID" /></label
+          ><label class="field"
+            >Version<input
+              v-model="machine.version"
+              aria-label="State machine version" /></label
+          ><label class="field"
+            >Display name<input
+              v-model="machine.name"
+              aria-label="State machine name" /></label
+          ><label class="field"
+            >Author<input
+              v-model="machine.author"
+              aria-label="State machine author" /></label
+          ><label class="field"
+            >License<input
+              v-model="machine.license"
+              aria-label="State machine license" /></label
+          ><label class="field"
+            >Description<textarea
+              v-model="machine.description"
+              aria-label="State machine description"
+            />
+          </label>
+        </div>
+      </fieldset>
+    </details>
+    <details class="state-panel">
+      <summary>
+        Exact data contracts · {{ contracts.length }} available from machine and
+        handlers
+      </summary>
+      <p class="state-help">
+        Handler bundle types are available automatically. Add a machine-owned
+        contract for additional state or payload types.
+      </p>
+      <div class="state-actions">
+        <label class="field"
+          >Installed data contract<select
+            v-model="dataSelection"
+            aria-label="State data contract"
+            :disabled="disabled"
+          >
+            <option value="">Select an exact version</option>
+            <option
+              v-for="l in dataCatalog"
+              :key="dataKey(l)"
+              :value="dataKey(l)"
+            >
+              {{ l.contract.id }} @ {{ l.contract.version }}
+            </option>
+          </select></label
+        ><button
+          class="button secondary"
+          :disabled="
+            disabled || !dataSelection || machine.dataContracts.length >= 8
+          "
+          @click="emit('embed-data', dataSelection)"
+        >
+          Embed state data contract
+        </button>
+      </div>
+      <div
+        v-for="(l, i) in machine.dataContracts"
+        :key="dataKey(l)"
+        class="state-lock"
+      >
+        <code
+          >{{ l.contract.id }} @ {{ l.contract.version }} ·
+          {{ l.digest.slice(0, 12) }}</code
+        ><button
+          class="button quiet"
+          :disabled="disabled"
+          @click="machine.dataContracts.splice(i, 1)"
+        >
+          Remove machine lock
+        </button>
+      </div>
+    </details>
   </div>
 </template>

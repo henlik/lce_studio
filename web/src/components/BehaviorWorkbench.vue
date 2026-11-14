@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
-import WorkspaceModes from "./WorkspaceModes.vue";
+import StudioRibbon from "./StudioRibbon.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -253,6 +253,8 @@ const pendingAdvanced = computed(
 );
 const showAdvanced = ref(false);
 const metadataOpen = ref(false);
+const studioRibbon = ref<InstanceType<typeof StudioRibbon> | null>(null);
+watch(metadataOpen, value => { if(value) studioRibbon.value?.show('Contract'); });
 
 function definitionStamp(p: CompositePackage, deps: CompositeLock[]) {
   const comparable = (value: CompositePackage) => ({
@@ -1180,19 +1182,49 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     class="behavior-workbench"
     :inert="autosave.status.value === 'loading'"
   >
-    <DraftStatus :draft="autosave" />
-    <div class="workbench-intro">
-      <div>
-        <span class="section-eyebrow">TYPED COMPONENT WORKBENCH</span>
-        <h2>Build behavior from reusable parts</h2>
-        <p>
-          Define scalar or structured inputs and outputs, compose pure
-          operations, and nest exact component versions. Evaluate the resulting
-          behavior with real values and inspect every step.
-        </p>
+    <StudioRibbon ref="studioRibbon" workspace="components" :title="draft.name + ' · ' + currentReference" :active="tab" :structure='["interface"]' :behavior='["compose"]' :execution='["evaluate","history"]' @select="tab = $event as typeof tab">
+      <template #status><small>{{ pendingAdvanced ? "Unapplied JSON edits" : isInstalled ? "Installed exact version" : "Local draft" }}</small><DraftStatus :draft="autosave" /></template>
+      <template #file>      <div class="workbench-actions">
+        <button
+          class="button secondary"
+          @click="createDraft"
+          :disabled="!!busy"
+        >
+          <Plus :size="14" /> New definition</button
+        ><button
+          class="button secondary"
+          @click="fileInput?.click()"
+          :disabled="!!busy"
+        >
+          <ArrowUpFromLine :size="14" /> Import bundle</button
+        ><button
+          class="button secondary"
+          @click="exportBundle"
+          :disabled="!!busy"
+        >
+          <ArrowDownToLine :size="14" /> Export bundle</button
+        ><button
+          class="button secondary"
+          @click="validateDraft"
+          :disabled="!!busy"
+        >
+          <FileCheck2 :size="14" /> Validate composition</button
+        ><button
+          class="button primary"
+          @click="installDraft"
+          :disabled="!!busy"
+        >
+          <Save :size="14" /> Install bundle
+        </button>
       </div>
-      <span class="workbench-version">DESIGN · EVALUATE</span>
-    </div>
+      <input
+        ref="fileInput"
+        class="hidden"
+        type="file"
+        accept=".json,application/json"
+        aria-label="Import component bundle JSON"
+        @change="importBundle"
+      />
     <details class="library-disclosure">
       <summary>Open an installed definition or example</summary>
       <div class="workbench-library">
@@ -1312,94 +1344,8 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         </button>
       </div>
     </details>
-    <div class="workbench-draft-bar">
-      <div>
-        <Box :size="18" /><span
-          ><strong>{{ draft.name }}</strong
-          ><code>{{ currentReference }}</code></span
-        ><small :class="{ installed: isInstalled }">{{
-          pendingAdvanced
-            ? "Unapplied JSON edits"
-            : isInstalled
-              ? "Installed exact version"
-              : "Local draft"
-        }}</small>
-      </div>
-      <div class="workbench-actions">
-        <button
-          class="button secondary"
-          @click="createDraft"
-          :disabled="!!busy"
-        >
-          <Plus :size="14" /> New definition</button
-        ><button
-          class="button secondary"
-          @click="fileInput?.click()"
-          :disabled="!!busy"
-        >
-          <ArrowUpFromLine :size="14" /> Import bundle</button
-        ><button
-          class="button secondary"
-          @click="exportBundle"
-          :disabled="!!busy"
-        >
-          <ArrowDownToLine :size="14" /> Export bundle</button
-        ><button
-          class="button secondary"
-          @click="validateDraft"
-          :disabled="!!busy"
-        >
-          <FileCheck2 :size="14" /> Validate composition</button
-        ><button
-          class="button primary"
-          @click="installDraft"
-          :disabled="!!busy"
-        >
-          <Save :size="14" /> Install bundle
-        </button>
-      </div>
-      <input
-        ref="fileInput"
-        class="hidden"
-        type="file"
-        accept=".json,application/json"
-        aria-label="Import component bundle JSON"
-        @change="importBundle"
-      />
-    </div>
-    <p class="workbench-draft-note">
-      {{
-        pendingAdvanced
-          ? "Advanced JSON edits are retained but not yet applied. Apply or reset them before validating, evaluating, installing or exporting."
-          : isInstalled
-            ? "This draft matches an immutable catalog version. Change the version before installing edited content."
-            : "Drafts autosave on this browser and recover after reload. Export a bundle to share it, or install an exact version in this studio."
-      }}
-      Component evaluation is separate from application resource simulation.
-    </p>
-    <div v-if="busy" class="workbench-progress" role="status">
-      <LoaderCircle :size="14" class="spin" />{{
-        busy === "evaluate"
-          ? "Evaluating and recording evidence…"
-          : busy === "test"
-            ? "Running definition tests…"
-            : "Working with the Go component engine…"
-      }}
-    </div>
-    <div v-if="error" class="workbench-error" role="alert">
-      <strong>{{ error }}</strong>
-      <ul v-if="issues.length">
-        <li v-for="issue in issues" :key="issue.path + issue.message">
-          <button class="issue-link" @click="focusIssue(issue)">
-            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
-          </button>
-        </li>
-      </ul>
-    </div>
-    <p v-if="notice" class="workbench-notice" role="status">
-      <Check :size="14" />{{ notice }}
-    </p>
-    <details
+</template>
+      <template #contract>    <details
       class="workbench-metadata"
       :open="metadataOpen"
       @toggle="metadataOpen = ($event.target as HTMLDetailsElement).open"
@@ -1455,8 +1401,32 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         </div>
       </fieldset>
     </details>
-    <WorkspaceModes :active="tab" :structure='["interface"]' :behavior='["compose"]' :execution='["evaluate", "history"]' @select='tab = $event as "interface" | "compose" | "evaluate" | "history"' />
-    <nav class="workbench-tabs" aria-label="Component workbench views">
+</template>
+      <template #help>
+    <div class="workbench-intro">
+      <div>
+        <span class="section-eyebrow">TYPED COMPONENT WORKBENCH</span>
+        <h2>Build behavior from reusable parts</h2>
+        <p>
+          Define scalar or structured inputs and outputs, compose pure
+          operations, and nest exact component versions. Evaluate the resulting
+          behavior with real values and inspect every step.
+        </p>
+      </div>
+      <span class="workbench-version">DESIGN · EVALUATE</span>
+    </div>
+    <p class="workbench-draft-note">
+      {{
+        pendingAdvanced
+          ? "Advanced JSON edits are retained but not yet applied. Apply or reset them before validating, evaluating, installing or exporting."
+          : isInstalled
+            ? "This draft matches an immutable catalog version. Change the version before installing edited content."
+            : "Drafts autosave on this browser and recover after reload. Export a bundle to share it, or install an exact version in this studio."
+      }}
+      Component evaluation is separate from application resource simulation.
+    </p>
+</template>
+          <nav class="workbench-tabs" aria-label="Component workbench views">
       <button v-show="['compose'].includes(tab)" :class="{ active: tab === 'compose' }" @click="tab = 'compose'">
         <Layers3 :size="15" /> Composition</button
       ><button
@@ -1474,6 +1444,31 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         <span>{{ history.length }}</span>
       </button>
     </nav>
+      <template #commands><button class="button secondary" :disabled="!!busy" @click="validateDraft">Validate composition</button></template>
+    </StudioRibbon>
+    <div v-if="busy" class="workbench-progress" role="status">
+      <LoaderCircle :size="14" class="spin" />{{
+        busy === "evaluate"
+          ? "Evaluating and recording evidence…"
+          : busy === "test"
+            ? "Running definition tests…"
+            : "Working with the Go component engine…"
+      }}
+    </div>
+    <div v-if="error" class="workbench-error" role="alert">
+      <strong>{{ error }}</strong>
+      <ul v-if="issues.length">
+        <li v-for="issue in issues" :key="issue.path + issue.message">
+          <button class="issue-link" @click="focusIssue(issue)">
+            <code>{{ issue.path }}</code> {{ issue.message }} → Fix
+          </button>
+        </li>
+      </ul>
+    </div>
+    <p v-if="notice" class="workbench-notice" role="status">
+      <Check :size="14" />{{ notice }}
+    </p>
+
     <section
       v-if="
         !readonly &&

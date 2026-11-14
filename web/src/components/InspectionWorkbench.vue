@@ -7,6 +7,7 @@ import { useActionFeedback } from '../composables/useNotifications';
 import { downloadWorkflow } from '../workflowTypes';
 import WorkflowJourney from './WorkflowJourney.vue';
 import DraftStatus from './DraftStatus.vue';
+import StudioRibbon from './StudioRibbon.vue';
 const emit = defineEmits<{ open: [item: InspectionCase] }>();
 const pack = ref<InspectionPack>();
 const results = ref<Record<string, { passed: boolean; actual?: unknown; error?: string; at: string; evidence: any }>>({});
@@ -27,7 +28,7 @@ const checks = [
   ['portability', 'Export each definition and its scenario/fixture, import into a fresh draft, install a version, reopen its exact package, and compare immutable history with an edited draft.'],
   ['data-evolution', 'Data → Behavior: compare the same contract, then remove or change a field and inspect the directional compatibility report.'],
   ['persistence', 'Edit a draft, wait for Saved locally, reload and verify it. Open a second tab and check conflict protection and recovery checkpoints. Save/reopen a project from PostgreSQL.'],
-  ['responsive', 'Collapse both panels, expand and exit every canvas, test keyboard navigation and narrow screens. Confirm the page itself does not overflow horizontally.'],
+  ['responsive', 'Switch ribbon tabs, hide/show commands and reload. Collapse both panels, expand and exit every canvas, open State/Message settings on the diagram, and test keyboard navigation and narrow screens. Confirm the page itself does not overflow horizontally.'],
   ['continuum', 'Open the edge placement exercise; compare edge/cloud placements, memory admission, CPU saturation, link bandwidth/outages and host power outages. Inspect timeline, energy and requirement verdicts.'],
 ];
 async function refresh() {
@@ -58,9 +59,12 @@ onMounted(async () => { await autosave.ready; await refresh(); });
 </script>
 <template>
   <section class="inspection-lab" aria-label="Inspection lab">
-    <header><small>REFERENCE USE CASE · SYNTHETIC DATA</small><h2>{{ pack?.name || 'Inspection lab' }}</h2><p>{{ pack?.description }}</p></header>
-    <DraftStatus :draft="autosave" />
-    <p v-if="error" role="alert" class="inspection-error">{{ error }} <button @click="refresh">Reload pack</button></p>
+    <StudioRibbon workspace="inspection" structure-label="Inspect" active="inspect" :structure="['inspect']" :title="pack?.name || 'Inspection lab'">
+      <template #status><DraftStatus :draft="autosave" /></template>
+      <template #file><button :disabled="!pack" @click="downloadWorkflow({pack,results,manual}, 'regional-care-inspection.json')">Export inspection report</button><button @click="refresh" :disabled="!!busy">Reload pack</button></template>
+      <template #help>    <header><small>REFERENCE USE CASE · SYNTHETIC DATA</small><h2>{{ pack?.name || 'Inspection lab' }}</h2><p>{{ pack?.description }}</p></header>
+    <p class="inspection-note">Runs use the real studio engines. Saved runs remain in their workspace history; component test reports and this checklist are saved locally. A passed check means its stated expectation matched, including intentional failure cases. UI checks are manual.</p>
+</template>
     <div class="inspection-controls">
       <label>Engine <select v-model="filter"><option value="all">All engines</option><option v-for="w in ['workflows','components','data','state','messages','design','deployment']" :key="w">{{ w }}</option></select></label>
       <button :disabled="!!busy || !pack" @click="run()">Run {{ visible.length }} visible checks</button>
@@ -68,8 +72,9 @@ onMounted(async () => { await autosave.ready; await refresh(); });
       <button :disabled="!pack" @click="downloadWorkflow({pack,results,manual}, 'regional-care-inspection.json')">Export inspection report</button>
       <strong>{{ passed }} / {{ pack?.cases.length || 0 }} passed</strong>
     </div>
+    </StudioRibbon>
+    <p v-if="error" role="alert" class="inspection-error">{{ error }} <button @click="refresh">Reload pack</button></p>
     <p aria-live="polite">{{ busy ? `Running: ${busy}` : notice || 'Choose an exercise, open its design, or run the inspection suite.' }}</p>
-    <p class="inspection-note">Runs use the real studio engines. Saved runs remain in their workspace history; component test reports and this checklist are saved locally. A passed check means its stated expectation matched, including intentional failure cases. UI checks are manual.</p>
     <div class="inspection-layout">
       <aside aria-label="Inspection exercises"><button v-for="item in visible" :key="item.id" :class="{active:selected === item.id}" @click="selected = item.id"><small>{{ item.workspace }} · {{ results[item.id] ? results[item.id].passed ? 'PASS' : 'FAIL' : 'NOT RUN' }}</small><strong>{{ item.name }}</strong></button></aside>
       <article v-if="current">
@@ -82,7 +87,7 @@ onMounted(async () => { await autosave.ready; await refresh(); });
         <details><summary>Exact definition and inputs</summary><pre>{{ JSON.stringify(current.body,null,2) }}</pre></details>
       </article>
     </div>
-    <details class="inspection-manual" open><summary>Manual coverage · {{ Object.values(manual).filter(Boolean).length }} / {{ checks.length }} inspected</summary><label v-for="[id,text] in checks" :key="id"><input type="checkbox" v-model="manual[id!]" />{{ text }}</label></details>
+    <details class="inspection-manual"><summary>Manual coverage · {{ Object.values(manual).filter(Boolean).length }} / {{ checks.length }} inspected</summary><label v-for="[id,text] in checks" :key="id"><input type="checkbox" v-model="manual[id!]" />{{ text }}</label></details>
     <p class="inspection-note">Not implemented: live clinical systems, authentication enforcement, community marketplace, real deployment, nested executable workflow calls, automatic cross-engine execution, multihop network routing, battery/solar models or migration. Stage paths are view organization, not independently callable workflows.</p>
   </section>
 </template>

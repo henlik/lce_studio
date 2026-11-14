@@ -62,10 +62,9 @@ import {
   PanelRightOpen,
 } from "lucide-vue-next";
 import StudioNode from "./components/StudioNode.vue";
-import WorkspaceModes from "./components/WorkspaceModes.vue";
+import StudioRibbon from "./components/StudioRibbon.vue";
 import InspectionWorkbench from "./components/InspectionWorkbench.vue";
 import type { InspectionCase } from "./inspection";
-import DesignOrientation from "./components/DesignOrientation.vue";
 import CanvasControls from "./components/CanvasControls.vue";
 import { useCanvasFocus } from "./composables/useCanvasFocus";
 import DeploymentEditor from "./components/DeploymentEditor.vue";
@@ -1206,7 +1205,18 @@ onUnmounted(() => {
             }}</span>
           </div>
         </div>
-        <div v-if="!definitionView" class="topbar-actions">
+        <input
+          ref="importInput"
+          class="hidden"
+          type="file"
+          accept="application/json,.json"
+          @change="importProject"
+        />
+      </header>
+      <div v-if="!definitionView" class="project-ribbon">
+        <StudioRibbon workspace="project" :active="view" :structure='["plan","deployment"]' :behavior='["design"]' :execution='["results"]' @select="view = $event as typeof view">
+          <template #status><DraftStatus :draft="autosave" /></template>
+          <template #file>        <div class="topbar-actions">
           <button
             class="icon-button"
             @click="importInput?.click()"
@@ -1243,18 +1253,17 @@ onUnmounted(() => {
             />{{ busy === "run" ? "Simulating…" : "Run simulation" }}
           </button>
         </div>
-        <input
-          ref="importInput"
-          class="hidden"
-          type="file"
-          accept="application/json,.json"
-          @change="importProject"
-        />
-      </header>
-      <DesignOrientation v-if="view !== 'data'" :workspace="view" />
-      <WorkspaceModes v-if="!definitionView" :active="view" :structure="['plan', 'deployment']" :behavior="['design']" :execution="['results']" @select="view = $event as typeof view" />
-
-      <DraftStatus v-if="!definitionView" :draft="autosave" />
+<button class="button secondary" @click="showProjects = true">Open projects</button></template>
+          <template #help><p>Plan requirements, compose application behavior, place it on computing resources, then inspect simulation evidence.</p></template>
+          <button v-if="view === 'plan' || view === 'deployment'" class="button secondary" :aria-pressed="view === 'plan'" @click="view='plan'">Requirements</button>
+          <button v-if="view === 'plan' || view === 'deployment'" class="button secondary" :aria-pressed="view === 'deployment'" @click="view='deployment'">Deployment</button>
+          <button v-if="view === 'plan'" class="button secondary" :disabled="!project" @click="addRequirement">Add requirement</button>
+          <button v-if="view === 'design' || view === 'deployment'" class="button secondary" :disabled="!!busy || !project" @click="validateModel">Validate model</button>
+          <button class="button secondary" :disabled="!!busy || !project" @click="saveProject">Save project</button>
+          <button class="button primary" :disabled="!!busy || !project" @click="simulate">{{ busy === 'run' ? 'Simulating…' : 'Run simulation' }}</button>
+          <button class="button secondary" @click="showRunHistory=true">Run history</button>
+        </StudioRibbon>
+      </div>
       <div v-if="error && !definitionView" class="alert error" role="alert">
         <CircleAlert :size="18" /><span>{{ error }}</span
         ><button @click="error = ''" aria-label="Dismiss error">
@@ -1310,52 +1319,6 @@ onUnmounted(() => {
       </div>
 
       <template v-if="project">
-        <div v-if="!definitionView" class="workspace-bar">
-          <div class="workspace-label">
-            <span class="section-eyebrow">{{
-              view === "design"
-                ? "ARCHITECTURE"
-                : view === "plan"
-                  ? "REQUIREMENTS"
-                  : view === "deployment"
-                    ? "COMPUTING CONTINUUM"
-                    : "SIMULATION LAB"
-            }}</span>
-            <h2>
-              {{
-                view === "design"
-                  ? "Design your system"
-                  : view === "plan"
-                    ? "Define what success means"
-                    : view === "deployment"
-                      ? "Place your system in the real world"
-                      : "Test your assumptions"
-              }}
-            </h2>
-          </div>
-          <div class="workspace-tools">
-            <span class="topology-label" v-if="view === 'design'"
-              >{{ project.nodes.length }} components <span>·</span>
-              {{ project.edges.length }} connections</span
-            ><button
-              class="button quiet"
-              v-if="view === 'design' || view === 'deployment'"
-              @click="validateModel"
-              :disabled="!!busy"
-            >
-              <ShieldCheck :size="16" /> Validate model</button
-            ><button
-              class="button quiet"
-              v-else-if="view === 'plan'"
-              @click="addRequirement"
-            >
-              <Plus :size="16" /> Add requirement</button
-            ><button class="button quiet" v-else @click="showRunHistory = true">
-              <Activity :size="16" /> Run history
-            </button>
-          </div>
-        </div>
-
         <DeploymentEditor
           v-if="view === 'deployment'"
           :project="project"

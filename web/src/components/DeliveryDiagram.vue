@@ -10,6 +10,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   select: [id: string];
+  route: [index:number];
   move: [id: string, position: { x: number; y: number }];
 }>();
 const svg = ref<SVGSVGElement | null>(null),
@@ -176,7 +177,7 @@ function short(value: string) {
         ref="svg"
         :viewBox="`${visible.x} ${visible.y} ${visible.w} ${visible.h}`"
         :style="svgStyle"
-        role="img"
+        role="group"
         aria-label="Pinned state machine instances connected by typed effect to command routes"
         @pointermove="move"
         @pointerup="end"
@@ -195,7 +196,8 @@ function short(value: string) {
             <path d="M0,0 L8,4 L0,8" fill="#629b8f" />
           </marker>
         </defs>
-        <g v-for="wire in wires" :key="wire.index">
+        <g v-for="wire in wires" :key="wire.index" role="button" tabindex="0" :aria-label="`Configure message route ${model.routes[wire.index]?.name}`" @click="emit('route',wire.index)" @keydown.enter.prevent="emit('route',wire.index)" @keydown.space.prevent="emit('route',wire.index)">
+          <path :d="wire.path" fill="none" stroke="transparent" stroke-width="18" />
           <path
             :d="wire.path"
             fill="none"
@@ -247,10 +249,12 @@ function short(value: string) {
       mappings; every dispatch and delivery still needs an explicit scenario
       step. Layout participates in the exact model lock.
     </p>
+    <slot />
   </section>
 </template>
 <style scoped>
 .delivery-diagram {
+  position:relative;
   background: #fff;
   border: 1px solid #dce6ed;
   border-radius: 9px;

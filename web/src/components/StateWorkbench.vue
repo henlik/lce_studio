@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
-import WorkspaceModes from "./WorkspaceModes.vue";
+import StudioRibbon from "./StudioRibbon.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -589,20 +589,33 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
 </script>
 <template>
   <section class="state-workbench" :inert="autosave.status.value === 'loading'">
-    <DraftStatus :draft="autosave" />
-    <header>
-      <span class="section-eyebrow">OWNED STATE & ATOMIC TRANSITIONS</span>
-      <h2>Test what survives a command, retry or restart</h2>
-      <p>
-        Define owned state, pin a pure decision handler, then run ordered
-        scenarios with independent expectations. Inspect current state,
-        historical receipts and committed effect intentions.
-      </p>
-    </header>
-    <div class="state-guide">
-      <span><b>1</b> Define ownership & handlers</span
-      ><span><b>2</b> Arrange commands & failures</span
-      ><span><b>3</b> Compare independent expectations</span>
+    <StudioRibbon workspace="state" :title="machine.name + ' · v' + machine.version" :active="tab" :structure='["definition"]' :behavior='["scenario"]' :execution='["evidence", "history"]' @select="tab = $event as typeof tab">
+      <template #status><small>{{ pendingJSON ? "Unapplied JSON edits" : installedStamp === machineStamp ? "Installed exact version" : "Local draft" }}</small><DraftStatus :draft="autosave" /></template>
+      <template #file><div class="state-actions"><button class="button secondary" :disabled="!!busy" @click="newDraft">
+        New state machine</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="requestImport('machine')"
+      >
+        Import state machine</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="exportMachine"
+      >
+        Export state machine</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="validateMachine"
+      >
+        Validate state machine</button
+      ><button class="button secondary" :disabled="!!busy" @click="install">
+        Install state machine</button
+      ><button class="button primary" :disabled="!!busy" @click="run">
+        Run state scenario
+      </button>
     </div>
     <div class="state-library">
       <label class="field"
@@ -642,43 +655,48 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         Refresh state workspace
       </button>
     </div>
-    <div class="state-actions">
-      <strong
-        >{{ machine.name
-        }}<small>{{ machine.id }} @ {{ machine.version }}</small></strong
-      ><span>{{
-        pendingJSON
-          ? "Unapplied JSON edits"
-          : installedStamp === machineStamp
-            ? "Exact machine installed"
-            : "Local state draft"
-      }}</span
-      ><button class="button secondary" :disabled="!!busy" @click="newDraft">
-        New state machine</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="requestImport('machine')"
-      >
-        Import state machine</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="exportMachine"
-      >
-        Export state machine</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="validateMachine"
-      >
-        Validate state machine</button
-      ><button class="button secondary" :disabled="!!busy" @click="install">
-        Install state machine</button
-      ><button class="button primary" :disabled="!!busy" @click="run">
-        Run state scenario
-      </button>
+</template>
+      <template #help>
+    <header>
+      <span class="section-eyebrow">OWNED STATE & ATOMIC TRANSITIONS</span>
+      <h2>Test what survives a command, retry or restart</h2>
+      <p>
+        Define owned state, pin a pure decision handler, then run ordered
+        scenarios with independent expectations. Inspect current state,
+        historical receipts and committed effect intentions.
+      </p>
+    </header>
+    <div class="state-guide">
+      <span><b>1</b> Define ownership & handlers</span
+      ><span><b>2</b> Arrange commands & failures</span
+      ><span><b>3</b> Compare independent expectations</span>
     </div>
+</template>
+          <nav class="state-tabs">
+      <button
+        v-show="['definition'].includes(tab)" :class="{ active: tab === 'definition' }"
+        @click="tab = 'definition'"
+      >
+        Ownership & handlers</button
+      ><button
+        v-show="['scenario'].includes(tab)" :class="{ active: tab === 'scenario' }"
+        @click="tab = 'scenario'"
+      >
+        Scenario & expectations</button
+      ><button
+        v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'evidence' }"
+        @click="tab = 'evidence'"
+      >
+        State evidence</button
+      ><button v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
+        State run history
+      </button>
+    </nav>
+      <template #commands><div class="state-actions">
+        <button class="button secondary" :disabled="!!busy" @click="validateMachine">Validate</button>
+        <button class="button primary" :disabled="!!busy" @click="run">Run scenario</button>
+      </div></template>
+    </StudioRibbon>
     <input
       ref="file"
       class="hidden"
@@ -701,27 +719,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     <p v-if="busy" class="state-notice" role="status">
       Working with the state engine…
     </p>
-    <WorkspaceModes :active="tab" :structure='["definition"]' :behavior='["scenario"]' :execution='["evidence", "history"]' @select='tab = $event as "definition" | "scenario" | "evidence" | "history"' />
-    <nav class="state-tabs">
-      <button
-        v-show="['definition'].includes(tab)" :class="{ active: tab === 'definition' }"
-        @click="tab = 'definition'"
-      >
-        Ownership & handlers</button
-      ><button
-        v-show="['scenario'].includes(tab)" :class="{ active: tab === 'scenario' }"
-        @click="tab = 'scenario'"
-      >
-        Scenario & expectations</button
-      ><button
-        v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'evidence' }"
-        @click="tab = 'evidence'"
-      >
-        State evidence</button
-      ><button v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
-        State run history
-      </button>
-    </nav>
+
     <section
       v-if="
         tab === 'definition' &&

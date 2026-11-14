@@ -4,7 +4,7 @@ import CanvasControls from "./CanvasControls.vue";
 import { useCanvasFocus, useCanvasViewport } from "../composables/useCanvasFocus";
 import type { StateMachine } from "../stateTypes";
 const props = defineProps<{ machine: StateMachine; selected: number }>();
-const emit = defineEmits<{ select: [index: number] }>();
+const emit = defineEmits<{ select: [index: number]; slot: [index:number]; effect: [index:number] }>();
 const wrapper = ref<HTMLElement | null>(null);
 const viewport = ref<HTMLElement | null>(null);
 const { zoom, svgStyle, fit, zoomIn, zoomOut } = useCanvasViewport(viewport);
@@ -63,7 +63,7 @@ const wires = computed(() => {
       <svg
         :viewBox="`0 0 960 ${height}`"
         :style="svgStyle"
-        role="img"
+        role="group"
         aria-label="Owned state, pure command handlers and committed effect intentions"
       >
         <defs>
@@ -99,7 +99,7 @@ const wires = computed(() => {
         <g
           v-for="(slot, i) in machine.state"
           :key="i"
-          :transform="`translate(20,${52 + i * 76})`"
+          :transform="`translate(20,${52 + i * 76})`" role="button" tabindex="0" :aria-label="`Configure slot ${slot.name}`" @click="emit('slot',i)" @keydown.enter.prevent="emit('slot',i)" @keydown.space.prevent="emit('slot',i)"
         >
           <rect width="230" height="61" rx="7" />
           <text x="12" y="24">{{ slot.name }}</text>
@@ -133,7 +133,7 @@ const wires = computed(() => {
         <g
           v-for="(effect, i) in machine.effects"
           :key="i"
-          :transform="`translate(710,${52 + i * 76})`"
+          :transform="`translate(710,${52 + i * 76})`" role="button" tabindex="0" :aria-label="`Configure effect ${effect.name}`" @click="emit('effect',i)" @keydown.enter.prevent="emit('effect',i)" @keydown.space.prevent="emit('effect',i)"
         >
           <rect width="230" height="61" rx="7" />
           <text x="12" y="24">{{ effect.name }}</text>
@@ -151,10 +151,12 @@ const wires = computed(() => {
       state writes. Only an accepted atomic commit publishes writes and
       intentions.
     </p>
+    <slot />
   </section>
 </template>
 <style scoped>
 .state-diagram {
+  position:relative;
   background: #fff;
   border: 1px solid #dce6ed;
   border-radius: 9px;

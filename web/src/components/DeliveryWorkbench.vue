@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
-import WorkspaceModes from "./WorkspaceModes.vue";
+import StudioRibbon from "./StudioRibbon.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -581,20 +581,29 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     class="state-workbench delivery-workbench"
     :inert="autosave.status.value === 'loading'"
   >
-    <DraftStatus :draft="autosave" />
-    <header>
-      <span class="section-eyebrow">TYPED MESSAGE DELIVERY</span>
-      <h2>Follow an intention from one owner to another</h2>
-      <p>
-        Connect exact state machines through typed routes. Explicitly dispatch,
-        deliver, retry and restart, then inspect acknowledgement separately from
-        business acceptance.
-      </p>
-    </header>
-    <div class="state-guide">
-      <span><b>1</b> Pin owners & map routes</span
-      ><span><b>2</b> Declare every transport step</span
-      ><span><b>3</b> Verify state & message outcomes</span>
+    <StudioRibbon workspace="messages" :title="model.name + ' · v' + model.version" :active="tab" :structure='["model"]' :behavior='["scenario"]' :execution='["evidence", "history"]' @select="tab = $event as typeof tab">
+      <template #status><small>{{ pendingJSON ? "Unapplied JSON edits" : installedStamp === modelStamp ? "Installed exact version" : "Local draft" }}</small><DraftStatus :draft="autosave" /></template>
+      <template #file><div class="state-actions"><button class="button secondary" :disabled="!!busy" @click="newDraft">
+        New message model</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="requestImport('model')"
+      >
+        Import message model</button
+      ><button class="button secondary" :disabled="!!busy" @click="exportModel">
+        Export message model</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="validateModel"
+      >
+        Validate message model</button
+      ><button class="button secondary" :disabled="!!busy" @click="install">
+        Install message model</button
+      ><button class="button primary" :disabled="!!busy" @click="run">
+        Run message scenario
+      </button>
     </div>
     <div class="state-library">
       <label class="field"
@@ -638,39 +647,45 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         Refresh Messages
       </button>
     </div>
-    <div class="state-actions">
-      <strong
-        >{{ model.name
-        }}<small>{{ model.id }} @ {{ model.version }}</small></strong
-      ><span>{{
-        pendingJSON
-          ? "Unapplied JSON edits"
-          : installedStamp === modelStamp
-            ? "Exact model installed"
-            : "Local message draft"
-      }}</span
-      ><button class="button secondary" :disabled="!!busy" @click="newDraft">
-        New message model</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="requestImport('model')"
-      >
-        Import message model</button
-      ><button class="button secondary" :disabled="!!busy" @click="exportModel">
-        Export message model</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="validateModel"
-      >
-        Validate message model</button
-      ><button class="button secondary" :disabled="!!busy" @click="install">
-        Install message model</button
-      ><button class="button primary" :disabled="!!busy" @click="run">
-        Run message scenario
-      </button>
+</template>
+      <template #help>
+    <header>
+      <span class="section-eyebrow">TYPED MESSAGE DELIVERY</span>
+      <h2>Follow an intention from one owner to another</h2>
+      <p>
+        Connect exact state machines through typed routes. Explicitly dispatch,
+        deliver, retry and restart, then inspect acknowledgement separately from
+        business acceptance.
+      </p>
+    </header>
+    <div class="state-guide">
+      <span><b>1</b> Pin owners & map routes</span
+      ><span><b>2</b> Declare every transport step</span
+      ><span><b>3</b> Verify state & message outcomes</span>
     </div>
+</template>
+          <nav class="state-tabs">
+      <button v-show="['model'].includes(tab)" :class="{ active: tab === 'model' }" @click="tab = 'model'">
+        Owners & routes</button
+      ><button
+        v-show="['scenario'].includes(tab)" :class="{ active: tab === 'scenario' }"
+        @click="tab = 'scenario'"
+      >
+        Delivery scenario</button
+      ><button
+        v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'evidence' }"
+        @click="tab = 'evidence'"
+      >
+        Message evidence</button
+      ><button v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
+        Message run history
+      </button>
+    </nav>
+      <template #commands><div class="state-actions">
+        <button class="button secondary" :disabled="!!busy" @click="validateModel">Validate</button>
+        <button class="button primary" :disabled="!!busy" @click="run">Run scenario</button>
+      </div></template>
+    </StudioRibbon>
     <input
       ref="file"
       class="hidden"
@@ -693,24 +708,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     <p v-if="busy" class="state-notice" role="status">
       Working with the message engine…
     </p>
-    <WorkspaceModes :active="tab" :structure='["model"]' :behavior='["scenario"]' :execution='["evidence", "history"]' @select='tab = $event as "model" | "scenario" | "evidence" | "history"' />
-    <nav class="state-tabs">
-      <button v-show="['model'].includes(tab)" :class="{ active: tab === 'model' }" @click="tab = 'model'">
-        Owners & routes</button
-      ><button
-        v-show="['scenario'].includes(tab)" :class="{ active: tab === 'scenario' }"
-        @click="tab = 'scenario'"
-      >
-        Delivery scenario</button
-      ><button
-        v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'evidence' }"
-        @click="tab = 'evidence'"
-      >
-        Message evidence</button
-      ><button v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
-        Message run history
-      </button>
-    </nav>
+
     <section
       v-if="tab === 'model' && !model.instances.length"
       class="state-panel"

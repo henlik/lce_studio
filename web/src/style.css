@@ -3022,3 +3022,39 @@ code,
   outline: 3px solid #c63f3f;
   border-radius: 10px;
 }
+
+/* Shared canvas-first workspace rhythm. */
+.main-shell .state-workbench,
+.main-shell .workflow-workbench,
+.main-shell .behavior-workbench,
+.main-shell .inspection-lab { padding:10px 20px; min-width:0; }
+.project-ribbon { margin:10px 20px 0; min-width:0; }
+.project-ribbon .topbar-actions { flex-wrap:wrap; justify-content:flex-start; }
+.main-shell .studio-ribbon .workbench-draft-note { margin:6px 0; }
+.main-shell .studio-ribbon .workbench-intro { padding:0; margin:0; background:transparent; border:0; }
+.main-shell .studio-ribbon .workbench-metadata { margin:0; border:0; padding:0; }
+.main-shell .studio-ribbon .workbench-tabs,
+.main-shell .studio-ribbon .state-tabs,
+.main-shell .studio-ribbon .wf-tabs { margin:0; padding:0; border:0; }
+.main-shell .studio-ribbon .state-library .field,
+.main-shell .studio-ribbon .wf-library .field { min-width:150px; }
+.canvas-author-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0; }
+.main-shell .state-diagram,.main-shell .delivery-diagram { margin:8px 0; }
+.main-shell .state-diagram .canvas-viewport,
+.main-shell .delivery-diagram .canvas-viewport { height:clamp(440px,65vh,800px); }
+.main-shell .canvas-focus--expanded .canvas-viewport { height:auto; }
+.main-shell .deployment-overview { padding:8px 0; margin:0 0 8px; }
+.main-shell .deployment-overview .section-eyebrow { display:none; }
+.main-shell .state-definition > .state-panel { margin:8px 0; }
+.main-shell .canvas-context-inspector .state-help { font-size:11px; line-height:1.6; }
+.main-shell .canvas-context-inspector .state-panel-heading { flex-wrap:wrap; gap:8px; }
+.main-shell .studio-ribbon button[aria-pressed=true] { background:#e6f4ee; color:#16715d; }
+@media(max-width:640px) {
+ .main-shell .state-workbench,.main-shell .workflow-workbench,
+ .main-shell .behavior-workbench,.main-shell .inspection-lab { padding:8px; }
+ .project-ribbon { margin:8px; }
+ .main-shell .studio-ribbon .state-library .field,
+ .main-shell .studio-ribbon .wf-library .field { min-width:0; width:100%; }
+ .main-shell .state-diagram .canvas-viewport,
+ .main-shell .delivery-diagram .canvas-viewport { height:550px; }
+}

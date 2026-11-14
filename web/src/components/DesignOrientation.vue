@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, useId } from "vue";
 import { ChevronDown, Layers3 } from "lucide-vue-next";
 
 const props = defineProps<{ workspace: string }>();
 const open = ref(false);
+const guideId = "design-hierarchy-" + useId().replace(/:/g, "");
 const flow = ref<"top-down" | "bottom-up">("top-down");
 const contexts: Record<string, { kind: string; detail: string }> = {
   inspection: { kind: "Reference use case", detail: "Inspect implemented capabilities through independent experiments and manual UX checks." },
@@ -38,14 +39,14 @@ const levels = [
       <button
         class="orientation-toggle"
         :aria-expanded="open"
-        aria-controls="design-hierarchy-guide"
+        :aria-controls="guideId"
         @click="open = !open"
       >
         Design levels &amp; flow
         <ChevronDown :size="15" :class="{ rotated: open }" aria-hidden="true" />
       </button>
     </div>
-    <div v-if="open" id="design-hierarchy-guide" class="orientation-guide">
+    <div v-if="open" :id="guideId" class="orientation-guide">
       <h2>Choose the boundary you are designing</h2>
       <p>
         A component can contain components at several depths. An application or

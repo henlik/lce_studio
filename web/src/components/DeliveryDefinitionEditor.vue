@@ -17,6 +17,7 @@ import {
   type DeliveryRoute,
 } from "../deliveryTypes";
 import DeliveryDiagram from "./DeliveryDiagram.vue";
+import CanvasInspector from "./CanvasInspector.vue";
 import DeliveryPositionEditor from "./DeliveryPositionEditor.vue";
 const props = defineProps<{
   model: DeliveryModel;
@@ -28,12 +29,15 @@ const emit = defineEmits<{
   "import-machine": [];
   "instance-added": [id: string];
 }>();
+const settings = ref<'instances'|'routes'|null>(null);
+const selectedRoute=ref<number|null>(null);
 const editorRoot = ref<HTMLElement | null>(null);
 function focusIssue(issue: ValidationIssue) {
   const instance = issue.path.match(/instances\[(\d+)\]/),
     route = issue.path.match(/routes\[(\d+)\]/);
-  if (instance)
-    selected.value = props.model.instances[Number(instance[1])]?.id || "";
+  if (instance) { selected.value = props.model.instances[Number(instance[1])]?.id || ""; settings.value='instances'; }
+  if (route) { selectedRoute.value=Number(route[1]); settings.value='routes'; }
+  if (!instance && !route) settings.value=null;
   focusField(
     editorRoot.value,
     instance
@@ -74,6 +78,7 @@ function renameInstance(e: Event) {
   editorError.value = "";
 }
 function addInstance() {
+  settings.value='instances';
   const lock = props.model.machines[0];
   if (!lock) return;
   const id = freshStateName(
@@ -97,6 +102,7 @@ function setMachine(key: string) {
   if (lock && current.value) current.value.machine = deliveryMachineRef(lock);
 }
 function addRoute() {
+  settings.value='routes'; selectedRoute.value=props.model.routes.length;
   const source = props.model.instances[0],
     target = props.model.instances[1] || source;
   if (!source || !target) return;
@@ -134,117 +140,28 @@ function mapInput(route: DeliveryRoute, name: string, e: Event) {
 </script>
 <template>
   <div ref="editorRoot">
-    <details class="state-panel">
-      <summary>Message model identity and description</summary>
-      <fieldset :disabled="disabled">
-        <div class="state-grid">
-          <label class="field"
-            >Namespaced ID<input
-              v-model="model.id"
-              aria-label="Message model ID" /></label
-          ><label class="field"
-            >Version<input
-              v-model="model.version"
-              aria-label="Message model version" /></label
-          ><label class="field"
-            >Display name<input
-              v-model="model.name"
-              aria-label="Message model name" /></label
-          ><label class="field"
-            >Author<input
-              v-model="model.author"
-              aria-label="Message model author" /></label
-          ><label class="field"
-            >License<input
-              v-model="model.license"
-              aria-label="Message model license" /></label
-          ><label class="field"
-            >Description<textarea
-              v-model="model.description"
-              aria-label="Message model description"
-            />
-          </label>
-        </div>
-      </fieldset>
-    </details>
-    <section class="state-panel">
-      <div class="state-panel-heading">
-        <h3>Exact state machine locks · {{ model.machines.length }} / 4</h3>
-        <button
-          class="button secondary"
-          :disabled="disabled || model.machines.length >= 4"
-          @click="emit('import-machine')"
-        >
-          Import state machine lock
-        </button>
-      </div>
-      <div class="state-actions">
-        <label class="field"
-          >Installed state machine<select
-            v-model="installed"
-            aria-label="Message owner machine"
-            :disabled="disabled"
-          >
-            <option value="">Choose an installed exact version</option>
-            <option
-              v-for="lock in machines"
-              :key="stateKey(lock)"
-              :value="stateKey(lock)"
-            >
-              {{ lock.machine.id }} @ {{ lock.machine.version }}
-            </option>
-          </select></label
-        ><button
-          class="button secondary"
-          :disabled="disabled || !installed || model.machines.length >= 4"
-          @click="emit('embed-machine', installed)"
-        >
-          Embed owner machine
-        </button>
-      </div>
-      <p class="state-help">
-        Build and test each owner in State, then pin its complete definition
-        here. Installation of this model does not install its dependencies into
-        other catalogs.
-      </p>
-      <p class="state-help">
-        The browser rejects exact locks containing negative-zero coordinates to
-        preserve their hashes. Retain those artifacts through the CLI, or
-        publish a new version with ordinary zero coordinates.
-      </p>
-      <div
-        v-for="(lock, i) in model.machines"
-        :key="stateKey(lock)"
-        class="state-lock"
-      >
-        <code
-          >{{ lock.machine.id }} @ {{ lock.machine.version }} ·
-          {{ lock.digest }}</code
-        ><button
-          class="button quiet"
-          :disabled="disabled"
-          @click="model.machines.splice(i, 1)"
-        >
-          Remove machine lock
-        </button>
-      </div>
-    </section>
     <p v-if="editorError" class="state-warning" role="alert">
       {{ editorError }}
     </p>
+    <div class="canvas-author-tools">
+      <button class="button secondary" @click="settings='instances'">Instances</button>
+      <button class="button secondary" @click="settings='routes'; selectedRoute=null">Routes</button>
+    </div>
     <DeliveryDiagram
       :model="model"
       :selected="current?.id || ''"
       :disabled="disabled"
-      @select="selected = $event"
+      @select="selected = $event; settings='instances'"
       @move="
         (id, position) => {
           const instance = model.instances.find((i) => i.id === id);
           if (instance && !disabled) instance.position = position;
         }
       "
-    />
-    <section class="state-panel">
+      @route="selectedRoute=$event; settings='routes'"
+    >
+      <CanvasInspector v-if="settings" :title="settings === 'instances' ? 'Message instance settings' : 'Message route settings'" @close="settings=null">
+    <section v-show="settings === 'instances'" class="state-panel">
       <div class="state-panel-heading">
         <h3>Pinned instances</h3>
         <button
@@ -339,7 +256,7 @@ function mapInput(route: DeliveryRoute, name: string, e: Event) {
         coordinates within ±1,000,000.
       </p>
     </section>
-    <section class="state-panel">
+    <section v-show="settings === 'routes'" class="state-panel">
       <div class="state-panel-heading">
         <h3>Typed effect-to-command routes</h3>
         <button
@@ -359,10 +276,10 @@ function mapInput(route: DeliveryRoute, name: string, e: Event) {
       </p>
       <fieldset :disabled="disabled">
         <details
-          v-for="(route, index) in model.routes"
+          v-for="(route, index) in model.routes" v-show="selectedRoute === null || selectedRoute === index"
           :key="stateUIKey(route)"
           class="state-card"
-          :open="index === 0"
+          :open="selectedRoute === index || index === 0"
         >
           <summary>
             {{ route.name || route.id }} · {{ route.sourceInstanceId }} →
@@ -515,5 +432,102 @@ function mapInput(route: DeliveryRoute, name: string, e: Event) {
         </details>
       </fieldset>
     </section>
+      </CanvasInspector>
+    </DeliveryDiagram>
+    <details class="state-panel">
+      <summary>Message model identity and description</summary>
+      <fieldset :disabled="disabled">
+        <div class="state-grid">
+          <label class="field"
+            >Namespaced ID<input
+              v-model="model.id"
+              aria-label="Message model ID" /></label
+          ><label class="field"
+            >Version<input
+              v-model="model.version"
+              aria-label="Message model version" /></label
+          ><label class="field"
+            >Display name<input
+              v-model="model.name"
+              aria-label="Message model name" /></label
+          ><label class="field"
+            >Author<input
+              v-model="model.author"
+              aria-label="Message model author" /></label
+          ><label class="field"
+            >License<input
+              v-model="model.license"
+              aria-label="Message model license" /></label
+          ><label class="field"
+            >Description<textarea
+              v-model="model.description"
+              aria-label="Message model description"
+            />
+          </label>
+        </div>
+      </fieldset>
+    </details>
+    <details class="state-panel"><summary>Owner machine dependencies</summary>
+      <div class="state-panel-heading">
+        <h3>Exact state machine locks · {{ model.machines.length }} / 4</h3>
+        <button
+          class="button secondary"
+          :disabled="disabled || model.machines.length >= 4"
+          @click="emit('import-machine')"
+        >
+          Import state machine lock
+        </button>
+      </div>
+      <div class="state-actions">
+        <label class="field"
+          >Installed state machine<select
+            v-model="installed"
+            aria-label="Message owner machine"
+            :disabled="disabled"
+          >
+            <option value="">Choose an installed exact version</option>
+            <option
+              v-for="lock in machines"
+              :key="stateKey(lock)"
+              :value="stateKey(lock)"
+            >
+              {{ lock.machine.id }} @ {{ lock.machine.version }}
+            </option>
+          </select></label
+        ><button
+          class="button secondary"
+          :disabled="disabled || !installed || model.machines.length >= 4"
+          @click="emit('embed-machine', installed)"
+        >
+          Embed owner machine
+        </button>
+      </div>
+      <p class="state-help">
+        Build and test each owner in State, then pin its complete definition
+        here. Installation of this model does not install its dependencies into
+        other catalogs.
+      </p>
+      <p class="state-help">
+        The browser rejects exact locks containing negative-zero coordinates to
+        preserve their hashes. Retain those artifacts through the CLI, or
+        publish a new version with ordinary zero coordinates.
+      </p>
+      <div
+        v-for="(lock, i) in model.machines"
+        :key="stateKey(lock)"
+        class="state-lock"
+      >
+        <code
+          >{{ lock.machine.id }} @ {{ lock.machine.version }} ·
+          {{ lock.digest }}</code
+        ><button
+          class="button quiet"
+          :disabled="disabled"
+          @click="model.machines.splice(i, 1)"
+        >
+          Remove machine lock
+        </button>
+      </div>
+    </details>
   </div>
 </template>

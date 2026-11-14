@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
-import WorkspaceModes from "./WorkspaceModes.vue";
+import StudioRibbon from "./StudioRibbon.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -726,18 +726,30 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     class="workflow-workbench"
     :inert="autosave.status.value === 'loading'"
   >
-    <DraftStatus :draft="autosave" />
-    <header class="wf-header">
-      <span class="section-eyebrow"
-        >REUSABLE WORKFLOW · HUMAN & ADAPTER BOUNDARIES</span
+    <StudioRibbon workspace="workflows" :title="workflow.name + ' · v' + workflow.version" :active="tab" :structure='["definition"]' :behavior='["scenario"]' :execution='["interactive", "evidence", "history"]' @select="tab = $event as typeof tab">
+      <template #status><small>{{ pendingJSON ? "Unapplied JSON edits" : installedStamp === definitionStamp ? "Installed exact version" : "Local draft" }}</small><DraftStatus :draft="autosave" /></template>
+      <template #file><div class="wf-actions"><button class="button secondary" :disabled="!!busy" @click="newDraft">
+        New workflow</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="requestImport('workflow')"
       >
-      <h2>Design top-down. Execute one explicit response at a time.</h2>
-      <p>
-        Compose a reusable workflow from tasks, exact pure decisions and owned
-        state commands. Follow its automatic route, interrupt it, and verify
-        independently specified outcomes.
-      </p>
-    </header>
+        Import workflow</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="exportPackage"
+      >
+        Export workflow</button
+      ><button class="button secondary" :disabled="!!busy" @click="validate">
+        Validate workflow</button
+      ><button class="button secondary" :disabled="!!busy" @click="install">
+        Install workflow</button
+      ><button class="button primary" :disabled="!!busy" @click="run">
+        Run independent scenario
+      </button>
+    </div>
     <div class="wf-library">
       <label class="field"
         >Reference experiment<select
@@ -780,39 +792,41 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         Refresh workflow catalog
       </button>
     </div>
-    <div class="wf-actions wf-toolbar">
-      <strong
-        >{{ workflow.name
-        }}<small>{{ workflow.id }} @ {{ workflow.version }}</small></strong
-      ><span>{{
-        pendingJSON
-          ? "Unapplied JSON edits"
-          : installedStamp === definitionStamp
-            ? "Exact workflow installed"
-            : "Local workflow draft"
-      }}</span
-      ><button class="button secondary" :disabled="!!busy" @click="newDraft">
-        New workflow</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="requestImport('workflow')"
+</template>
+      <template #help>
+    <header class="wf-header">
+      <span class="section-eyebrow"
+        >REUSABLE WORKFLOW · HUMAN & ADAPTER BOUNDARIES</span
       >
-        Import workflow</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="exportPackage"
+      <h2>Design top-down. Execute one explicit response at a time.</h2>
+      <p>
+        Compose a reusable workflow from tasks, exact pure decisions and owned
+        state commands. Follow its automatic route, interrupt it, and verify
+        independently specified outcomes.
+      </p>
+    </header>
+</template>
+          <nav class="wf-tabs">
+      <button
+        v-for="item in [
+          ['definition', 'Definition & hierarchy'],
+          ['interactive', 'Interactive tasks'],
+          ['scenario', 'Scenario & expectations'],
+          ['evidence', 'Execution evidence'],
+          ['history', 'Run history'],
+        ] as const"
+        :key="item[0]" v-show="perspectiveTabs.includes(item[0])"
+        :class="{ active: tab === item[0] }"
+        @click="tab = item[0]"
       >
-        Export workflow</button
-      ><button class="button secondary" :disabled="!!busy" @click="validate">
-        Validate workflow</button
-      ><button class="button secondary" :disabled="!!busy" @click="install">
-        Install workflow</button
-      ><button class="button primary" :disabled="!!busy" @click="run">
-        Run independent scenario
+        {{ item[1] }}
       </button>
-    </div>
+    </nav>
+      <template #commands><div class="wf-actions">
+        <button class="button secondary" :disabled="!!busy" @click="validate">Validate</button>
+        <button class="button primary" :disabled="!!busy" @click="run">Run scenario</button>
+      </div></template>
+    </StudioRibbon>
     <input
       ref="file"
       type="file"
@@ -835,23 +849,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     <p v-if="busy" class="wf-notice" role="status">
       Working with the workflow engine…
     </p>
-    <WorkspaceModes :active="tab" :structure='["definition"]' :behavior='["scenario"]' :execution='["interactive", "evidence", "history"]' @select='tab = $event as "definition" | "scenario" | "interactive" | "evidence" | "history"' />
-    <nav class="wf-tabs">
-      <button
-        v-for="item in [
-          ['definition', 'Definition & hierarchy'],
-          ['interactive', 'Interactive tasks'],
-          ['scenario', 'Scenario & expectations'],
-          ['evidence', 'Execution evidence'],
-          ['history', 'Run history'],
-        ] as const"
-        :key="item[0]" v-show="perspectiveTabs.includes(item[0])"
-        :class="{ active: tab === item[0] }"
-        @click="tab = item[0]"
-      >
-        {{ item[1] }}
-      </button>
-    </nav>
+
     <WorkflowDefinitionEditor
       ref="definitionEditor"
       :issues="issues"
