@@ -51,6 +51,7 @@ type RequiredInput struct {
 	Fields []model.DataField `json:"fields,omitempty"`
 }
 type Plan struct {
+	Workflows     []WorkflowTask   `json:"workflows,omitempty"`
 	Channels      []MessageChannel `json:"channels,omitempty"`
 	EngineVersion string           `json:"engineVersion"`
 	Tasks         []Task           `json:"tasks"`
@@ -63,6 +64,7 @@ type Inputs struct {
 	Values map[string]model.TypedValue `json:"values"`
 }
 type Event struct {
+	Workflow     *WorkflowEvidence           `json:"workflow,omitempty"`
 	IntentIDs    []string                    `json:"intentIds,omitempty"`
 	Message      *MessageEvidence            `json:"message,omitempty"`
 	ScenarioStep int                         `json:"scenarioStep,omitempty"`
@@ -270,7 +272,7 @@ func Prepare(tasks []Task, links []Link, channels ...MessageChannel) (Plan, erro
 }
 
 func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
-	if len(plan.Channels) > 0 {
+	if len(plan.Channels) > 0 || len(plan.Workflows) > 0 {
 		return Report{}, &Invalid{[]model.ValidationIssue{{Path: "scenario", Message: "Message channels require an explicit shared scenario"}}}
 	}
 	return runGraph(ctx, plan, inputs, nil)
@@ -280,7 +282,7 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 		return Report{}, err
 	}
 	// Re-derive order and input requirements; never trust a caller-supplied schedule.
-	plan, err := Prepare(plan.Tasks, plan.Links, plan.Channels...)
+	plan, err := PrepareUnified(plan.Tasks, plan.Links, plan.Channels, plan.Workflows)
 	if err != nil {
 		return Report{}, err
 	}
@@ -408,7 +410,7 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 				return Report{}, err
 			}
 			result.State = &StateEvidence{Provider: task.State.Provider, Step: step, Instance: snapshot[0]}
-			if plan.EngineVersion == MultiCommandVersion || plan.EngineVersion == MessageVersion {
+			if plan.EngineVersion == MultiCommandVersion || plan.EngineVersion == MessageVersion || plan.EngineVersion == UnifiedVersion {
 				result.State.Command = command.Name
 			}
 			result.Outputs, result.BundleHash = map[string]model.TypedValue{}, task.State.Machine.Digest

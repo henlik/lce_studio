@@ -20,6 +20,9 @@ type StateCall struct {
 }
 
 func ScenarioEngineVersion(plan Plan, scenario Scenario) string {
+	if len(plan.Workflows) > 0 {
+		return "system-scenario-4"
+	}
 	if len(plan.Channels) > 0 {
 		return "system-scenario-3"
 	}
@@ -35,13 +38,15 @@ func ScenarioEngineVersion(plan Plan, scenario Scenario) string {
 }
 
 type ScenarioStep struct {
-	Message               *MessageCall      `json:"message,omitempty"`
-	ExpectedMessageStatus string            `json:"expectedMessageStatus,omitempty"`
-	Kind                  string            `json:"kind"`
-	TaskID                string            `json:"taskId,omitempty"`
-	Inputs                []Inputs          `json:"inputs,omitempty"`
-	Calls                 []StateCall       `json:"calls,omitempty"`
-	ExpectedStatuses      map[string]string `json:"expectedStatuses,omitempty"`
+	Workflow               *WorkflowCall     `json:"workflow,omitempty"`
+	ExpectedWorkflowStatus string            `json:"expectedWorkflowStatus,omitempty"`
+	Message                *MessageCall      `json:"message,omitempty"`
+	ExpectedMessageStatus  string            `json:"expectedMessageStatus,omitempty"`
+	Kind                   string            `json:"kind"`
+	TaskID                 string            `json:"taskId,omitempty"`
+	Inputs                 []Inputs          `json:"inputs,omitempty"`
+	Calls                  []StateCall       `json:"calls,omitempty"`
+	ExpectedStatuses       map[string]string `json:"expectedStatuses,omitempty"`
 }
 type FinalExpectation struct {
 	TaskID   string                      `json:"taskId"`
@@ -51,10 +56,11 @@ type FinalExpectation struct {
 	Effects  *int                        `json:"effects"`
 }
 type Scenario struct {
-	ExpectedMessages []MessageExpectation `json:"expectedMessages,omitempty"`
-	Name             string               `json:"name"`
-	Steps            []ScenarioStep       `json:"steps"`
-	Expected         []FinalExpectation   `json:"expected"`
+	ExpectedWorkflows []WorkflowExpectation `json:"expectedWorkflows,omitempty"`
+	ExpectedMessages  []MessageExpectation  `json:"expectedMessages,omitempty"`
+	Name              string                `json:"name"`
+	Steps             []ScenarioStep        `json:"steps"`
+	Expected          []FinalExpectation    `json:"expected"`
 }
 type ScenarioAssertion struct {
 	Path    string `json:"path"`
@@ -66,6 +72,7 @@ type FinalState struct {
 	Instance state.InstanceResult `json:"instance"`
 }
 type ScenarioOutcome struct {
+	Workflows  []FinalWorkflow     `json:"workflows,omitempty"`
 	Messages   []FinalMessages     `json:"messages,omitempty"`
 	Verified   bool                `json:"verified"`
 	Passed     bool                `json:"passed"`
@@ -73,6 +80,8 @@ type ScenarioOutcome struct {
 	Final      []FinalState        `json:"final"`
 }
 type scenarioRuntime struct {
+	workflows                      map[string]*runningWorkflow
+	workflowOrder                  []string
 	brokers                        map[string]*delivery.SharedSession
 	sessions                       map[string]*state.Session
 	budget                         *state.Budget
@@ -99,11 +108,11 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	if len(encoded) > 1<<20 {
 		return fail("scenario", "Scenario exceeds 1 MiB")
 	}
-	plan, err := Prepare(original.Tasks, original.Links, original.Channels...)
+	plan, err := PrepareUnified(original.Tasks, original.Links, original.Channels, original.Workflows)
 	if err != nil {
 		return Report{}, err
 	}
-	runtime := &scenarioRuntime{sessions: map[string]*state.Session{}, budget: &state.Budget{}}
+	runtime := &scenarioRuntime{workflows: map[string]*runningWorkflow{}, sessions: map[string]*state.Session{}, budget: &state.Budget{}}
 	tasks := map[string]Task{}
 	for _, task := range plan.Tasks {
 		tasks[task.ID] = task
@@ -116,10 +125,13 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 			runtime.sessions[task.ID] = session
 		}
 	}
-	if len(runtime.sessions) == 0 {
+	if len(runtime.sessions) == 0 && len(plan.Workflows) == 0 {
 		return fail("scenario", "A shared scenario requires at least one state task")
 	}
 	if err := prepareMessages(ctx, plan, scenario, runtime); err != nil {
+		return Report{}, err
+	}
+	if err := validateWorkflowSteps(plan, scenario); err != nil {
 		return Report{}, err
 	}
 	// Validate all envelopes and independent expectations before any transition.
@@ -127,6 +139,8 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	for i, step := range scenario.Steps {
 		path := fmt.Sprintf("scenario.steps[%d]", i)
 		switch step.Kind {
+		case "workflow_start", "workflow_event", "workflow_restart", "workflow_deliver", "workflow_retry":
+			activations++
 		case "dispatch", "deliver", "retry", "broker_restart":
 			activations++
 		case "invoke":
@@ -170,7 +184,7 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 				return fail(path, "Restart requires only an owned state task target")
 			}
 		default:
-			return fail(path+".kind", "Choose invoke, command or restart")
+			return fail(path+".kind", "Choose a graph, owner, message or workflow step")
 		}
 		for id, status := range step.ExpectedStatuses {
 			if _, ok := tasks[id]; !ok || (step.Kind != "invoke" && id != step.TaskID) {
@@ -204,7 +218,7 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	}
 	report := Report{EngineVersion: "system-scenario-1", Mode: "shared-scenario", Events: []Event{}, Results: []TaskResult{}, Scenario: &ScenarioOutcome{Assertions: []ScenarioAssertion{}, Final: []FinalState{}}, Limitations: []string{"One explicitly ordered interleaving; no exhaustive race detection or parallel timing.", "State persists between steps within this run only. Each state aspect still exposes one command; invocations may repeat it.", "Lost replies and missing receipts block downstream transfers; independent branches may still execute. Effects are intents, not deliveries.", "Scenario expectations are checked independently; system contract claims, live providers and deployment are not evaluated."}}
 	report.EngineVersion = ScenarioEngineVersion(plan, scenario)
-	if report.EngineVersion == "system-scenario-2" || report.EngineVersion == "system-scenario-3" {
+	if report.EngineVersion == "system-scenario-2" || report.EngineVersion == "system-scenario-3" || report.EngineVersion == "system-scenario-4" {
 		report.Limitations[1] = "State persists between steps within this run only. Graph invocations use each owner's selected entry; explicit owner commands share its revision and receipt history without invoking graph links."
 	}
 	if len(plan.Channels) > 0 {
@@ -243,7 +257,26 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 		}
 		runtime.index = i
 		statuses := map[string]string{}
-		if step.Message != nil {
+		if step.Workflow != nil {
+			events, result, err := runWorkflowStep(ctx, plan, step, runtime)
+			if err != nil {
+				return Report{}, err
+			}
+			for _, event := range events {
+				if event.Workflow != nil && event.Workflow.Step != nil {
+					activations++
+					if activations > 256 {
+						return fail("scenario.steps", "Scenario exceeds 256 task and workflow activations")
+					}
+				}
+				if err = appendEvent(event, i); err != nil {
+					return Report{}, err
+				}
+			}
+			if step.ExpectedWorkflowStatus != "" {
+				assert(fmt.Sprintf("steps[%d].workflow", i), result.Status == step.ExpectedWorkflowStatus, fmt.Sprintf("Expected %s; observed %s", step.ExpectedWorkflowStatus, result.Status))
+			}
+		} else if step.Message != nil {
 			events, status, err := runMessageStep(ctx, plan, step, runtime)
 			if err != nil {
 				return Report{}, err
@@ -355,6 +388,19 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 				}
 			}
 			assert(fmt.Sprintf("expectedMessages[%d]", i), status == e.Status && attempts == e.Attempts && acceptedOK, "Compare transport status, attempts and optional acknowledged business verdict")
+		}
+	}
+	for _, id := range runtime.workflowOrder {
+		running := runtime.workflows[id]
+		result, err := running.session.Snapshot(ctx)
+		if err != nil {
+			return Report{}, err
+		}
+		report.Scenario.Workflows = append(report.Scenario.Workflows, FinalWorkflow{WorkflowID: running.task.ID, InstanceID: id, Result: result})
+		for _, expected := range scenario.ExpectedWorkflows {
+			if expected.InstanceID == id {
+				assert("workflows."+id, matchWorkflowExpectation(expected, result), "Compare workflow status, outcome, waiting node and independently declared values")
+			}
 		}
 	}
 	report.Scenario.Verified = len(report.Scenario.Assertions) > 0

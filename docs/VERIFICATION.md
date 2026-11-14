@@ -1,5 +1,42 @@
 # Verification
 
+## M1 connected offline engineering model — 14 November 2026
+
+- Workflows now use the existing system state sessions and budget. Pure decisions,
+  command responses, human responses, signals, bounded loops and typed broker
+  handoffs run in one scenario. Broker tasks resume only from their correlated
+  acknowledgement; direct human responses cannot forge that completion.
+- Added exact modeled-workflow@1.0.0 and versioned capability checks for workflow,
+  state and broker bindings. Inspectors configure exact owner pins and typed
+  handoffs. The scenario editor exposes workflow starts/events/delivery/retry/
+  checkpoint restarts, independent final assertions and a sequential token trace.
+- The M1 fixture owns all five aspects and supplies six scenarios: complete
+  journey, lost acknowledgement, stock rejection, atomic rollback, review loop
+  with duplicate event, and cancellation with late acknowledgement. Handwritten
+  expectations check shared revisions, receipts, intents, state, task correlation
+  and workflow outcomes. Store tests also check subsequent direct owner access,
+  malformed bindings/inputs, reserved identities, instance limits, cancellation,
+  failed expectations and portable replay after all artifact catalogs are removed.
+- system-dataflow-5/system-scenario-4 preserve older plans and omitted-field report
+  formats. Saved evidence retains its provider checks, portable workflow locks,
+  mappings, hashes and reports; replay remains separate and immutable.
+- Full Go race tests against PostgreSQL, the live API acceptance suite, all 43
+  frontend tests and Vue production build passed. The final cancellation guard
+  has focused systemrun/workflow race coverage; go vet and backend build passed.
+  The frontend regression includes editing API scenarios whose empty optional
+  assertion maps were omitted. Vite retains its existing chunk-size warning.
+- **M1 100%; overall 33% (+5 percentage points)** on the unchanged weighted
+  roadmap. This closes the bounded offline joint-execution gate. Manual desktop
+  and mobile interaction remain pending; automated results do not establish UX
+  quality. Use [M1_MANUAL_ACCEPTANCE.md](M1_MANUAL_ACCEPTANCE.md) for the complete
+  joint inspection, with a pending-results table.
+- Scope: supported dataflow arrows remain acyclic; workflow control uses its
+  pinned node graph and explicit owner/message mappings. Model restarts do not
+  test live process/disk recovery. Live providers, nested workflow calls,
+  clock-driven delivery, calibrated continuum deployment, general implementation
+  conformance, production security and autonomous runtime remain later work.
+  Scenario assertions and exact replay do not evaluate system contract claims.
+
 ## Shared owners and offline broker — 14 November 2026
 
 - Added pinned message actor mappings to existing system state owners; exact machine identities and provider versions are checked. Delivery reuses the same state sessions, revisions, receipts, budgets and effects as graph and owner calls.

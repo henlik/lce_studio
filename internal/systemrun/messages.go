@@ -164,7 +164,9 @@ func prepareMessages(ctx context.Context, plan Plan, scenario Scenario, runtime 
 		if !ok {
 			return &Invalid{[]model.ValidationIssue{{Path: "scenario.expectedMessages", Message: "Unknown channel"}}}
 		}
-		s.ExpectedMessages = append(s.ExpectedMessages, e.DeliveryMessageExpectation)
+		if len(plan.Workflows) == 0 || !strings.HasPrefix(e.Name, "wfs_") {
+			s.ExpectedMessages = append(s.ExpectedMessages, e.DeliveryMessageExpectation)
+		}
 		transport[e.ChannelID] = s
 	}
 	for _, c := range plan.Channels {

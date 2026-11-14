@@ -6,13 +6,13 @@ import {milestones} from '../src/studioBlueprint.ts';
 import {parseDefinition,definitionStamp} from '../src/definitionTypes.ts';
 test('roadmap score reflects accepted gates, and history matches the current baseline',()=>{
  assert.deepEqual(progressMilestones.map(m=>m.id),milestones.map(m=>m.id));
- assert.equal(roadmapProgress.total,28);
- assert.equal(roadmapProgress.milestones[0]!.percentage,80);
+ assert.equal(roadmapProgress.total,33);
+ assert.equal(roadmapProgress.milestones[0]!.percentage,100);
  assert.equal(progressHistory.at(-1)!.percentage,roadmapProgress.total);
  const before=structuredClone(progressMilestones);before[0]!.checkpoints[3]!.done=false;
- assert.equal(calculateProgress(before).total,23);
+ assert.equal(calculateProgress(before).total,28);
  before[0]!.checkpoints[2]!.done=false;
- assert.equal(calculateProgress(before).total,18);
+ assert.equal(calculateProgress(before).total,23);
  for(const m of progressMilestones)for(const c of m.checkpoints)if(c.done)for(const e of c.evidence)assert.ok(existsSync(new URL('../../'+e,import.meta.url)),e);
 });
 test('progress cannot advance without evidence and weights cannot drift silently',()=>{

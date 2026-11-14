@@ -8,7 +8,7 @@ The **System design** workspace adds a shared design/reference model, four execu
 
 Version **0.8.1** adds a searchable left-side component palette, a right-side binding inspector, visual node/pin/feedback conventions, validation navigation, action notifications and automatic browser draft recovery with protection against conflicting edits from multiple tabs. See [visual authoring and recovery](docs/STUDIO_UX.md) for the workflow and its limits. Portable bundles and publishing to the local catalog are available; a public community marketplace is still planned.
 
-The studio also provides **Structure / Behavior / Execution** perspectives, nested workflow stage focus, token-following replay, and a **Regional care ecosystem inspection lab**. Open the lab to run reference exercises across all implemented engines and track manual UX checks. See the [step-by-step inspection guide](docs/STAGED_INSPECTION.md). Stages organize the workflow view; executable child-workflow calls and cross-engine orchestration are not implemented.
+The studio also provides **Structure / Behavior / Execution** perspectives, nested workflow stage focus, token-following replay, and a **Regional care ecosystem inspection lab**. Open the lab to run reference exercises across all implemented engines and track manual UX checks. See the [step-by-step inspection guide](docs/STAGED_INSPECTION.md). Stages organize the workflow view. Shared workflow/state/message execution is available through the M1 acceptance example; executable child-workflow calls remain future work.
 
 Executable task workflows connect human/adapter tasks, exact pure decisions and owned-state commands; follow automatic branches, interrupt an active task, and retain complete experiment evidence. The **Workflows** workspace includes hospital reception and a service-desk reuse example. See [the reception replication guide](docs/HOSPITAL_RECEPTION_REPLICATION.md).
 
@@ -299,3 +299,11 @@ Use `STUDIO_URL=http://127.0.0.1:18080` to target a separate test instance. The 
 First establish explicit artifact kinds and a common parent/child design navigator for top-down and bottom-up work, as described in [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md). Then couple owned-state and message transitions to resource/failure simulation under an explicit clock and scheduling contract; add event scheduling and bounded parallel fork/join; optional and nested data types; isolated external effect adapters; application generation and measured implementation tests; model migrations and multi-user access. Each change should include a small reference scenario with an independently known outcome. See [ROADMAP.md](docs/ROADMAP.md) for the full product direction.
 
 MIT licensed. Third-party dependencies retain their respective licences.
+
+## M1 acceptance
+
+The connected offline engineering milestone is implemented: **M1 100%, overall roadmap 33%**.
+Use [the complete manual acceptance guide](docs/M1_MANUAL_ACCEPTANCE.md) to inspect
+the five owned aspects, typed providers, six integrated scenarios, saved evidence
+and recovery. Manual UI acceptance is pending. Live adapters and runtime autonomy
+remain subsequent milestones.

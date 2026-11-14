@@ -8,7 +8,7 @@ export const progressMilestones:ProgressMilestone[]=[
   gate('direct-resolution','Reject missing or changed direct catalog references before a run.','internal/system/resolution_test.go'),
   gate('aspect-ownership','Install immutable component definitions with pinned aspects and open their editors in context.','internal/store/definitions_test.go','docs/COMPONENT_DEFINITIONS.md'),
   gate('compatible-closure','Validate full dependency closures and compatible ports across aspects.','internal/store/system_compatibility_test.go','internal/system/connections_test.go','docs/SYSTEM_CONNECTIONS.md'),
-  gate('joint-execution','Execute connected component aspects and typed provider bindings together.')
+  gate('joint-execution','Execute connected component aspects and typed provider bindings together within the bounded offline engineering model.','internal/store/m1_acceptance_test.go','scripts/acceptance-system.mjs','docs/M1_MANUAL_ACCEPTANCE.md')
  ]},
  {id:'M2',weight:20,checkpoints:[
   gate('bounded-conformance','Run and persist the bounded reception model/Go/PostgreSQL comparison.','internal/conformance/run_test.go'),
@@ -74,6 +74,7 @@ export const progressHistory=[
  {date:'2026-11-14',percentage:28,reason:'Corrected Design routing and library categories; separated timing simulation navigation and profiles. UX correction adds no engine checkpoint credit.'},
  {date:'2026-11-14',percentage:28,reason:'Added UI/API catalog-independent replay verification, stored plan/report hashes, bounded mismatch inspection and immutable verification history. Reproducibility does not close joint-engine or implementation-conformance checkpoints; no additional credit.'},
  {date:'2026-11-14',percentage:28,reason:'Added selected graph entry commands and explicit owner-command scenario steps sharing revisions and receipts, typed configuration, reference exercise and replay. Message/workflow and live-provider integration remain open; no additional checkpoint credit.'},
- {date:'2026-11-14',percentage:28,reason:'Connected pinned message actors to shared state owners, added the durable modeled broker, explicit transport scenarios, journey traces and portable replay. Workflow, continuum and live implementation/provider integration remain open; no additional checkpoint credit.'}
+ {date:'2026-11-14',percentage:28,reason:'Connected pinned message actors to shared state owners, added the durable modeled broker, explicit transport scenarios, journey traces and portable replay. Workflow, continuum and live implementation/provider integration remain open; no additional checkpoint credit.'},
+ {date:'2026-11-14',percentage:33,reason:'Completed bounded offline joint execution: shared workflow/state/broker ownership, exact typed provider capabilities, correlated command and acknowledgement routing, six integrated acceptance scenarios and portable replay (+5 points). M1 100%; manual UI acceptance pending. Live adapters and continuum/conformance integration remain later milestones.'}
 ];
 export const progressMethod='Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.';

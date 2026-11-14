@@ -18,9 +18,10 @@ import (
 var ErrPureExecution = errors.New("model execution failed")
 
 type ExecutionPreparation struct {
-	Plan       systemrun.Plan    `json:"plan"`
-	Resolution system.Resolution `json:"resolution"`
-	DesignHash string            `json:"designHash"`
+	ProviderChecks []system.ProviderCheck `json:"providerChecks,omitempty"`
+	Plan           systemrun.Plan         `json:"plan"`
+	Resolution     system.Resolution      `json:"resolution"`
+	DesignHash     string                 `json:"designHash"`
 }
 type SystemExecution struct {
 	SnapshotVersion int                 `json:"snapshotVersion,omitempty"`
@@ -70,6 +71,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	}
 	tasks := []systemrun.Task{}
 	channels := []systemrun.MessageChannel{}
+	workflows := []systemrun.WorkflowTask{}
 	planBytes := 0
 	links := []systemrun.Link{}
 	addTask := func(component, slot, name, id, version, digest, path string) error {
@@ -107,6 +109,8 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 		entries := map[string]string{}
 		usedEntries := map[string]bool{}
 		usedOwners := map[int]bool{}
+		usedWorkflowOwners := map[int]bool{}
+		usedWorkflowRoutes := map[int]bool{}
 		for _, entry := range c.StateEntries {
 			entries[entry.Slot] = entry.Command
 		}
@@ -124,6 +128,41 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				count := 0
 				for j, a := range def.Aspects {
 					if a.Kind == "data" {
+						continue
+					}
+					if a.Kind == "workflow" {
+						requirement := "workflow/" + a.Slot
+						provider := system.ExecutionProvider{}
+						for _, b := range c.Bindings {
+							if b.Requirement == requirement {
+								provider = providers[b.ResourceID]
+								usedBindings[requirement] = true
+							}
+						}
+						if provider.ID == "" {
+							add(path+".bindings", "Bind "+requirement+" to modeled-workflow@1.0.0")
+							continue
+						}
+						usedProviders[provider.ID] = true
+						record, err := s.WorkflowPackage(ctx, a.ID, a.Version, a.Digest)
+						if err != nil {
+							return prepared, err
+						}
+						f := systemrun.WorkflowTask{ID: systemrun.Key(c.ID, a.Slot), Name: c.Name + " / " + a.Slot, Lock: model.WorkflowLock{Workflow: record.Workflow, Digest: record.Digest}, Provider: provider}
+						for k, o := range c.WorkflowOwners {
+							if o.Slot == a.Slot {
+								usedWorkflowOwners[k] = true
+								f.Owners = append(f.Owners, systemrun.WorkflowOwner{OwnerID: o.OwnerID, TaskID: systemrun.Key(o.ComponentID, o.StateSlot)})
+							}
+						}
+						for k, r := range c.WorkflowMessages {
+							if r.Slot == a.Slot {
+								usedWorkflowRoutes[k] = true
+								f.Routes = append(f.Routes, systemrun.WorkflowRoute{NodeID: r.NodeID, ChannelID: systemrun.Key(r.ChannelComponentID, r.ChannelSlot), RouteID: r.RouteID, SourceNodeID: r.SourceNodeID, Response: r.Response})
+							}
+						}
+						workflows = append(workflows, f)
+						count++
 						continue
 					}
 					if a.Kind == "messages" {
@@ -220,14 +259,42 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				return prepared, err
 			}
 		}
+		for j := range c.WorkflowOwners {
+			if !usedWorkflowOwners[j] {
+				add(fmt.Sprintf("%s.workflowOwners[%d]", path, j), "Mapping must name an owned workflow aspect")
+			}
+		}
+		for j := range c.WorkflowMessages {
+			if !usedWorkflowRoutes[j] {
+				add(fmt.Sprintf("%s.workflowMessages[%d]", path, j), "Route must name an owned workflow aspect")
+			}
+		}
 		for j := range c.MessageOwners {
 			if !usedOwners[j] {
 				add(fmt.Sprintf("%s.messageOwners[%d]", path, j), "Mapping must name an owned message aspect")
 			}
 		}
 		for j, binding := range c.Bindings {
+			if usedBindings[binding.Requirement] {
+				provider := providers[binding.ResourceID]
+				required := append([]string{}, system.RequiredCapabilities(binding.Requirement)...)
+				required = append(required, binding.RequiredCapabilities...)
+				provided := system.ProviderCapabilities(provider)
+				supported := map[string]bool{}
+				for _, cap := range provided {
+					supported[cap] = true
+				}
+				ok := true
+				for _, cap := range required {
+					if !supported[cap] {
+						ok = false
+						add(fmt.Sprintf("%s.bindings[%d]", path, j), "Provider lacks required capability: "+cap)
+					}
+				}
+				prepared.ProviderChecks = append(prepared.ProviderChecks, system.ProviderCheck{ComponentID: c.ID, Requirement: binding.Requirement, ProviderID: binding.ResourceID, Required: required, Provided: provided, Satisfied: ok})
+			}
 			if !usedBindings[binding.Requirement] {
-				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot> or messages/<slot> requirement")
+				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot>, messages/<slot> or workflow/<slot> requirement")
 			}
 		}
 		for j, entry := range c.StateEntries {
@@ -238,7 +305,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	}
 	for i, p := range d.ExecutionProviders {
 		if !usedProviders[p.ID] {
-			add(fmt.Sprintf("executionProviders[%d]", i), "Provider is unused by executable state or message aspects")
+			add(fmt.Sprintf("executionProviders[%d]", i), "Provider is unused by executable state, message or workflow aspects")
 		}
 	}
 	for i, c := range d.Connections {
@@ -258,7 +325,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	if len(issues) > 0 {
 		return prepared, &systemrun.Invalid{Issues: issues}
 	}
-	prepared.Plan, err = systemrun.Prepare(tasks, links, channels...)
+	prepared.Plan, err = systemrun.PrepareUnified(tasks, links, channels, workflows)
 	if err != nil {
 		return prepared, err
 	}

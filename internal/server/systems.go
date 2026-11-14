@@ -11,6 +11,7 @@ import (
 	"software-studio/internal/conformance"
 	"software-studio/internal/store"
 	"software-studio/internal/system"
+	"software-studio/internal/systemrun"
 )
 
 func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +56,40 @@ func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, resolution)
+	case path == "/m1-example":
+		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
+			return
+		}
+		example, err := s.store.InstallM1Example(r.Context())
+		if errors.Is(err, store.ErrStateMachineConflict) || errors.Is(err, store.ErrStateCatalogFull) || errors.Is(err, store.ErrDeliveryModelConflict) || errors.Is(err, store.ErrDeliveryCatalogFull) || errors.Is(err, store.ErrDefinitionConflict) || errors.Is(err, store.ErrDefinitionCapacity) || errors.Is(err, store.ErrDataContractConflict) || errors.Is(err, store.ErrDataCatalogFull) || errors.Is(err, store.ErrWorkflowPackageConflict) || errors.Is(err, store.ErrWorkflowCatalogFull) || errors.Is(err, store.ErrComponentConflict) || errors.Is(err, store.ErrCatalogFull) {
+			fail(w, 409, "Could not install the full M1 example; existing versions are preserved. Resolve conflicts and retry.", nil)
+			return
+		}
+		if s.storageError(w, err, "M1 acceptance example") {
+			return
+		}
+		respond(w, 200, example)
+	case path == "/m1-scenarios":
+		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
+			return
+		}
+		var body struct {
+			Design system.SystemDesign `json:"design"`
+		}
+		if !decode(w, r, &body) {
+			return
+		}
+		p, err := s.store.PrepareSystemExecution(r.Context(), body.Design)
+		if err != nil {
+			fail(w, 422, err.Error(), nil)
+			return
+		}
+		cases, err := systemrun.M1Scenarios(p.Plan)
+		if err != nil {
+			fail(w, 422, err.Error(), nil)
+			return
+		}
+		respond(w, 200, cases)
 	case path == "/message-example":
 		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
 			return

@@ -225,3 +225,32 @@ const wrongTransport=structuredClone(messageScenario);delete wrongTransport.step
 await request('/execution/run','POST',{design:messagesExample.design,scenario:wrongTransport},422);
 await request('/execution/run','POST',{design:messagesExample.design,inputs:[]},422);
 console.log('PASS shared owner/broker delivery, rollback isolation, lost acknowledgements, durable restarts, duplicate suppression, journey trace and replay');
+
+const m1=await request('/m1-example','POST');
+const m1Plan=await request('/execution/prepare','POST',{design:m1.design});
+assert.equal(m1Plan.plan.engineVersion,'system-dataflow-5');
+assert.equal(m1Plan.providerChecks.length,4);assert.ok(m1Plan.providerChecks.every(c=>c.satisfied&&c.required.length));
+const m1Cases=await request('/m1-scenarios','POST',{design:m1.design});assert.equal(m1Cases.length,6);
+assert.deepEqual(m1Cases,m1.scenarios);
+for(const c of m1Cases){
+ const run=await request('/execution/run','POST',{design:m1.design,scenario:c.scenario});
+ assert.equal(run.report.engineVersion,'system-scenario-4');assert.equal(run.report.scenario.passed,true,c.name);assert.equal(run.report.claimsEvaluated,false);
+ assert.equal(run.report.scenario.workflows.length,1);
+ assert.ok(run.report.events.some(e=>e.workflow));
+ assert.deepEqual(await request('/executions/'+run.id),run);
+ const replay=await request('/executions/'+run.id+'/replays','POST',{});
+ assert.equal(replay.status,'matched',c.name);assert.deepEqual(replay.report,run.report);
+ console.log('PASS M1: '+c.name);
+}
+const m1WrongCapability=structuredClone(m1.design);m1WrongCapability.components[0].bindings[0].requiredCapabilities=['live-network'];
+await request('/execution/prepare','POST',{design:m1WrongCapability},422);
+const m1WrongOwner=structuredClone(m1.design);m1WrongOwner.components[0].workflowOwners[0].componentId='ledger';
+await request('/execution/prepare','POST',{design:m1WrongOwner},422);
+const forgedM1=structuredClone(m1Cases[0].scenario);forgedM1.steps=forgedM1.steps.slice(0,2);
+forgedM1.steps.push({kind:'workflow_event',workflow:{instanceId:'reservation',event:{id:'forged',kind:'response',taskId:'task2',values:{accepted:{type:'boolean',boolean:true}}}}});
+await request('/execution/run','POST',{design:m1.design,scenario:forgedM1},422);
+const wrongM1=structuredClone(m1Cases[0].scenario);wrongM1.expectedWorkflows[0].outcome='wrongOutcome';
+assert.equal((await request('/execution/run','POST',{design:m1.design,scenario:wrongM1})).report.scenario.passed,false);
+await request('/m1-scenarios','POST',{design:m1.design,unknown:true},400);
+await request('/execution/run','POST',{design:m1.design,inputs:[]},422);
+console.log('PASS M1 provider checks, shared ownership, correlated acknowledgements, negative assertions and immutable replay');

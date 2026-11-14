@@ -82,6 +82,19 @@ func Validate(d SystemDesign) model.Validation {
 			add(p+".id", "Component instance IDs must be nonempty and unique")
 		}
 		components[c.ID] = true
+		if len(c.WorkflowOwners) > 64 || len(c.WorkflowMessages) > 64 {
+			add(p, "At most 64 workflow owner and message bindings")
+		}
+		for j, b := range c.Bindings {
+			if len(b.RequiredCapabilities) > 32 {
+				add(fmt.Sprintf("%s.bindings[%d]", p, j), "At most 32 required capabilities")
+			}
+			for _, cap := range b.RequiredCapabilities {
+				if !definitionID.MatchString(cap) {
+					add(p+".bindings", "Capabilities must use nonempty local identifiers")
+				}
+			}
+		}
 		messageOwners := map[string]bool{}
 		if len(c.MessageOwners) > 64 {
 			add(p+".messageOwners", "At most 64 actor bindings")
@@ -138,8 +151,8 @@ func Validate(d SystemDesign) model.Validation {
 			add(path+".id", "Provider IDs must be nonempty and unique")
 		}
 		providers[p.ID] = true
-		if (p.Kind != "modeled-state" && p.Kind != "modeled-broker") || p.Version != "1.0.0" {
-			add(path, "Supported providers: modeled-state@1.0.0 and modeled-broker@1.0.0 (offline only)")
+		if (p.Kind != "modeled-state" && p.Kind != "modeled-broker" && p.Kind != "modeled-workflow") || p.Version != "1.0.0" {
+			add(path, "Supported providers: modeled-state@1.0.0 modeled-broker@1.0.0 and modeled-workflow@1.0.0 (offline only)")
 		}
 	}
 	plans := map[string]bool{}

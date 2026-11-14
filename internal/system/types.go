@@ -31,17 +31,20 @@ type ArtifactRef struct {
 	Version string `json:"version"`
 }
 type Binding struct {
-	Requirement string `json:"requirement"`
-	ResourceID  string `json:"resourceId"`
+	RequiredCapabilities []string `json:"requiredCapabilities,omitempty"`
+	Requirement          string   `json:"requirement"`
+	ResourceID           string   `json:"resourceId"`
 }
 type ComponentInstance struct {
-	MessageOwners []MessageOwner `json:"messageOwners,omitempty"`
-	StateEntries  []StateEntry   `json:"stateEntries,omitempty"`
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Definition    DefinitionRef  `json:"definition"`
-	Artifacts     []ArtifactRef  `json:"artifacts"`
-	Bindings      []Binding      `json:"bindings"`
+	WorkflowOwners   []WorkflowOwnerBinding   `json:"workflowOwners,omitempty"`
+	WorkflowMessages []WorkflowMessageBinding `json:"workflowMessages,omitempty"`
+	MessageOwners    []MessageOwner           `json:"messageOwners,omitempty"`
+	StateEntries     []StateEntry             `json:"stateEntries,omitempty"`
+	ID               string                   `json:"id"`
+	Name             string                   `json:"name"`
+	Definition       DefinitionRef            `json:"definition"`
+	Artifacts        []ArtifactRef            `json:"artifacts"`
+	Bindings         []Binding                `json:"bindings"`
 }
 
 // StateEntry selects the command whose ports participate in a graph invocation.

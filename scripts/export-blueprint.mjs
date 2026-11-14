@@ -51,7 +51,14 @@ across repeated commands, faults and restarts with independent expectations. Sav
 executions can be replay-verified from their pinned snapshots through the UI/API;
 separate immutable checks distinguish reproduction, mismatch and unsupported replay.
 Explicit owner-command steps now share state and receipts with graph entry calls.
-Message/workflow integration, feedback/delivery scheduling and live provider integration remain unfinished. System architecture currently records references;
+Shared workflows now execute pure decisions and commands on the same system owners,
+then resume broker tasks only from correlated acknowledgements. Exact provider
+capabilities, six integrated acceptance scenarios and portable replay close M1
+within its bounded offline scope. Manual UI acceptance remains pending. Live
+implementation adapters, nested workflow calls and calibrated continuum simulation
+remain subsequent work; capability statuses may cover broader scope than M1.
+See [M1 manual acceptance](M1_MANUAL_ACCEPTANCE.md).
+System architecture executes the supported typed bindings;
 the timing/deployment simulator uses its existing project model under Simulation.
 Design opens System architecture and its installed library. Library sections distinguish
 components, supporting services and actors/workload. The separate timing-profile library

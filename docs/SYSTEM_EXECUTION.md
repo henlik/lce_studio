@@ -1,5 +1,10 @@
 # Execute connected components
 
+Current milestone: **M1 100%, overall 33%** for the bounded offline model.
+The workflow/state/message integration and joint inspection are documented in
+[M1 manual acceptance](M1_MANUAL_ACCEPTANCE.md). Progress figures below describe
+this earlier implementation increment.
+
 Current message integration: [Shared system messages](SYSTEM_MESSAGES.md) documents actor-to-owner bindings, modeled brokers, transport scenarios and replay. Earlier pure/state exercises remain supported.
 
 Engineering → Design → System architecture → Execution runs a bounded, acyclic

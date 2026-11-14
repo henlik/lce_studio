@@ -64,3 +64,9 @@ test('offline providers survive imports and malformed provider shapes are reject
  assert.deepEqual(parseSystemImport(JSON.stringify(d)),d);
  for(const providers of [null,{},[{}],[{id:'x',kind:'modeled-state',version:1}]])assert.throws(()=>parseSystemImport(JSON.stringify({...d,executionProviders:providers})));
 });
+
+test('workflow owner routes and provider capabilities survive import with exact shapes',()=>{
+ const d=emptySystem();d.components=[{id:'stock',name:'Stock',definition:{kind:'definition',id:'stock',version:'2.0.0'},artifacts:[],bindings:[{requirement:'workflow/flow',resourceId:'workflow',requiredCapabilities:['correlated-responses']}],workflowOwners:[{slot:'flow',ownerId:'stock',componentId:'stock',stateSlot:'state'}],workflowMessages:[{slot:'flow',nodeId:'handoff',channelComponentId:'stock',channelSlot:'messages',routeId:'deliver',sourceNodeId:'reserve',response:{accepted:'accepted'}}]}];
+ assert.deepEqual(parseSystemImport(JSON.stringify(d)),d);
+ for(const patch of [{workflowOwners:null},{workflowOwners:[{slot:'flow'}]},{workflowMessages:[{...d.components[0]!.workflowMessages![0],response:{accepted:7}}]},{bindings:[{requirement:'workflow/flow',resourceId:'workflow',requiredCapabilities:[1]}]}])assert.throws(()=>parseSystemImport(JSON.stringify({...d,components:[{...d.components[0],...patch}]})));
+});

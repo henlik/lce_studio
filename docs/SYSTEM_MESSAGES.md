@@ -1,5 +1,10 @@
 # Shared system messages: stock owner → reservation ledger
 
+Current milestone: **M1 100%, overall 33%** for the bounded offline model.
+The workflow/state/message integration and joint inspection are documented in
+[M1 manual acceptance](M1_MANUAL_ACCEPTANCE.md). Progress figures below describe
+this earlier implementation increment.
+
 This exercise connects an installed message definition to existing component state
 owners. Graph invocations, explicit owner commands and delivered commands use the
 same state sessions, revisions, receipts and committed effect intents. All data is

@@ -45,7 +45,14 @@ across repeated commands, faults and restarts with independent expectations. Sav
 executions can be replay-verified from their pinned snapshots through the UI/API;
 separate immutable checks distinguish reproduction, mismatch and unsupported replay.
 Explicit owner-command steps now share state and receipts with graph entry calls.
-Message/workflow integration, feedback/delivery scheduling and live provider integration remain unfinished. System architecture currently records references;
+Shared workflows now execute pure decisions and commands on the same system owners,
+then resume broker tasks only from correlated acknowledgements. Exact provider
+capabilities, six integrated acceptance scenarios and portable replay close M1
+within its bounded offline scope. Manual UI acceptance remains pending. Live
+implementation adapters, nested workflow calls and calibrated continuum simulation
+remain subsequent work; capability statuses may cover broader scope than M1.
+See [M1 manual acceptance](M1_MANUAL_ACCEPTANCE.md).
+System architecture executes the supported typed bindings;
 the timing/deployment simulator uses its existing project model under Simulation.
 Design opens System architecture and its installed library. Library sections distinguish
 components, supporting services and actors/workload. The separate timing-profile library
@@ -53,7 +60,7 @@ retains its existing simulation behavior; these models are not silently merged.
 
 ## Implementation sequence
 
-**Weighted implementation: 28%**
+**Weighted implementation: 33%**
 
 Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.
 
@@ -68,20 +75,21 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **28%** — Added UI/API catalog-independent replay verification, stored plan/report hashes, bounded mismatch inspection and immutable verification history. Reproducibility does not close joint-engine or implementation-conformance checkpoints; no additional credit.
 - 2026-11-14: **28%** — Added selected graph entry commands and explicit owner-command scenario steps sharing revisions and receipts, typed configuration, reference exercise and replay. Message/workflow and live-provider integration remain open; no additional checkpoint credit.
 - 2026-11-14: **28%** — Connected pinned message actors to shared state owners, added the durable modeled broker, explicit transport scenarios, journey traces and portable replay. Workflow, continuum and live implementation/provider integration remain open; no additional checkpoint credit.
+- 2026-11-14: **33%** — Completed bounded offline joint execution: shared workflow/state/broker ownership, exact typed provider capabilities, correlated command and acknowledgement routing, six integrated acceptance scenarios and portable replay (+5 points). M1 100%; manual UI acceptance pending. Live adapters and continuum/conformance integration remain later milestones.
 
 ### M1. Connect the engineering model
 
 Capabilities: Component definitions, System architecture, Databases & brokers.
 
-**Exit gate:** A selected component owns its aspects, references resolve, and compatible system connections execute.
+**Exit gate:** A selected component owns its aspects, references resolve, and supported typed dataflow plus workflow/state/message bindings execute together within the bounded offline model.
 
-**Milestone progress: 80% · roadmap weight: 25%**
+**Milestone progress: 100% · roadmap weight: 25%**
 
 - [x] Persist the shared design, contract and separate deployment schema. Evidence: [internal/system/types.go](../internal/system/types.go), [internal/store/systems_test.go](../internal/store/systems_test.go).
 - [x] Reject missing or changed direct catalog references before a run. Evidence: [internal/system/resolution_test.go](../internal/system/resolution_test.go).
 - [x] Install immutable component definitions with pinned aspects and open their editors in context. Evidence: [internal/store/definitions_test.go](../internal/store/definitions_test.go), [docs/COMPONENT_DEFINITIONS.md](../docs/COMPONENT_DEFINITIONS.md).
 - [x] Validate full dependency closures and compatible ports across aspects. Evidence: [internal/store/system_compatibility_test.go](../internal/store/system_compatibility_test.go), [internal/system/connections_test.go](../internal/system/connections_test.go), [docs/SYSTEM_CONNECTIONS.md](../docs/SYSTEM_CONNECTIONS.md).
-- [ ] Execute connected component aspects and typed provider bindings together.
+- [x] Execute connected component aspects and typed provider bindings together within the bounded offline engineering model. Evidence: [internal/store/m1_acceptance_test.go](../internal/store/m1_acceptance_test.go), [scripts/acceptance-system.mjs](../scripts/acceptance-system.mjs), [docs/M1_MANUAL_ACCEPTANCE.md](../docs/M1_MANUAL_ACCEPTANCE.md).
 
 ### M2. Generalize conformance
 
@@ -189,7 +197,7 @@ Define reusable records, entities, keys and relationships.
 Define owned state, commands and transition rules.
 
 - Today: Owned-state scenarios, receipts and decision dependencies are executable.
-- Next: Connect owner lifetimes to unified component instances.
+- Next: Add measured live persistence semantics beyond the shared offline owner sessions.
 - Acceptance: Command replay and rejected transitions retain the expected state and receipts.
 - Dependencies: Interface & behavior, Data
 
@@ -206,7 +214,7 @@ Define component message contracts and delivery behavior.
 
 Compose tasks, decisions, owned commands and handoffs.
 
-- Today: Staged workflow authoring, interactive tasks and bounded execution are available.
+- Today: Staged workflows use shared system owners, pure decisions, correlated broker acknowledgements, review loops, signals and modeled checkpoint restarts.
 - Next: Execute nested workflow calls and connect their resource costs to system simulation.
 - Acceptance: Reception and service-desk reference workflows run with independently checked expectations.
 - Dependencies: Interface & behavior, State
@@ -215,8 +223,8 @@ Compose tasks, decisions, owned commands and handoffs.
 
 Own all aspects under one selected, versioned component.
 
-- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and selected state entry commands execute together with saved token traces; owner commands and broker deliveries share revisions and receipts.
-- Next: Integrate workflow adapters, automatic command routing and live provider bindings.
+- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and selected state entry commands execute together with saved token traces; owner commands, broker deliveries and workflow commands share revisions and receipts.
+- Next: Extend the offline integration with nested workflow calls and live implementation adapters.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
@@ -226,8 +234,8 @@ Own all aspects under one selected, versioned component.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared multi-command scenarios record routed values, faults, restarts, message journeys and independent assertions.
-- Next: Integrate workflows, live providers and feedback/timed delivery scheduling.
+- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared multi-command scenarios record routed values, faults, restarts, message journeys, workflow tokens and independent assertions.
+- Next: Connect the shared model to calibrated continuum simulation and live implementation conformance.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Installed component library
 
@@ -235,8 +243,8 @@ Assemble exact component references, bindings, contracts and deployment plans.
 
 Bind component requirements to storage, cache, routing and messaging services.
 
-- Today: Exact modeled-state@1.0.0 and modeled-broker@1.0.0 bindings execute shared owner/delivery semantics offline; deployment resources are not provisioned.
-- Next: Add typed provider capabilities and executable PostgreSQL, cache and broker adapters.
+- Today: Exact modeled-state, modeled-broker and modeled-workflow 1.0.0 bindings check required capabilities and execute shared owner, delivery and correlated workflow semantics offline.
+- Next: Implement live PostgreSQL, cache and broker adapters with separate conformance evidence.
 - Acceptance: An incompatible provider is rejected and a supported binding executes through its adapter.
 - Dependencies: System architecture, Component definitions
 

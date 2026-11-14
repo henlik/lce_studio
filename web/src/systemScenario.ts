@@ -1,11 +1,14 @@
+import type {WorkflowEvent,WorkflowResult} from './workflowTypes';
 import type {DeliveryMessageExpectation,DeliveryMessage} from './deliveryTypes';
 import type {ExecutionPlan} from './executionTypes';
 import type {TypedValue} from './behaviorTypes';
 export interface StateCall {command?:string;taskId:string;commandId:string;expectedRevision:number|null;fault?:string}
 export interface MessageCall {channelId:string;routeId?:string;sourceCommandId?:string;sourceMessage?:string;alias?:string;expectedRevision?:number;fault?:string}
-export interface SharedStep {kind:'invoke'|'restart'|'command'|'dispatch'|'deliver'|'retry'|'broker_restart';message?:MessageCall;expectedMessageStatus?:string;taskId?:string;inputs?:{taskId:string;values:Record<string,TypedValue>}[];calls?:StateCall[];expectedStatuses:Record<string,string>}
-export interface SharedScenario {expectedMessages?:(DeliveryMessageExpectation & {channelId:string})[];name:string;steps:SharedStep[];expected:{taskId:string;state:Record<string,TypedValue>;revision:number|null;receipts:number|null;effects:number|null}[]}
-export interface ScenarioOutcome {messages?:{channelId:string;messages:DeliveryMessage[]}[];verified:boolean;passed:boolean;assertions:{path:string;passed:boolean;message:string}[];final:unknown[]}
+export interface WorkflowCall {workflowId?:string;instanceId:string;inputs?:Record<string,TypedValue>;faults?:Record<string,string>;taskId?:string;fault?:string;event?:WorkflowEvent}
+export interface WorkflowExpectation {instanceId:string;status:string;outcome:string;activeTaskNode:string;variables:Record<string,TypedValue>;outputs:Record<string,TypedValue>}
+export interface SharedStep {workflow?:WorkflowCall;expectedWorkflowStatus?:string;kind:'workflow_start'|'workflow_event'|'workflow_deliver'|'workflow_retry'|'workflow_restart'|'invoke'|'restart'|'command'|'dispatch'|'deliver'|'retry'|'broker_restart';message?:MessageCall;expectedMessageStatus?:string;taskId?:string;inputs?:{taskId:string;values:Record<string,TypedValue>}[];calls?:StateCall[];expectedStatuses:Record<string,string>}
+export interface SharedScenario {expectedWorkflows?:WorkflowExpectation[];expectedMessages?:(DeliveryMessageExpectation & {channelId:string})[];name:string;steps:SharedStep[];expected:{taskId:string;state:Record<string,TypedValue>;revision:number|null;receipts:number|null;effects:number|null}[]}
+export interface ScenarioOutcome {workflows?:{workflowId:string;instanceId:string;result:WorkflowResult}[];messages?:{channelId:string;messages:DeliveryMessage[]}[];verified:boolean;passed:boolean;assertions:{path:string;passed:boolean;message:string}[];final:unknown[]}
 export const scenarioStatuses=['completed','committed','denied','replayed','id_conflict','revision_conflict','rolled_back','evaluation_error','reply_lost','skipped','restarted'];
 export function stockScenario(plan:ExecutionPlan):SharedScenario {
  const owner=plan.tasks.find(t=>t.state?.machine.machine.id==='studio.example-stock-owner');
@@ -43,4 +46,19 @@ export function messageScenario(plan:ExecutionPlan):SharedScenario {
  const deliver=(kind:'deliver'|'retry',fault:string,status:string):SharedStep=>({kind,message:{channelId:channel.id,alias:'reservationA',fault},expectedStatuses:{},expectedMessageStatus:status});
  const initial=(task:typeof stock)=>JSON.parse(JSON.stringify(Object.fromEntries(task.state!.machine.machine.state.map(s=>[s.name,s.initial])))) as Record<string,TypedValue>;
  return {name:'Stock to ledger: rollback, retry and lost acknowledgement',steps:[command('rollback','before_commit','rolled_back'),dispatch('rollback','noMessage','missing_intent'),command('reserveA','','committed'),dispatch('reserveA','reservationA','dispatched'),deliver('deliver','drop_before_receive','dropped'),deliver('retry','before_recipient_commit','recipient_unacknowledged'),deliver('retry','after_recipient_commit_before_ack','acknowledgement_lost'),{kind:'broker_restart',message:{channelId:channel.id},expectedMessageStatus:'broker_restarted',expectedStatuses:{}},{kind:'restart',taskId:ledger.id,expectedStatuses:{[ledger.id]:'restarted'}},{kind:'restart',taskId:stock.id,expectedStatuses:{[stock.id]:'restarted'}},deliver('retry','','acknowledged'),deliver('retry','','already_acknowledged'),command('reserveA','','replayed'),dispatch('reserveA','reservationA','dispatch_replayed')],expected:[{taskId:stock.id,state:{...initial(stock),available:{type:'integer',integer:3}},revision:1,receipts:1,effects:1},{taskId:ledger.id,state:{...initial(ledger),totalReserved:{type:'integer',integer:2}},revision:1,receipts:1,effects:0}],expectedMessages:[{channelId:channel.id,name:'noMessage',status:'absent',attempts:0},{channelId:channel.id,name:'reservationA',status:'acknowledged',attempts:4,accepted:true}]};
+}
+
+export function workflowScenarioStep(plan:ExecutionPlan,kind:'workflow_start'|'workflow_event'|'workflow_deliver'|'workflow_retry'|'workflow_restart',instanceId='workflow1'):SharedStep {
+ const flow=plan.workflows?.[0];if(!flow)throw new Error('Prepare a design with a workflow aspect first.');
+ return {kind,workflow:{instanceId,...(kind==='workflow_start'?{workflowId:flow.id,inputs:{},faults:{}}:kind==='workflow_event'?{event:{id:'response1',kind:'response' as const,taskId:'task1',values:{}}}:kind==='workflow_restart'?{}:{taskId:'',fault:''})},expectedStatuses:{}};
+}
+
+// Server omits empty optional collections. Give the editable draft its own maps,
+// without adding assertions or changing the saved execution snapshot.
+export function editableScenario(value:SharedScenario):SharedScenario {
+ const result=JSON.parse(JSON.stringify(value)) as SharedScenario;
+ result.expected??=[];
+ for(const step of result.steps)step.expectedStatuses??={};
+ for(const e of result.expectedWorkflows||[]){e.variables??={};e.outputs??={};}
+ return result;
 }
