@@ -53,7 +53,10 @@ func (s *Store) InstallDefinition(ctx context.Context, d system.ComponentDefinit
 	if err != nil {
 		return DefinitionRecord{}, err
 	}
-	checked := system.ResolveDefinition(d, catalog)
+	checked, err := s.checkDefinition(ctx, d, catalog)
+	if err != nil {
+		return DefinitionRecord{}, err
+	}
 	if !checked.Valid {
 		return DefinitionRecord{}, &DefinitionValidationError{checked.Issues}
 	}

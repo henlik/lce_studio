@@ -39,11 +39,11 @@ func (s *Server) definitionsAPI(w http.ResponseWriter, r *http.Request, path str
 		return
 	}
 	if path == "/definitions/validate" {
-		catalog, err := s.store.SystemCatalog(r.Context())
-		if s.storageError(w, err, "System catalog") {
+		checked, err := s.store.CheckDefinition(r.Context(), d)
+		if s.storageError(w, err, "Definition compatibility") {
 			return
 		}
-		respond(w, 200, system.ResolveDefinition(d, catalog))
+		respond(w, 200, checked)
 		return
 	}
 	result, err := s.store.InstallDefinition(r.Context(), d)

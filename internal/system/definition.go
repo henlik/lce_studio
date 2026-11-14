@@ -13,12 +13,23 @@ import (
 // ComponentDefinition owns named links to immutable artifact versions. It does
 // not change the semantics of those artifacts or merge their execution engines.
 type ComponentDefinition struct {
-	SchemaVersion int         `json:"schemaVersion"`
-	ID            string      `json:"id"`
-	Version       string      `json:"version"`
-	Name          string      `json:"name"`
-	Description   string      `json:"description"`
-	Aspects       []AspectRef `json:"aspects"`
+	SchemaVersion int          `json:"schemaVersion"`
+	ID            string       `json:"id"`
+	Version       string       `json:"version"`
+	Name          string       `json:"name"`
+	Description   string       `json:"description"`
+	Aspects       []AspectRef  `json:"aspects"`
+	Links         []AspectLink `json:"links,omitempty"`
+}
+type AspectEndpoint struct {
+	Slot      string `json:"slot"`
+	Interface string `json:"interface"`
+	Port      string `json:"port"`
+}
+type AspectLink struct {
+	ID     string         `json:"id"`
+	Source AspectEndpoint `json:"source"`
+	Target AspectEndpoint `json:"target"`
 }
 type AspectRef struct {
 	Slot    string `json:"slot"`
@@ -82,6 +93,28 @@ func ValidateDefinition(d ComponentDefinition) model.Validation {
 		}
 		if !definitionDigest.MatchString(a.Digest) {
 			add(p+".digest", "Pin the installed artifact's SHA-256 digest")
+		}
+	}
+	if len(d.Links) > 128 {
+		add("links", "At most 128 aspect links are supported")
+	}
+	linkIDs := map[string]bool{}
+	for i, l := range d.Links {
+		p := fmt.Sprintf("links[%d]", i)
+		if !definitionID.MatchString(l.ID) || linkIDs[l.ID] {
+			add(p+".id", "Use a unique nonempty link ID")
+		}
+		linkIDs[l.ID] = true
+		for _, e := range []struct {
+			name     string
+			endpoint AspectEndpoint
+		}{{"source", l.Source}, {"target", l.Target}} {
+			if !slots[e.endpoint.Slot] {
+				add(p+"."+e.name+".slot", "Choose an owned aspect slot")
+			}
+			if e.endpoint.Interface == "" || len(e.endpoint.Interface) > 400 || e.endpoint.Port == "" || len(e.endpoint.Port) > 200 {
+				add(p+"."+e.name, "Choose a named interface and port")
+			}
 		}
 	}
 	return model.Validation{Valid: len(issues) == 0, Issues: issues}

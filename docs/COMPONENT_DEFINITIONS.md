@@ -4,7 +4,8 @@ A component definition owns named references to reusable artifacts. For example,
 `hospital.reception@1.0.0` can contain `screening` (behavior), `patients` (data),
 `encounter` (state), `dispatch` (messages), and `intake` (workflow). Each reference
 pins kind, ID, exact version and SHA-256 digest. These are ownership links;
-adding them does not yet wire the five execution engines together.
+explicit typed links can now be checked between their declared interfaces.
+These links do not yet wire the five execution engines together.
 
 Deployment remains a system design concern. Definitions cannot own deployment
 plans or other definitions in this increment. Existing behavior and workflow
@@ -27,7 +28,7 @@ composition mechanisms still support nested reusable components.
 5. Click an aspect card. In its canvas inspector, give it a meaningful, unique
    slot such as `patients` or `intake`. The inspector shows its kind, version and
    pinned digest. A slot is a local ownership name, not an executable connection.
-6. Click **Validate pins**. Click any issue to focus its card or component identity.
+6. Click **Check compatibility**. Click any issue to focus its card or component identity.
    Missing versions or changed content must be resolved before installation.
 7. Click **Install version**. The manifest is stored in PostgreSQL. Reinstalling
    identical content is idempotent; changing content under the same ID/version
@@ -48,9 +49,67 @@ composition mechanisms still support nested reusable components.
     references** verifies the manifest and expands its owned aspect references.
     A design can be saved before it resolves; unresolved references block runs.
 12. Use **Product blueprint → Implementation sequence** to inspect remaining
-    compatibility, joint-execution and release work. The conformance runner still
+    system-wide compatibility, joint-execution and release work. The conformance runner still
     accepts only the bounded built-in reception experiment; this manifest does
     not make arbitrary systems executable or deployable.
+
+## Inspect compatibility and connect aspects
+
+This exercise uses the synthetic Health record access behavior to learn the UI.
+It is a type-checking exercise, not a recommended access-control architecture.
+
+1. In **Interface & behavior**, load **Health record access** from the reference
+   examples and install its bundle (including its policy and same-tenant dependencies).
+2. In **Component definitions**, create an empty definition, set its identity,
+   refresh the library, and add Health record access twice. Rename the aspect slots
+   `first` and `second` in their card inspectors.
+3. Click **Check compatibility**, then **Structure → Connections**. Expand the
+   dependency table. The policy and same-tenant descendants are visible with exact
+   versions/digests and occurrence paths. They do not need separate aspect slots.
+4. Choose source `first / outputs / permitted` and target
+   `second / inputs / active`. Both are boolean. Click **Add link**, then
+   **Check compatibility**. The declared link passes static type checking.
+5. Add another link from the same output to `second / inputs / role` (string).
+   Check again: this link is highlighted as invalid. Click its issue to open
+   Connections, then remove the invalid link.
+6. Try a second producer for `second / inputs / active`. Validation rejects it:
+   merge/arbitration semantics are not implemented. Remove the duplicate.
+7. Check again, then install the definition. Export/import preserves its links.
+   To change installed content, use a new definition version as before.
+
+### What the check guarantees
+
+- Every aspect root resolves to its exact installed artifact.
+- Composite behavior dependencies are followed through the installed catalog;
+  the existing bundle validator verifies the full closure and rejects missing,
+  changed, cyclic or invalid dependencies.
+- State, messages and workflows use their validated embedded dependency bundles.
+  Their embedded locks need not also exist as separate catalog installations.
+- The report includes data locks, behavior bundles and state-machine dependencies.
+  The same kind/ID/version cannot have different content digests anywhere inside
+  one definition. Different explicit versions remain distinct identities.
+- Each declared link uses an existing output and input. Scalar types must match.
+  Records and collections additionally require the same contract ID, version,
+  digest and record name. No implicit conversions or structural subtyping occur.
+- One target input can have at most one declared producer. Optional links are
+  included in the immutable manifest digest; older link-free hashes are unchanged.
+- Installation and subsequent system resolution apply these checks too. They are
+  not merely a frontend warning. A formerly installed definition whose dependency
+  disappears or becomes inconsistent will no longer resolve successfully.
+
+| Aspect | Declared interfaces |
+| --- | --- |
+| Composite behavior | `inputs`, `outputs` |
+| Workflow | `inputs`, `outputs` |
+| State | `command/<name>/inputs`, `command/<name>/outputs`, `effect/<name>` |
+| Messages | State interfaces prefixed by `instance/<id>/` |
+| Data, timing profiles | No executable ports; data supplies nominal types |
+
+Limits: checks cover declared manifest links, not every unconnected required
+input, trigger ordering, task response bindings, cycles between aspects, delivery
+semantics, system-instance connections or provider capabilities. This is not an
+execution plan. Component definitions still cannot be nested. Reports are bounded
+at 4096 dependency occurrences and manifests at 128 links.
 
 ## Saving and portability
 
@@ -68,7 +127,7 @@ All routes are relative to `/api/systems`:
 | --- | --- | --- |
 | `/definitions` | GET | List installed definitions and digests |
 | `/definitions` | POST | Install immutable definition; 409 on conflicting content |
-| `/definitions/validate` | POST | Validate structure and resolve pinned aspects |
+| `/definitions/validate` | POST | Validate pins, closures and typed links; return ports and dependencies |
 | `/definitions/aspect` | POST | Resolve one exact aspect and return its editor payload |
 | `/catalog` | GET | Include definitions alongside installed artifact kinds |
 | `/resolve` | POST | Resolve a system and expand owned aspects |
@@ -89,6 +148,10 @@ This estimates accepted scope on the current roadmap. It is not measured effort,
 test coverage, production readiness or a prediction of delivery time. Existing
 standalone editors are foundations; menus do not earn completion credit. Security,
 provenance, general execution and autonomous runtime gates remain incomplete.
+
+The compatibility increment keeps the score at **23% (+0 points)**. Manifest-level
+checks are implemented, but the M1 compatibility checkpoint remains open until
+system-wide connections are checked. M1 remains 60%; joint execution is separate.
 
 For every implementation increment:
 

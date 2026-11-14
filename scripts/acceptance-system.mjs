@@ -75,3 +75,21 @@ assert.equal(composedResolution.valid,true);assert.equal(composedResolution.refe
 assert.equal(composedResolution.references[1].digest,entry.digest);
 await request('/conformance','POST',{design:composed},422);
 console.log('PASS immutable ownership, exact aspect editor payload, expanded resolution and unsupported joint execution rejection');
+
+async function artifactRequest(path,body,statuses=[200]){
+ const r=await fetch(`${base}/api${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(60000)});
+ const value=await r.json();assert.ok(statuses.includes(r.status),JSON.stringify(value));return value;
+}
+const behaviorPackage={schemaVersion:2,id:`acceptance.copy-${randomUUID()}`,version:'1.0.0',name:'Boolean copy',description:'Synthetic typed link fixture',author:'Acceptance',license:'MIT',kernel:'composite',capabilities:['design','evaluate'],behavior:{inputs:[{name:'value',type:'boolean'}],outputs:[{name:'result',type:'boolean'}],nodes:[{id:'copy',op:'identity',inputs:{value:{input:'value'}}}],bindings:{result:{node:'copy',port:'result'}}}};
+const bundle=await artifactRequest('/components/prepare',{package:behaviorPackage,dependencies:[]});
+await artifactRequest('/components/bundles',bundle,[200,201]);
+const linked={schemaVersion:1,id:`acceptance.linked-${randomUUID()}`,version:'1.0.0',name:'Linked copies',description:'Static compatibility, no joint execution',aspects:['source','target'].map(slot=>({slot,kind:'component',id:bundle.root.packageId,version:bundle.root.version,digest:bundle.root.digest})),links:[{id:'copy',source:{slot:'source',interface:'outputs',port:'result'},target:{slot:'target',interface:'inputs',port:'value'}}]};
+const checked=await request('/definitions/validate','POST',linked);
+assert.equal(checked.valid,true);assert.equal(checked.ports.length,4);assert.ok(checked.dependencies.length>=4);
+await request('/definitions','POST',linked);
+const wrongLink=structuredClone(linked);wrongLink.links[0].target.interface='outputs';wrongLink.links[0].target.port='result';
+assert.equal((await request('/definitions/validate','POST',wrongLink)).valid,false);
+await request('/definitions','POST',wrongLink,422);
+const duplicateProducer=structuredClone(linked);duplicateProducer.links.push({...duplicateProducer.links[0],id:'second'});
+assert.equal((await request('/definitions/validate','POST',duplicateProducer)).valid,false);
+console.log('PASS typed aspect links, dependency inspection, direction checks and multiple-producer rejection');

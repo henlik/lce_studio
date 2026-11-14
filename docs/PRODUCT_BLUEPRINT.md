@@ -37,7 +37,8 @@ runtime execution is introduced.
 Component Data, State, Messages and Workflows are now grouped under Components.
 Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
-Joint execution and cross-aspect compatibility remain unfinished. System architecture currently records references;
+Definitions inspect dependency closures and check declared aspect-link types.
+Joint execution and system-wide connection compatibility remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 
@@ -49,6 +50,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 
 - 2026-11-14: **18%** — Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.
 - 2026-11-14: **23%** — Versioned component ownership and contextual aspect editing (+5 percentage points).
+- 2026-11-14: **23%** — Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -196,8 +198,8 @@ Compose tasks, decisions, owned commands and handoffs.
 
 Own all aspects under one selected, versioned component.
 
-- Today: Versioned component manifests own named, digest-pinned aspect references. Installed versions are immutable and reusable in system designs.
-- Next: Add compatibility checks across aspects and execute linked behavior under one component boundary.
+- Today: Immutable component manifests own digest-pinned aspects, inspect dependency closures and validate explicit typed aspect links.
+- Next: Check connections across system instances and execute linked behavior under one component boundary.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 

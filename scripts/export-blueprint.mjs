@@ -43,7 +43,8 @@ runtime execution is introduced.
 Component Data, State, Messages and Workflows are now grouped under Components.
 Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
-Joint execution and cross-aspect compatibility remain unfinished. System architecture currently records references;
+Definitions inspect dependency closures and check declared aspect-link types.
+Joint execution and system-wide connection compatibility remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 

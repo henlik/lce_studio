@@ -1,5 +1,32 @@
 # Verification
 
+## Manifest compatibility and dependency inspection — 14 November 2026
+
+- Optional immutable aspect links declare source and target slot/interface/port.
+  Backend validation rejects missing endpoints, wrong direction, scalar or nominal
+  record type mismatches and multiple producers for one input. Link-free manifest
+  digests remain compatible; frontend installed comparison normalizes empty links.
+- Definitions inspect catalog-resolved composite closures and validated embedded
+  state/message/workflow dependencies. Conflicting content under one kind/ID/version
+  is rejected across aspects. A missing transitive behavior dependency blocks
+  installation and resolution of an already installed definition.
+- Timing-profile roots intentionally expose no ports. A timing profile used as a
+  composite's descendant is rejected, rather than silently treated as a root.
+- The full Go race suite, vet, backend build and live PostgreSQL/API acceptance
+  passed. After the timing-descendant fix, focused race tests for definitions,
+  aspect links and catalog resolution, vet, build and live acceptance passed again.
+  Vue production build and all 27 frontend tests passed. Vite retains its existing
+  large-chunk warning. Browser and mobile interaction verification remains pending.
+- The Connections view exposes port choices, highlights rejected link cards and
+  shows dependency occurrence paths and exact digests. A reproducible manual
+  exercise is in [COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md).
+- Roadmap remains **23% (+0 points), M1 60%**. This increment advances the
+  compatibility checkpoint but does not complete its system-wide scope. The history
+  explicitly records partial progress without changing weights or awarding credit.
+- Limits: no joint execution, inter-aspect scheduling, cycle/liveness guarantee,
+  mandatory-input completeness, typed system-instance connections or provider
+  compatibility. Type compatibility does not establish those properties.
+
 ## Versioned component ownership and roadmap progress — 14 November 2026
 
 - Component definitions own 1–32 named exact aspect references. PostgreSQL versions

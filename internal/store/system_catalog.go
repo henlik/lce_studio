@@ -59,7 +59,10 @@ func (s *Store) SystemCatalog(ctx context.Context) ([]system.CatalogEntry, error
 	for _, r := range definitions {
 		entry := system.CatalogEntry{Kind: "definition", ID: r.Definition.ID, Version: r.Definition.Version, Name: r.Definition.Name, Digest: r.Digest, Source: "component-definition", Ready: true, Aspects: r.Definition.Aspects}
 		digest, err := system.DefinitionDigest(r.Definition)
-		checked := system.ResolveDefinition(r.Definition, entries)
+		checked, checkErr := s.checkDefinition(ctx, r.Definition, entries)
+		if checkErr != nil {
+			return nil, checkErr
+		}
 		if err != nil || digest != r.Digest {
 			entry.Issue = "Definition content digest mismatch"
 		} else if !checked.Valid {
