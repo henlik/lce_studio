@@ -53,3 +53,9 @@ test('typed system ports roundtrip and partial or malformed endpoint objects are
  const missing=JSON.parse(JSON.stringify(d));delete missing.connections[0].targetPort;
  assert.throws(()=>parseSystemImport(JSON.stringify(missing)));
 });
+
+test('offline providers survive imports and malformed provider shapes are rejected',()=>{
+ const d=emptySystem();d.executionProviders=[{id:'state-model',kind:'modeled-state',version:'1.0.0'}];
+ assert.deepEqual(parseSystemImport(JSON.stringify(d)),d);
+ for(const providers of [null,{},[{}],[{id:'x',kind:'modeled-state',version:1}]])assert.throws(()=>parseSystemImport(JSON.stringify({...d,executionProviders:providers})));
+});

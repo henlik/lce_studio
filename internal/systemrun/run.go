@@ -1,20 +1,33 @@
-// Package systemrun executes a bounded, acyclic graph of pure behavior tasks.
+// Package systemrun executes bounded acyclic pure and single-command state graphs.
 // It performs no storage effects, timing simulation or contract verification.
 package systemrun
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"software-studio/internal/behavior"
 	"software-studio/internal/model"
+	"software-studio/internal/state"
+	"software-studio/internal/system"
 	"sort"
 )
 
-const Version = "system-pure-1"
+const Version = "system-dataflow-2"
 const MaxBytes = 4 << 20
 
+type StateTask struct {
+	Machine  model.StateMachineLock   `json:"machine"`
+	Provider system.ExecutionProvider `json:"provider"`
+}
+type StateEvidence struct {
+	Provider system.ExecutionProvider `json:"provider"`
+	Step     state.StepResult         `json:"step"`
+	Instance state.InstanceResult     `json:"instance"`
+}
 type Task struct {
+	State       *StateTask            `json:"state,omitempty"`
 	ID          string                `json:"id"`
 	ComponentID string                `json:"componentId"`
 	Slot        string                `json:"slot"`
@@ -46,6 +59,7 @@ type Inputs struct {
 	Values map[string]model.TypedValue `json:"values"`
 }
 type Event struct {
+	State        *StateEvidence              `json:"state,omitempty"`
 	Sequence     int                         `json:"sequence"`
 	Kind         string                      `json:"kind"`
 	TaskID       string                      `json:"taskId"`
@@ -55,6 +69,7 @@ type Event struct {
 	Values       map[string]model.TypedValue `json:"values"`
 }
 type TaskResult struct {
+	State       *StateEvidence              `json:"state,omitempty"`
 	TaskID      string                      `json:"taskId"`
 	Outputs     map[string]model.TypedValue `json:"outputs"`
 	BundleHash  string                      `json:"bundleHash"`
@@ -72,7 +87,7 @@ type Report struct {
 type Invalid struct{ Issues []model.ValidationIssue }
 
 func (e *Invalid) Error() string {
-	return "Pure system execution requires a valid acyclic dataflow plan and complete typed inputs"
+	return "System execution requires a valid acyclic dataflow plan and complete typed inputs"
 }
 func Key(component, slot string) string {
 	b, _ := json.Marshal([]string{component, slot})
@@ -88,20 +103,20 @@ func root(t Task) model.ComponentPackage {
 }
 
 func Prepare(tasks []Task, links []Link) (Plan, error) {
-	plan := Plan{EngineVersion: Version, Tasks: tasks, Links: links, Order: []string{}, Inputs: []RequiredInput{}}
+	plan := Plan{EngineVersion: "system-pure-1", Tasks: tasks, Links: links, Order: []string{}, Inputs: []RequiredInput{}}
 	issues := []model.ValidationIssue{}
 	add := func(path, message string) {
 		issues = append(issues, model.ValidationIssue{Path: path, Message: message})
 	}
 	if len(tasks) == 0 || len(tasks) > 64 || len(links) > 256 {
-		return plan, &Invalid{[]model.ValidationIssue{{Path: "components", Message: "Execution supports 1–64 pure tasks and at most 256 links"}}}
+		return plan, &Invalid{[]model.ValidationIssue{{Path: "components", Message: "Execution supports 1–64 tasks and at most 256 links"}}}
 	}
 	bundleBytes := 0
 	byID := map[string]Task{}
 	indegree := map[string]int{}
 	bound := map[string]map[string]bool{}
 	for i, t := range tasks {
-		encoded, err := json.Marshal(t.Bundle)
+		encoded, err := json.Marshal(t)
 		if err != nil {
 			return plan, err
 		}
@@ -119,7 +134,21 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 		byID[t.ID] = t
 		indegree[t.ID] = 0
 		bound[t.ID] = map[string]bool{}
-		for _, issue := range model.ValidateComponentBundle(t.Bundle) {
+		validation := model.ValidateComponentBundle(t.Bundle)
+		if t.State != nil {
+			plan.EngineVersion = Version
+			validation = model.ValidateStateMachineLock(t.State.Machine)
+			if t.Bundle.SchemaVersion != 0 || len(t.Bundle.Packages) > 0 || t.Bundle.Root != (model.ComponentRef{}) {
+				add(path, "A task cannot contain both pure and state definitions")
+			}
+			if len(t.State.Machine.Machine.Commands) != 1 {
+				add(path, "State tasks require exactly one command; multi-command scheduling is not implemented")
+			}
+			if t.State.Provider.ID == "" || t.State.Provider.Kind != "modeled-state" || t.State.Provider.Version != "1.0.0" {
+				add(path, "State requires an exact modeled-state@1.0.0 provider")
+			}
+		}
+		for _, issue := range validation {
 			add(path+".bundle."+issue.Path, issue.Message)
 		}
 	}
@@ -140,13 +169,13 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 			continue
 		}
 		var out, in *model.BehaviorPort
-		for _, p := range root(s).Behavior.Outputs {
+		for _, p := range ports(s, false) {
 			if p.Name == l.Output {
 				v := p
 				out = &v
 			}
 		}
-		for _, p := range root(t).Behavior.Inputs {
+		for _, p := range ports(t, true) {
 			if p.Name == l.Input {
 				v := p
 				in = &v
@@ -189,8 +218,8 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 	}
 	for _, id := range plan.Order {
 		t := byID[id]
-		contracts, _ := model.BundleDataContracts(t.Bundle)
-		for _, p := range root(t).Behavior.Inputs {
+		contracts, _ := contracts(t)
+		for _, p := range ports(t, true) {
 			if !bound[id][p.Name] {
 				r := RequiredInput{TaskID: id, BehaviorPort: p}
 				if p.RecordRef != nil {
@@ -249,7 +278,7 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 				ports = append(ports, p.BehaviorPort)
 			}
 		}
-		contracts, _ := model.BundleDataContracts(t.Bundle)
+		contracts, _ := contracts(t)
 		for _, issue := range model.ValidateStructuredBehaviorValues(values[id], ports, contracts) {
 			issues = append(issues, model.ValidationIssue{Path: "inputs." + id + "." + issue.Path, Message: issue.Message})
 		}
@@ -257,7 +286,16 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 	if len(issues) > 0 {
 		return Report{}, &Invalid{issues}
 	}
-	report := Report{EngineVersion: Version, Mode: "pure-dataflow", Events: []Event{}, Results: []TaskResult{}, Limitations: []string{"Each pure task executes once in deterministic topological order; independent tasks are serialized.", "No virtual clock, resource simulation, external I/O, stateful effects, delivery semantics or deployment execution.", "System claims and assumptions are not evaluated. This is model execution, not implementation conformance."}}
+	report := Report{EngineVersion: plan.EngineVersion, Mode: "pure-dataflow", Events: []Event{}, Results: []TaskResult{}, Limitations: []string{"Each pure task executes once in deterministic topological order; independent tasks are serialized.", "No virtual clock, resource simulation, external I/O, stateful effects, delivery semantics or deployment execution.", "System claims and assumptions are not evaluated. This is model execution, not implementation conformance."}}
+	for _, t := range plan.Tasks {
+		if t.State != nil {
+			report.Mode = "stateful-dataflow"
+		}
+	}
+	if report.Mode == "stateful-dataflow" {
+		report.Limitations = []string{"One invocation per task; each state aspect owns a fresh instance initialized from its immutable definition.", "modeled-state@1.0.0 supplies in-memory atomic state, revisions, receipts and effect intents within this run; it is not live PostgreSQL storage.", "Independent tasks are serialized. Effects are not delivered; no clock, restart scenario, deployment or claim evaluation is performed."}
+	}
+	stateBudget := &state.Budget{}
 	eventBytes := 0
 	operations, invocations := 0, 0
 	emit := func(e Event) error {
@@ -280,19 +318,48 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 		if err := emit(Event{Kind: "started", TaskID: id, Values: values[id]}); err != nil {
 			return Report{}, err
 		}
-		result, err := behavior.Evaluate(ctx, byID[id].Bundle, values[id])
-		if err != nil {
-			return Report{}, fmt.Errorf("task %s: %w", id, err)
+		task := byID[id]
+		result := TaskResult{TaskID: id}
+		if task.State == nil {
+			evaluated, err := behavior.Evaluate(ctx, task.Bundle, values[id])
+			if err != nil {
+				return Report{}, fmt.Errorf("task %s: %w", id, err)
+			}
+			result.Outputs, result.BundleHash, result.Operations, result.Invocations = evaluated.Outputs, evaluated.BundleHash, evaluated.Operations, evaluated.Invocations
+		} else {
+			ownerID := fmt.Sprintf("owner%x", sha256.Sum256([]byte(id)))[:37]
+			session, err := state.NewSession(ctx, task.State.Machine, []model.StateInstance{{ID: ownerID, Name: task.Name, Initial: map[string]model.TypedValue{}}}, stateBudget)
+			if err != nil {
+				return Report{}, err
+			}
+			zero := int64(0)
+			step, err := session.Apply(ctx, 0, model.StateStep{Kind: "command", InstanceID: ownerID, CommandID: "execute", Command: task.State.Machine.Machine.Commands[0].Name, ExpectedRevision: &zero, Inputs: values[id]}, nil)
+			if err != nil {
+				return Report{}, err
+			}
+			if step.Receipt == nil {
+				return Report{}, fmt.Errorf("state task %s produced no receipt: %s %s", id, step.Status, step.Message)
+			}
+			snapshot, err := session.Snapshot(ctx)
+			if err != nil {
+				return Report{}, err
+			}
+			result.State = &StateEvidence{Provider: task.State.Provider, Step: step, Instance: snapshot[0]}
+			result.Outputs, result.BundleHash = step.Receipt.Outputs, task.State.Machine.Digest
+			if step.Decision != nil {
+				result.Operations, result.Invocations = step.Decision.Operations, step.Decision.Invocations
+			}
 		}
 		operations += result.Operations
 		invocations += result.Invocations
 		if operations > 4096 || invocations > 4096 {
 			return Report{}, fmt.Errorf("system operation or invocation budget exceeded")
 		}
-		report.Results = append(report.Results, TaskResult{TaskID: id, Outputs: result.Outputs, BundleHash: result.BundleHash, Operations: result.Operations, Invocations: result.Invocations})
-		if err := emit(Event{Kind: "completed", TaskID: id, Values: result.Outputs}); err != nil {
+		report.Results = append(report.Results, result)
+		if err := emit(Event{Kind: "completed", TaskID: id, Values: result.Outputs, State: result.State}); err != nil {
 			return Report{}, err
 		}
+
 		for _, l := range plan.Links {
 			if l.Source != id {
 				continue
@@ -318,4 +385,31 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 	var frozen Report
 	err = json.Unmarshal(b, &frozen)
 	return frozen, err
+}
+
+func ports(t Task, input bool) []model.BehaviorPort {
+	if t.State != nil {
+		if len(t.State.Machine.Machine.Commands) != 1 {
+			return nil
+		}
+		c := t.State.Machine.Machine.Commands[0]
+		if input {
+			return c.Inputs
+		}
+		return c.Outputs
+	}
+	b := root(t).Behavior
+	if b == nil {
+		return nil
+	}
+	if input {
+		return b.Inputs
+	}
+	return b.Outputs
+}
+func contracts(t Task) ([]model.DataContractLock, []model.ValidationIssue) {
+	if t.State != nil {
+		return model.StateMachineDataContracts(t.State.Machine.Machine)
+	}
+	return model.BundleDataContracts(t.Bundle)
 }

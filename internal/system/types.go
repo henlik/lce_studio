@@ -3,14 +3,22 @@
 package system
 
 type SystemDesign struct {
-	SchemaVersion   int                 `json:"schemaVersion"`
-	ID              string              `json:"id"`
-	Name            string              `json:"name"`
-	Revision        string              `json:"revision"`
-	Components      []ComponentInstance `json:"components"`
-	Connections     []Connection        `json:"connections"`
-	DeploymentPlans []DeploymentPlan    `json:"deploymentPlans"`
-	Contract        Contract            `json:"contract"`
+	SchemaVersion      int                 `json:"schemaVersion"`
+	ID                 string              `json:"id"`
+	Name               string              `json:"name"`
+	Revision           string              `json:"revision"`
+	Components         []ComponentInstance `json:"components"`
+	Connections        []Connection        `json:"connections"`
+	DeploymentPlans    []DeploymentPlan    `json:"deploymentPlans"`
+	ExecutionProviders []ExecutionProvider `json:"executionProviders,omitempty"`
+	Contract           Contract            `json:"contract"`
+}
+
+// ExecutionProvider is an offline semantic adapter, separate from deployment resources.
+type ExecutionProvider struct {
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Version string `json:"version"`
 }
 type DefinitionRef struct {
 	Kind    string `json:"kind,omitempty"`

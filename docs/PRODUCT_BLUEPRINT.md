@@ -39,8 +39,9 @@ Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
-Bounded pure behavior graphs execute with deterministic token traces.
-Stateful execution, feedback/delivery scheduling and provider integration remain unfinished. System architecture currently records references;
+Bounded pure and single-command state graphs execute with deterministic token traces
+and exact offline modeled-state provider bindings. Multi-command, feedback/delivery
+scheduling and live provider integration remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 
@@ -55,6 +56,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **23%** — Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.
 - 2026-11-14: **28%** — Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).
 - 2026-11-14: **28%** — Added bounded pure component execution, token traces and saved replayable snapshots. Stateful/provider execution remains unfinished; no additional checkpoint credit.
+- 2026-11-14: **28%** — Added single-command state handoffs and exact modeled-state provider bindings with commit/denial evidence. Multi-command, message/workflow and live-provider integration remain open; no additional checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -202,8 +204,8 @@ Compose tasks, decisions, owned commands and handoffs.
 
 Own all aspects under one selected, versioned component.
 
-- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior aspects can execute together with saved token traces.
-- Next: Integrate state, message and workflow execution adapters and typed provider bindings.
+- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and single-command state aspects execute together with saved token traces.
+- Next: Integrate multi-command scheduling, message/workflow adapters and live provider bindings.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
@@ -222,8 +224,8 @@ Capture intent and measurable acceptance conditions.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: System designs check typed connections and dependencies; bounded pure dataflow execution records routed values and replayable snapshots.
-- Next: Extend pure dataflow to stateful engines, provider capabilities and explicit feedback/delivery scheduling.
+- Today: System designs check typed connections and dependencies; bounded pure/state dataflow execution records routed values, state transitions and replayable snapshots.
+- Next: Extend single-command execution to shared scenarios, live providers and explicit feedback/delivery scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Local catalog
 
@@ -240,7 +242,7 @@ Explore processing flows and resource demand.
 
 Bind component requirements to storage, cache, routing and messaging services.
 
-- Today: The system model records resource references; actual providers are not provisioned.
+- Today: Exact modeled-state@1.0.0 bindings execute offline state semantics; deployment resources remain separate and are not provisioned.
 - Next: Add typed provider capabilities and executable PostgreSQL, cache and broker adapters.
 - Acceptance: An incompatible provider is rejected and a supported binding executes through its adapter.
 - Dependencies: System architecture, Component definitions

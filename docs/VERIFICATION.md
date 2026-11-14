@@ -1,5 +1,33 @@
 # Verification
 
+## Connected state execution and offline provider bindings — 14 November 2026
+
+- Pure tasks and single-command state aspects execute in one bounded graph through
+  exact `modeled-state@1.0.0` bindings. The existing state kernel supplies atomic
+  commits/denials, revision and receipt semantics, and pending effect intents.
+  Shared providers preserve isolated component ownership and distinct effect IDs.
+- The synthetic request → stock owner → summary example produces eight events.
+  Quantity 2 changes stock 5 → 3 at revision 1 and emits one intent. Quantity 9 is
+  denied at revision 0 with stock 5, one denied receipt and no intent. Each fresh
+  run starts from its declared state. Missing/unknown bindings and live provider
+  kinds are rejected rather than ignored.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL, as did `go vet`,
+  the backend build and live system API acceptance. Acceptance retained all prior
+  scenarios and added commit/denial, provider rejection, design persistence and
+  immutable execution round trips. Store tests removed the state catalog and
+  reproduced the complete saved report using its portable plan.
+- Vue production build and all **32 frontend tests** passed, including provider
+  import shape validation. The UI adds provider editing, provider notices and
+  before/after state, revision, receipt and intent inspection at the token step.
+  Browser/mobile interaction checks remain outstanding; Vite's existing chunk
+  size warning remains. See [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md).
+- Pure reports retain engine `system-pure-1`; state reports use `system-dataflow-2`.
+  This is offline model execution with claims unevaluated. One command per state
+  aspect is supported; multi-command schedules, shared state, delivery, workflows,
+  live database adapters, deployment and runtime conformance remain outside it.
+- Roadmap remains **28% (+0 points), M1 80%**. The final joint-execution checkpoint
+  remains open; its scope and weights are unchanged.
+
 ## Connected pure execution and token traces — 14 November 2026
 
 - Connected pure behavior packages and behavior-only component definitions execute

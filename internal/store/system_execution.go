@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var ErrPureExecution = errors.New("pure execution failed")
+var ErrPureExecution = errors.New("model execution failed")
 
 type ExecutionPreparation struct {
 	Plan       systemrun.Plan    `json:"plan"`
@@ -58,7 +58,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 		issues = append(issues, model.ValidationIssue{Path: path, Message: message})
 	}
 	if len(d.DeploymentPlans) > 0 {
-		add("deploymentPlans", "Pure execution does not support deployment plans; use a separate behavior-only design")
+		add("deploymentPlans", "Model execution does not support deployment plans; keep deployment simulation separate")
 	}
 	records, err := s.Definitions(ctx)
 	if err != nil {
@@ -91,11 +91,14 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 		tasks = append(tasks, systemrun.Task{ID: systemrun.Key(component, slot), ComponentID: component, Slot: slot, Name: name, Bundle: b})
 		return nil
 	}
+	providers := map[string]system.ExecutionProvider{}
+	usedProviders := map[string]bool{}
+	for _, p := range d.ExecutionProviders {
+		providers[p.ID] = p
+	}
 	for i, c := range d.Components {
 		path := fmt.Sprintf("components[%d]", i)
-		if len(c.Bindings) > 0 {
-			add(path+".bindings", "Provider bindings are not supported by pure execution")
-		}
+		usedBindings := map[string]bool{}
 		for j, a := range c.Artifacts {
 			if a.Kind != "data" {
 				add(fmt.Sprintf("%s.artifacts[%d]", path, j), "Only data attachments are allowed; compose executable behavior using owned aspect slots")
@@ -112,8 +115,39 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 					if a.Kind == "data" {
 						continue
 					}
+					if a.Kind == "state" {
+						requirement := "state/" + a.Slot
+						provider := system.ExecutionProvider{}
+						for _, binding := range c.Bindings {
+							if binding.Requirement == requirement {
+								provider = providers[binding.ResourceID]
+								usedBindings[requirement] = true
+							}
+						}
+						if provider.ID == "" {
+							add(path+".bindings", "Bind "+requirement+" to a modeled-state@1.0.0 execution provider")
+							continue
+						}
+						usedProviders[provider.ID] = true
+						machine, err := s.StateMachine(ctx, a.ID, a.Version, a.Digest)
+						if err != nil {
+							return prepared, err
+						}
+						task := systemrun.Task{ID: systemrun.Key(c.ID, a.Slot), ComponentID: c.ID, Slot: a.Slot, Name: c.Name + " / " + a.Slot, State: &systemrun.StateTask{Machine: model.StateMachineLock{Machine: machine.Machine, Digest: machine.Digest}, Provider: provider}}
+						encoded, err := json.Marshal(task)
+						if err != nil {
+							return prepared, err
+						}
+						planBytes += len(encoded)
+						if planBytes > systemrun.MaxBytes {
+							return prepared, &systemrun.Invalid{Issues: []model.ValidationIssue{{Path: path, Message: "Portable task definitions exceed 4 MiB"}}}
+						}
+						tasks = append(tasks, task)
+						count++
+						continue
+					}
 					if a.Kind != "component" {
-						add(fmt.Sprintf("%s.definition.aspects[%d]", path, j), "State, message and workflow aspects need execution adapters; they are not ignored")
+						add(fmt.Sprintf("%s.definition.aspects[%d]", path, j), "Message and workflow aspects need execution adapters; they are not ignored")
 						continue
 					}
 					count++
@@ -122,11 +156,11 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 					}
 				}
 				if count == 0 {
-					add(path+".definition", "At least one pure behavior aspect is required")
+					add(path+".definition", "At least one behavior or state aspect is required")
 				}
 				for _, l := range def.Links {
-					if l.Source.Interface != "outputs" || l.Target.Interface != "inputs" {
-						add(path+".definition.links", "Only behavior output-to-input links are executable")
+					if !executionInterface(tasks, systemrun.Key(c.ID, l.Source.Slot), l.Source.Interface, false) || !executionInterface(tasks, systemrun.Key(c.ID, l.Target.Slot), l.Target.Interface, true) {
+						add(path+".definition.links", "Link must use the selected behavior or single-command state interface")
 					}
 					links = append(links, systemrun.Link{ID: "internal/" + systemrun.Key(c.ID, l.ID), Source: systemrun.Key(c.ID, l.Source.Slot), Target: systemrun.Key(c.ID, l.Target.Slot), Output: l.Source.Port, Input: l.Target.Port})
 				}
@@ -142,18 +176,28 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				return prepared, err
 			}
 		}
+		for j, binding := range c.Bindings {
+			if !usedBindings[binding.Requirement] {
+				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot> requirement")
+			}
+		}
+	}
+	for i, p := range d.ExecutionProviders {
+		if !usedProviders[p.ID] {
+			add(fmt.Sprintf("executionProviders[%d]", i), "Provider is unused by executable state aspects")
+		}
 	}
 	for i, c := range d.Connections {
 		path := fmt.Sprintf("connections[%d]", i)
 		if c.Kind != "data" {
-			add(path+".kind", "Pure execution supports data links only; request/event semantics require adapters")
+			add(path+".kind", "Model execution supports data links only; request/event semantics require adapters")
 		}
 		if c.SourcePort == nil || c.TargetPort == nil {
 			add(path, "Bind both typed endpoints before executing")
 			continue
 		}
-		if c.SourcePort.Interface != "outputs" || c.TargetPort.Interface != "inputs" {
-			add(path, "Only behavior output-to-input interfaces are executable")
+		if !executionInterface(tasks, systemrun.Key(c.Source, c.SourcePort.Slot), c.SourcePort.Interface, false) || !executionInterface(tasks, systemrun.Key(c.Target, c.TargetPort.Slot), c.TargetPort.Interface, true) {
+			add(path, "Link must use the selected behavior or single-command state interface")
 		}
 		links = append(links, systemrun.Link{ID: "system/" + c.ID, ConnectionID: c.ID, Source: systemrun.Key(c.Source, c.SourcePort.Slot), Target: systemrun.Key(c.Target, c.TargetPort.Slot), Output: c.SourcePort.Port, Input: c.TargetPort.Port})
 	}
@@ -232,4 +276,24 @@ func (s *Store) SystemExecutions(ctx context.Context, systemID string) ([]Execut
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+func executionInterface(tasks []systemrun.Task, id, name string, input bool) bool {
+	suffix := "outputs"
+	if input {
+		suffix = "inputs"
+	}
+	for _, task := range tasks {
+		if task.ID != id {
+			continue
+		}
+		if task.State == nil {
+			return name == suffix
+		}
+		if len(task.State.Machine.Machine.Commands) != 1 {
+			return false
+		}
+		return name == "command/"+task.State.Machine.Machine.Commands[0].Name+"/"+suffix
+	}
+	return false
 }

@@ -123,3 +123,26 @@ await request('/execution/run','POST',{design:connectionFixture.design,inputs:[]
 await request('/execution/prepare','POST',{design:connectionFixture.mismatch},422);
 await request('/execution/prepare','POST',{design:await request('/example')},422);
 console.log('PASS bounded pure execution, routed encounter values, ordered token trace, immutable snapshots and unsupported-path rejection');
+
+const stateFixture=await request('/state-execution-example','POST',{});
+const statePlan=await request('/execution/prepare','POST',{design:stateFixture.design});
+assert.equal(statePlan.plan.tasks.length,3);assert.equal(statePlan.plan.inputs.length,1);
+const statePort=statePlan.plan.inputs[0];
+const stateInputs=[{taskId:statePort.taskId,values:{request:{type:'record',recordRef:statePort.recordRef,record:{tenantId:{type:'string',string:'tenantDefault'},resourceId:{type:'string',string:'resourceDefault'},quantity:{type:'integer',integer:2}}}}}];
+const stateRun=await request('/execution/run','POST',{design:stateFixture.design,inputs:stateInputs});
+assert.equal(stateRun.report.mode,'stateful-dataflow');assert.equal(stateRun.report.events.length,8);
+const stateResult=stateRun.report.results.find(r=>r.state);
+assert.equal(stateResult.state.step.status,'committed');assert.equal(stateResult.state.instance.revision,1);
+assert.equal(stateResult.state.instance.state.available.integer,3);assert.equal(stateResult.state.instance.receipts.length,1);assert.equal(stateResult.state.instance.effects.length,1);
+assert.equal(stateRun.report.results.at(-1).outputs.remaining.integer,3);
+assert.deepEqual(await request('/executions/'+stateRun.id),stateRun);
+await request('/'+stateFixture.design.id,'PUT',stateFixture.design);
+assert.deepEqual(await request('/'+stateFixture.design.id),stateFixture.design);
+stateInputs[0].values.request.record.quantity.integer=9;
+const denied=await request('/execution/run','POST',{design:stateFixture.design,inputs:stateInputs});
+assert.equal(denied.report.results.find(r=>r.state).state.step.status,'denied');assert.equal(denied.report.results.at(-1).outputs.remaining.integer,5);
+const missingProvider=structuredClone(stateFixture.design);missingProvider.components[1].bindings=[];
+await request('/execution/prepare','POST',{design:missingProvider},422);
+const liveProvider=structuredClone(stateFixture.design);liveProvider.executionProviders[0].kind='postgresql';
+await request('/execution/prepare','POST',{design:liveProvider},422);
+console.log('PASS connected state commit/denial, provider rejection, owned revisions/receipts/intents and immutable snapshots');

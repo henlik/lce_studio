@@ -5,7 +5,7 @@ A component definition owns named references to reusable artifacts. For example,
 `encounter` (state), `dispatch` (messages), and `intake` (workflow). Each reference
 pins kind, ID, exact version and SHA-256 digest. These are ownership links;
 explicit typed links can now be checked between their declared interfaces.
-Pure behavior links can now execute in System architecture; the five execution
+Pure behavior and single-command state links can now execute in System architecture; the five execution
 engines are not yet integrated. See [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
 
 Deployment remains a system design concern. Definitions cannot own deployment
@@ -174,3 +174,6 @@ In a browser, perform steps 1–12, including an unsaved-draft cancellation, ope
 an aspect into an editor that has not yet loaded, reloading a saved definition
 draft, invalid import retention, and narrow-screen panel collapse. Automated tests
 cover domain/API behavior and frontend types; they do not replace these UI checks.
+
+Single-command state aspects require an exact offline provider binding. Follow
+[STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md) for the connected stock example.

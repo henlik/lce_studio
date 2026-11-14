@@ -107,6 +107,20 @@ func Validate(d SystemDesign) model.Validation {
 		}
 	}
 	resources := map[string]bool{}
+	providers := map[string]bool{}
+	if len(d.ExecutionProviders) > 64 {
+		add("executionProviders", "At most 64 execution providers")
+	}
+	for i, p := range d.ExecutionProviders {
+		path := fmt.Sprintf("executionProviders[%d]", i)
+		if strings.TrimSpace(p.ID) == "" || providers[p.ID] {
+			add(path+".id", "Provider IDs must be nonempty and unique")
+		}
+		providers[p.ID] = true
+		if p.Kind != "modeled-state" || p.Version != "1.0.0" {
+			add(path, "Supported provider: modeled-state@1.0.0 (offline only)")
+		}
+	}
 	plans := map[string]bool{}
 	for i, p := range d.DeploymentPlans {
 		path := fmt.Sprintf("deploymentPlans[%d]", i)
@@ -122,6 +136,9 @@ func Validate(d SystemDesign) model.Validation {
 				add(q+".id", "Resource IDs must be nonempty and unique within a plan")
 			}
 			local[r.ID] = true
+			if providers[r.ID] {
+				add(q+".id", "Deployment and execution-provider identities must be distinct")
+			}
 			kinds[r.ID] = r.Kind
 			resources[r.ID] = true
 			switch r.Kind {
@@ -148,7 +165,7 @@ func Validate(d SystemDesign) model.Validation {
 		}
 		for ci, c := range d.Components {
 			for bi, b := range c.Bindings {
-				if !local[b.ResourceID] {
+				if !local[b.ResourceID] && !providers[b.ResourceID] {
 					add(fmt.Sprintf("components[%d].bindings[%d].resourceId", ci, bi), fmt.Sprintf("Resource is missing from deployment plan %q", p.ID))
 				}
 			}
@@ -162,7 +179,7 @@ func Validate(d SystemDesign) model.Validation {
 				add(p+".requirement", "Binding requirements must be nonempty and unique")
 			}
 			bound[b.Requirement] = true
-			if !resources[b.ResourceID] {
+			if !resources[b.ResourceID] && !providers[b.ResourceID] {
 				add(p+".resourceId", "Unknown deployment resource")
 			}
 		}

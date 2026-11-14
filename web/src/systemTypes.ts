@@ -1,6 +1,7 @@
 import type {AspectEndpoint,AspectPort} from './definitionTypes';
 export interface SystemDesign {
  schemaVersion: number; id: string; name: string; revision: string;
+ executionProviders?: {id:string;kind:string;version:string}[];
  components: ComponentInstance[]; connections: SystemConnection[]; deploymentPlans: DeploymentPlan[]; contract: SystemContract;
 }
 export interface ComponentInstance { id:string; name:string; definition:{kind?:'component'|'definition';id:string;version:string}; artifacts:{kind:string;id:string;version:string}[]; bindings:{requirement:string;resourceId:string}[] }
@@ -27,6 +28,7 @@ export function parseSystemImport(source:string):SystemDesign {
  const endpoint=(x:unknown)=>stringFields(x,['slot','interface','port']);
  const arrayOf=(x:unknown,check:(v:unknown)=>boolean)=>Array.isArray(x)&&x.every(check);
  if(!object(value)||value.schemaVersion!==1||!stringFields(value,['id','name','revision'])||
+ (value.executionProviders!==undefined&&!arrayOf(value.executionProviders,p=>stringFields(p,['id','kind','version'])))||
  !arrayOf(value.components,c=>object(c)&&stringFields(c,['id','name'])&&object(c.definition)&&stringFields(c.definition,['id','version'])&&(!('kind' in c.definition)||c.definition.kind==='component'||c.definition.kind==='definition')&&arrayOf(c.artifacts,a=>stringFields(a,['kind','id','version']))&&arrayOf(c.bindings,b=>stringFields(b,['requirement','resourceId'])))||
  !arrayOf(value.connections,c=>object(c)&&stringFields(c,['id','source','target','kind'])&&((c.sourcePort===undefined&&c.targetPort===undefined)||(endpoint(c.sourcePort)&&endpoint(c.targetPort))))||
  !arrayOf(value.deploymentPlans,p=>object(p)&&stringFields(p,['id','name'])&&arrayOf(p.resources,r=>stringFields(r,['id','kind']))&&arrayOf(p.placements,r=>stringFields(r,['componentId','resourceId'])))||

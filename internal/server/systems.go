@@ -55,6 +55,19 @@ func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, resolution)
+	case path == "/state-execution-example":
+		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
+			return
+		}
+		example, err := s.store.InstallStateExecutionExample(r.Context())
+		if errors.Is(err, store.ErrComponentConflict) || errors.Is(err, store.ErrCatalogFull) || errors.Is(err, store.ErrStateMachineConflict) || errors.Is(err, store.ErrStateCatalogFull) || errors.Is(err, store.ErrDefinitionConflict) || errors.Is(err, store.ErrDefinitionCapacity) {
+			fail(w, 409, "Could not install the complete state example; installed versions were preserved. Resolve catalog conflicts and retry.", nil)
+			return
+		}
+		if s.storageError(w, err, "State execution example") {
+			return
+		}
+		respond(w, 200, example)
 	case path == "/connection-example":
 		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
 			return

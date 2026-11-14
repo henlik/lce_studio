@@ -41,7 +41,7 @@ their inspector. Untyped legacy edges stay explicitly unchecked. See
 exercise. Structural validation, static compatibility and execution support are
 separate checks.
 
-System architecture also includes **Execution** for bounded pure component graphs,
+System architecture also includes **Execution** for bounded pure and single-command state graphs,
 with input forms, token stepping and saved snapshots. **Evidence** continues to
 show the separate model-versus-implementation conformance experiment. See
 [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
@@ -85,3 +85,6 @@ Open **State → Structure**. Use **Owned state**, **Effects**, or **Commands** 
 Open **Messages → Structure**. Expand **Owner machine dependencies** below the diagram to import or embed exact state machines. Open **Instances** to add owners and **Routes** to add their typed connections. Select an existing instance or route on the diagram to configure it in place. Broken/unresolved routes remain editable through **Routes** even if they cannot be drawn.
 
 Validation shortcuts still open the affected editor. Changes retain the original exact-lock, import/export, draft recovery and simulation semantics. These UI changes do not introduce new execution engines or live deployment.
+
+The state handoff exercise adds offline execution providers under System settings,
+separate from Deployment resources. See [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md).

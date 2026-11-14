@@ -1,7 +1,8 @@
-# Execute connected pure components
+# Execute connected components
 
 Engineering → Design → System architecture → Execution runs a bounded, acyclic
-graph of pure behavior components. It routes actual typed model values and records
+graph of pure behavior components. Single-command state aspects are also supported
+with explicit offline provider bindings; see [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md). It routes actual typed model values and records
 an ordered token trace. It is model execution, not deployed software, a resource
 simulation, a clinical process or proof that a real implementation conforms.
 
@@ -18,9 +19,9 @@ simulation, a clinical process or proof that a real implementation conforms.
    derives a deterministic task order and identifies external inputs.
 4. The form shows only Reception's encounter input. Consultation receives its
    value from the handoff link, so it has no separate input form.
-5. Click **Use synthetic encounter** or enter `encounterId` and `patientId` in the
+5. Click **Use example inputs** or enter `encounterId` and `patientId` in the
    generated record fields. All supplied identifiers here are synthetic.
-6. Click **Run pure model**. The successful result is saved in PostgreSQL with
+6. Click **Run model**. The successful result is saved in PostgreSQL with
    its design, inputs, exact executable bundles and trace.
 7. Use **Next**, **Previous** or the trace slider:
 
@@ -65,12 +66,12 @@ not the full reception workflow or a consultation implementation.
   to exact typed values before submission.
 
 Rejected explicitly: cycles, timing profiles, built-in conformance adapters,
-request/event edges, state/message/workflow aspects, non-data attachments, resource
-bindings and deployment plans. Unsupported aspects are never silently skipped.
+request/event edges, message/workflow aspects, multi-command state machines, non-data attachments,
+unsupported provider bindings and deployment plans. Unsupported aspects are never silently skipped.
 
 To execute a pure component model while retaining a deployment design, keep a
-separate behavior-only design. Later execution adapters will connect state,
-delivery, workloads, provider effects and deployment constraints.
+separate behavior-only design. The current state adapter is described in the companion guide. Later adapters will
+connect delivery, workloads, live provider effects and deployment constraints.
 
 ## Bounds and failure behavior
 
@@ -114,7 +115,7 @@ replacement plan, schedule or database URL through the run endpoint.
 ## Progress and manual checks
 
 Roadmap v1 stays at **28% (+0 points)**; M1 remains **80%**. Pure execution is a
-completed part of its final checkpoint, but stateful engine integration and typed
+completed part of its final checkpoint, but broader aspect integration and live
 provider bindings remain unfinished. No checkpoint weight or scope was changed.
 
 Browser/mobile verification is still required for the walkthrough, input error
