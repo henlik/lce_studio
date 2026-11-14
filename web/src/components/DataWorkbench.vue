@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
-import WorkspaceModes from "./WorkspaceModes.vue";
+import DesignOrientation from "./DesignOrientation.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -60,6 +60,28 @@ const tab = ref<"model" | "relationships" | "fixture" | "history" | "compare">(
   selectedCatalog = ref(""),
   selectedEntity = ref(""),
   selectedRecord = ref("");
+const ribbonTab = ref('Structure');
+const ribbonCollapsed = ref(false);
+const ribbonTabs = ['File', 'Structure', 'Behavior', 'Execution', 'Contract', 'Help'];
+function chooseRibbon(name: string) {
+  ribbonTab.value = name;
+  ribbonCollapsed.value = false;
+  if (name === 'Structure') tab.value = 'model';
+  if (name === 'Behavior') tab.value = 'compare';
+  if (name === 'Execution' && !['fixture', 'history'].includes(tab.value)) tab.value = 'fixture';
+}
+function ribbonKeys(event: KeyboardEvent) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const buttons = Array.from((event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+  const current = buttons.indexOf(event.target as HTMLButtonElement);
+  if (current < 0) return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+  chooseRibbon(ribbonTabs[next]); buttons[next].focus();
+}
+watchInspection(tab, value => {
+  ribbonTab.value = ['model', 'relationships'].includes(value) ? 'Structure' : value === 'compare' ? 'Behavior' : 'Execution';
+}, { flush: 'sync' });
 const canvasSelection = ref<DataSelection | null>(null);
 const recordPositions = ref<Record<string, {x:number;y:number}>>({});
 const canvasMode = ref<"properties" | "fields">("properties");
@@ -152,6 +174,7 @@ function focusIssue(issue: ValidationIssue) {
   if (entity) selectCanvas({kind:'entity',index:Number(entity[1])});
   if (record) selectCanvas({kind:'record',index:Number(record[1])});
   if (relationship) selectCanvas({kind:'relationship',index:Number(relationship[1])});
+  if (!entity && !record && !relationship && !issue.path.includes('fixture')) chooseRibbon('Contract');
   const field = issue.path.match(/fields\[(\d+)\]/);
   focusField(
     document.querySelector(".data-workbench"),
@@ -568,6 +591,7 @@ const autosave = useWorkspaceDraft("data", {
   selectedRecord,
   canvasSelection,
   recordPositions,
+  ribbonCollapsed,
   jsonKind,
   jsonText,
   jsonBaseline,
@@ -601,17 +625,49 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
 }, { immediate:true });
 </script>
 <template>
-  <section class="data-workbench" :inert="autosave.status.value === 'loading'">
-    <DraftStatus :draft="autosave" />
-    <header>
-      <span class="section-eyebrow">REUSABLE DATA CONTRACTS</span>
-      <h2>Design data and its relationships</h2>
-      <p>
-        Record types define required scalar fields. Entities add identity and
-        uniqueness; explicit foreign keys connect complete datasets. The same
-        locked types can be used in Components.
-      </p>
-    </header>
+  <section class="data-workbench" :class="{ 'ribbon-collapsed': ribbonCollapsed }" :inert="autosave.status.value === 'loading'">
+    <div class="document-bar">
+      <strong :title="draft.id + ' @ ' + draft.version">{{ draft.name }} <small>v{{ draft.version }}</small></strong>
+      <span>{{ pendingJSON ? 'Unapplied JSON edits' : installedStamp === draftStamp ? 'Installed exact contract' : 'Local draft' }}</span>
+      <DraftStatus :draft="autosave" />
+    </div>
+    <input ref="file" class="hidden" type="file" accept=".json,application/json" aria-label="Import data JSON" @change="importFile" />
+    <section class="data-ribbon" aria-label="Data commands">
+      <div class="ribbon-nav">
+        <div class="ribbon-tabs" role="tablist" aria-label="Data ribbon" @keydown="ribbonKeys">
+          <button v-for="name in ribbonTabs" :id="'data-ribbon-' + name" :key="name" role="tab"
+            :aria-selected="ribbonTab === name" :tabindex="ribbonTab === name ? 0 : -1"
+            aria-controls="data-ribbon-panel" @click="chooseRibbon(name)">{{ name }}</button>
+        </div>
+        <button class="ribbon-toggle" :aria-expanded="!ribbonCollapsed" aria-controls="data-ribbon-panel"
+          @click="ribbonCollapsed = !ribbonCollapsed">{{ ribbonCollapsed ? 'Show commands' : 'Hide commands' }}</button>
+      </div>
+      <div v-show="!ribbonCollapsed" id="data-ribbon-panel" role="tabpanel" :aria-labelledby="'data-ribbon-' + ribbonTab" class="ribbon-panel">
+        <template v-if="ribbonTab === 'File'">
+<div class="ribbon-group"><button class="button secondary" :disabled="!!busy" @click="newDraft">
+        New data contract</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="requestImport('contract')"
+      >
+        Import data contract</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="exportContract"
+      >
+        Export data contract</button
+      ><button
+        class="button secondary"
+        :disabled="!!busy"
+        @click="validateDefinition"
+      >
+        Validate data model</button
+      ><button class="button primary" :disabled="!!busy" @click="install">
+        Install data contract</button
+      >
+    </div>
     <div class="data-library">
       <label class="field"
         >Reference dataset<select
@@ -650,69 +706,27 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         Refresh
       </button>
     </div>
-    <div class="data-actions">
-      <strong
-        >{{ draft.name }}
-        <small>{{ draft.id }} @ {{ draft.version }}</small></strong
-      ><span>{{
-        pendingJSON
-          ? "Unapplied JSON edits"
-          : installedStamp === draftStamp
-            ? "Installed exact contract"
-            : "Local draft"
-      }}</span
-      ><button class="button secondary" :disabled="!!busy" @click="newDraft">
-        New data contract</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="requestImport('contract')"
-      >
-        Import data contract</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="exportContract"
-      >
-        Export data contract</button
-      ><button
-        class="button secondary"
-        :disabled="!!busy"
-        @click="validateDefinition"
-      >
-        Validate data model</button
-      ><button class="button primary" :disabled="!!busy" @click="install">
-        Install data contract</button
-      ><input
-        ref="file"
-        class="hidden"
-        type="file"
-        accept=".json,application/json"
-        aria-label="Import data JSON"
-        @change="importFile"
-      />
-    </div>
-    <p class="help">
-      Drafts and fixtures autosave on this browser. Installing retains the exact
-      definition; export fixtures separately. Changing installed content
-      requires a new version.
-    </p>
-    <div v-if="error" class="data-error" role="alert">
-      <strong>{{ error }}</strong>
-      <ul>
-        <li v-for="i in issues" :key="i.path + i.message">
-          <button class="issue-link" @click="focusIssue(i)">
-            <code>{{ i.path }}</code> {{ i.message }} → Fix
-          </button>
-        </li>
-      </ul>
-    </div>
-    <p v-if="notice" class="data-notice" role="status">{{ notice }}</p>
-    <p v-if="busy" class="data-notice" role="status">
-      Working with the data engine…
-    </p>
-    <details class="data-panel">
-      <summary>Contract identity and description</summary>
+
+        </template>
+        <div v-if="ribbonTab === 'Structure'" class="ribbon-group" aria-label="Structure commands">
+          <button class="button secondary" :disabled="!!busy || draft.records.length >= 32" @click="addRecord">+ Record</button>
+          <button class="button secondary" :disabled="!!busy || !draft.records.length || draft.entities.length >= 32" @click="addEntity()">+ Entity</button>
+          <button class="button secondary" :disabled="!!busy || !draft.entities.length || draft.relationships.length >= 64" @click="addRelationship()">+ Relationship</button>
+          <span class="ribbon-divider"></span>
+          <button class="button secondary" :disabled="!!busy" @click="validateDefinition">Validate data</button>
+          <span class="ribbon-hint">Select an element to edit it on the canvas.</span>
+        </div>
+        <div v-if="ribbonTab === 'Behavior'" class="ribbon-group">
+          <button class="button secondary" @click="tab='compare'">Compatibility comparison</button>
+          <span class="ribbon-hint">Compare an installed contract with this draft.</span>
+        </div>
+        <div v-if="ribbonTab === 'Execution'" class="ribbon-group">
+          <button class="button secondary" :aria-pressed="tab === 'fixture'" @click="tab='fixture'">Fixture validation</button>
+          <button class="button secondary" :aria-pressed="tab === 'history'" @click="tab='history'">Data validation history</button>
+        </div>
+        <template v-if="ribbonTab === 'Contract'">
+    <div class="ribbon-contract">
+
       <fieldset :disabled="!!busy">
         <div class="data-grid">
           <label class="field"
@@ -743,30 +757,34 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
           </label>
         </div>
       </fieldset>
-    </details>
-    <WorkspaceModes :active="tab" :structure='["model", "relationships"]' :behavior='["compare"]' :execution='["fixture", "history"]' @select='tab = $event as "model" | "relationships" | "compare" | "fixture" | "history"' />
-    <nav class="data-tabs">
-      <button v-show="['model', 'relationships'].includes(tab)" class="active" @click="tab = 'model'">
-        Data canvas</button
-      ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'fixture' }" @click="tab = 'fixture'">
-        Fixture validation</button
-      ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
-        Data validation history</button
-      ><button v-show="['compare'].includes(tab)" :class="{ active: tab === 'compare' }" @click="tab = 'compare'">
-        Compatibility
-      </button>
-    </nav>
-    <section v-if="tab === 'model' && !draft.records.length" class="data-panel">
-      <p class="help">
-        This contract is empty. Add the first record type and its fields, then
-        create entities and relationships for the data you want to model.
-      </p>
-      <button class="button secondary" :disabled="!!busy" @click="addRecord">
-        Add first record type
-      </button>
+    </div>
+
+        </template>
+        <div v-if="ribbonTab === 'Help'" class="ribbon-help">
+          <p>Record types define required fields. Entities add identity and uniqueness; foreign keys connect datasets. Click a card or connection to edit it in place.</p>
+          <p>Drafts and fixtures autosave on this browser. Installing retains the exact definition; export fixtures separately. Changing installed content requires a new version.</p>
+          <DesignOrientation workspace="data" />
+        </div>
+      </div>
     </section>
+    <div v-if="error" class="data-error" role="alert">
+      <strong>{{ error }}</strong>
+      <ul>
+        <li v-for="i in issues" :key="i.path + i.message">
+          <button class="issue-link" @click="focusIssue(i)">
+            <code>{{ i.path }}</code> {{ i.message }} → Fix
+          </button>
+        </li>
+      </ul>
+    </div>
+    <p v-if="notice" class="data-notice" role="status">{{ notice }}</p>
+    <p v-if="busy" class="data-notice" role="status">
+      Working with the data engine…
+    </p>
+
+    <p v-if="tab === 'model' && !draft.records.length" class="empty-canvas-hint">Start with <strong>Structure → + Record</strong>, then create entities and connect them.</p>
     <DataGraph v-if="tab === 'model' || tab === 'relationships'"
-      :contract="draft" :selection="canvasSelection" :disabled="!!busy"
+      :compact="true" :contract="draft" :selection="canvasSelection" :disabled="!!busy"
       :record-positions="recordPositions" :connection-source="connectionSource" :issues="issues"
       @select="selectCanvas" @close="closeCanvasEditor" @add-record="addRecord" @add-entity="addEntity()"
       @add-relationship="addRelationship()" @connect="connectEntities" @cancel-connect="connectionSource=null"
@@ -1213,6 +1231,39 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
   </section>
 </template>
 <style scoped>
+.document-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; min-width:0; margin-bottom:8px; }
+.document-bar > strong { font-size:14px; color:#355269; overflow-wrap:anywhere; }
+.document-bar small,.document-bar > span { color:#698292; font-size:11px; font-weight:400; }
+.document-bar :deep(.draft-status) { margin:0 0 0 auto; padding:4px 8px; font-size:11px; border:0; }
+.data-ribbon { border:1px solid #dce6ed; border-radius:8px; background:#fff; margin-bottom:10px; overflow:hidden; min-width:0; }
+.ribbon-nav { display:flex; align-items:center; gap:8px; background:#f8fbfc; border-bottom:1px solid #e1eaee; }
+.ribbon-tabs { display:flex; overflow-x:auto; min-width:0; flex:1; }
+.ribbon-tabs button { padding:11px 15px; font-size:12px; color:#4b687a; background:transparent; border-bottom:3px solid transparent; white-space:nowrap; }
+.ribbon-tabs button[aria-selected=true] { color:#16715d; border-bottom-color:#23846e; background:#eaf6f1; }
+.ribbon-tabs button:focus-visible,.ribbon-toggle:focus-visible { outline:2px solid #23846e; outline-offset:-3px; }
+.ribbon-toggle { background:transparent; color:#567381; padding:8px 12px; font-size:11px; white-space:nowrap; }
+.ribbon-panel { padding:8px 12px; max-height:240px; overflow:auto; }
+.ribbon-group { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ribbon-divider { height:26px; border-left:1px solid #dce6ed; margin:0 4px; }
+.ribbon-hint,.ribbon-help,.empty-canvas-hint { font-size:12px; color:#698292; }
+.ribbon-hint { margin-left:auto; }
+.ribbon-panel .data-library { margin:8px 0 0; padding:8px 0 0; border:0; border-top:1px solid #e1eaee; border-radius:0; }
+.ribbon-panel .data-library .field { min-width:150px; }
+.ribbon-contract fieldset { min-width:0; }
+.ribbon-help p { margin:4px 0 8px; }
+.document-bar :deep(.recovery-choice) { font-size:11px; }
+.data-workbench :deep(.canvas-stage) { height:calc(100dvh - 310px); min-height:420px; }
+.data-workbench.ribbon-collapsed :deep(.canvas-stage) { height:calc(100dvh - 260px); }
+.data-workbench :deep(.canvas-focus--expanded .canvas-stage) { height:auto; min-height:0; }
+@media(max-width:640px) {
+ .data-workbench { padding:8px; }
+ .ribbon-tabs button { padding:10px; }
+ .ribbon-toggle { max-width:78px; white-space:normal; }
+ .ribbon-hint { display:none; }
+ .document-bar :deep(.draft-status) { margin-left:0; }
+ .ribbon-panel { max-height:210px; }
+}
+
 .canvas-context-actions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
 .canvas-context-actions button[aria-pressed=true] { background:#e6f4ee; border-color:#23846e; }
 .data-workbench :deep(.canvas-editor) .field-row { grid-template-columns:minmax(0,1fr) minmax(85px,.65fr); }
@@ -1220,7 +1271,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
 .data-workbench :deep(.canvas-editor) .data-grid { grid-template-columns:1fr; }
 .data-workbench :deep(.canvas-editor) fieldset { min-width:0; }
 .data-workbench {
-  padding: 24px 30px;
+  padding: 10px 20px;
   background: #f5f8fa;
   min-width: 0;
 }

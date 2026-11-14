@@ -6,7 +6,16 @@ A data contract gives an exact meaning to the records exchanged by components an
 
 ## Edit directly on the canvas
 
-Open **Data → Structure → Data canvas**. Record types, entities and relationships share one editing surface.
+Open **Data → Structure**. Record types, entities and relationships share one editing surface beneath a compact ribbon.
+
+- **File**: new/import/export, installation, reference examples and installed contracts.
+- **Structure**: add records, entities and relationships; validate the model.
+- **Behavior**: compare compatibility.
+- **Execution**: fixture validation and saved validation history.
+- **Contract**: identity, version, author, license and description.
+- **Help**: authoring guidance and design hierarchy.
+
+Click **Hide commands** to leave only the tabs and enlarge the canvas; this preference survives reload. Click any tab to show its commands again. Arrow keys, Home and End navigate the ribbon tabs. Canvas expansion retains its own creation controls.
 
 1. Click **+ Record**. Its settings open beside the new record card. Name the type and add its required fields.
 2. Click **Create entity from this record**. Configure its name, primary key and unique keys in the same canvas.

@@ -1251,7 +1251,7 @@ onUnmounted(() => {
           @change="importProject"
         />
       </header>
-      <DesignOrientation :workspace="view" />
+      <DesignOrientation v-if="view !== 'data'" :workspace="view" />
       <WorkspaceModes v-if="!definitionView" :active="view" :structure="['plan', 'deployment']" :behavior="['design']" :execution="['results']" @select="view = $event as typeof view" />
 
       <DraftStatus v-if="!definitionView" :draft="autosave" />

@@ -7,6 +7,7 @@ import type { ValidationIssue } from "../types";
 import type { DataContract } from "../dataTypes";
 const props = defineProps<{
   contract: DataContract;
+  compact?: boolean;
   selection: DataSelection | null;
   recordPositions: Record<string,{x:number;y:number}>;
   connectionSource: number | null;
@@ -235,7 +236,7 @@ watch([bounds,zoom,expanded],()=>void nextTick(placeEditor));
       >
       <CanvasControls label="data diagram" :zoom="zoom" :expanded="expanded" @zoom-in="zoomIn" @zoom-out="zoomOut" @fit="fit" @expand="toggleExpand" />
     </div>
-    <div class="canvas-actions" role="toolbar" aria-label="Create data elements">
+    <div v-if="!compact || expanded" class="canvas-actions" role="toolbar" aria-label="Create data elements">
       <button :disabled="disabled || contract.records.length>=32" @click="emit('add-record')">+ Record</button>
       <button :disabled="disabled || !contract.records.length || contract.entities.length>=32" @click="emit('add-entity')">+ Entity</button>
       <button :disabled="disabled || !contract.entities.length || contract.relationships.length>=64" @click="emit('add-relationship')">+ Relationship</button>
