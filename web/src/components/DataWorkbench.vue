@@ -27,6 +27,7 @@ import {
   type DataValidationSummary,
   type DataComparison,
 } from "../dataTypes";
+import type { DataSelection } from "../dataCanvas";
 import DataGraph from "./DataGraph.vue";
 import DataFixtureEditor from "./DataFixtureEditor.vue";
 function blank(): DataContract {
@@ -59,6 +60,10 @@ const tab = ref<"model" | "relationships" | "fixture" | "history" | "compare">(
   selectedCatalog = ref(""),
   selectedEntity = ref(""),
   selectedRecord = ref("");
+const canvasSelection = ref<DataSelection | null>(null);
+const recordPositions = ref<Record<string, {x:number;y:number}>>({});
+const canvasMode = ref<"properties" | "fields">("properties");
+const connectionSource = ref<number | null>(null);
 const baselineContract = ref(""),
   baselineFixture = ref(""),
   installedStamp = ref(""),
@@ -100,6 +105,39 @@ const currentEntity = computed(
     draft.value.entities.find((e) => e.name === selectedEntity.value) ||
     draft.value.entities[0],
 );
+const canvasRecord = computed(() => canvasSelection.value?.kind === "entity"
+  ? draft.value.records.find(r => r.name === currentEntity.value?.record) : currentRecord.value);
+const canvasIssues = computed(() => {
+ const selection = canvasSelection.value;
+ if (!selection) return [];
+ const prefix = `${selection.kind === 'entity' ? 'entities' : selection.kind === 'record' ? 'records' : 'relationships'}[${selection.index}]`;
+ const recordIndex = draft.value.records.findIndex(r => r === canvasRecord.value);
+ return issues.value.filter(i => i.path.startsWith(prefix) || (canvasMode.value === 'fields' && i.path.startsWith('records[' + recordIndex + ']')));
+});
+function selectCanvas(selection: DataSelection) {
+ canvasSelection.value = selection; canvasMode.value = 'properties';
+ if (selection.kind === 'entity') { selectedEntity.value = draft.value.entities[selection.index]?.name || ''; selectedRecord.value = currentEntity.value?.record || ''; }
+ if (selection.kind === 'record') selectedRecord.value = draft.value.records[selection.index]?.name || '';
+}
+function closeCanvasEditor() { canvasSelection.value = null; canvasMode.value = 'properties'; }
+function removeCanvasRecord() {
+ const item=canvasRecord.value; if(!item || busy.value) return;
+ draft.value.records = draft.value.records.filter(r => r !== item);
+ delete recordPositions.value[item.name]; closeCanvasEditor();
+}
+function removeCanvasEntity() {
+ if(busy.value) return;
+ draft.value.entities = draft.value.entities.filter(e => e !== currentEntity.value);
+ closeCanvasEditor(); connectionSource.value=null;
+}
+function removeCanvasRelationship(index:number) {
+ if(busy.value) return;
+ draft.value.relationships.splice(index,1);closeCanvasEditor();
+}
+function connectEntities(from:number,to:number) {
+ if(busy.value) return;
+ addRelationship(from,to); connectionSource.value=null;
+}
 baselineContract.value = draftStamp.value;
 baselineFixture.value = fixtureStamp.value;
 function focusIssue(issue: ValidationIssue) {
@@ -111,16 +149,16 @@ function focusIssue(issue: ValidationIssue) {
     : issue.path.includes("fixture")
       ? "fixture"
       : "model";
-  if (entity)
-    selectedEntity.value = draft.value.entities[Number(entity[1])]?.name || "";
-  if (record)
-    selectedRecord.value = draft.value.records[Number(record[1])]?.name || "";
+  if (entity) selectCanvas({kind:'entity',index:Number(entity[1])});
+  if (record) selectCanvas({kind:'record',index:Number(record[1])});
+  if (relationship) selectCanvas({kind:'relationship',index:Number(relationship[1])});
+  const field = issue.path.match(/fields\[(\d+)\]/);
   focusField(
     document.querySelector(".data-workbench"),
     entity
-      ? '[aria-label="Entity name"]'
+      ? (issue.path.includes('primaryKey') ? '[aria-label="Entity primary key"]' : '[aria-label="Entity name"]')
       : record
-        ? '[aria-label="Record type name"]'
+        ? (field ? `[aria-label="Record field ${Number(field[1])+1} ${issue.path.endsWith('.type') ? 'type' : 'name'}"]` : '[aria-label="Record type name"]')
         : relationship
           ? `[aria-label="Relationship ${Number(relationship[1]) + 1} name"]`
           : '[aria-label="Data contract ID"]',
@@ -153,6 +191,7 @@ function replaceAllowed() {
   );
 }
 function adopt(lock: DataContractLock, data?: DataFixture, installed = false) {
+  closeCanvasEditor(); connectionSource.value=null; recordPositions.value={};
   draft.value = cloneBehavior(lock.contract);
   fixture.value = data
     ? cloneBehavior(data)
@@ -194,6 +233,7 @@ async function initialize() {
 }
 function newDraft() {
   if (busy.value || !replaceAllowed()) return;
+  closeCanvasEditor(); connectionSource.value=null; recordPositions.value={};
   draft.value = blank();
   fixture.value = { name: "New fixture", rows: {} };
   selectedRecord.value = "";
@@ -391,9 +431,10 @@ function addRecord() {
     draft.value.records.map((r) => r.name),
   );
   draft.value.records.push({ name, fields: [{ name: "id", type: "string" }] });
-  selectedRecord.value = name;
+  selectedRecord.value = name; selectCanvas({kind:'record',index:draft.value.records.length-1});
 }
-function addEntity() {
+function addEntity(recordName?: string) {
+  if (recordName) selectedRecord.value=recordName;
   if (draft.value.entities.length >= 32 || !currentRecord.value) return;
   const name = fresh(
     "Entity",
@@ -409,23 +450,23 @@ function addEntity() {
       y: 40 + Math.floor(draft.value.entities.length / 3) * 300,
     },
   });
-  selectedEntity.value = name;
+  selectedEntity.value = name; selectCanvas({kind:'entity',index:draft.value.entities.length-1});
 }
 function addField() {
-  if (!currentRecord.value || currentRecord.value.fields.length >= 16) return;
-  currentRecord.value.fields.push({
+  if (!canvasRecord.value || canvasRecord.value.fields.length >= 16) return;
+  canvasRecord.value.fields.push({
     name: fresh(
       "field",
-      currentRecord.value.fields.map((f) => f.name),
+      canvasRecord.value.fields.map((f) => f.name),
     ),
     type: "string",
   });
 }
-function addRelationship() {
+function addRelationship(from=0, to=1) {
   if (draft.value.relationships.length >= 64 || !draft.value.entities.length)
     return;
-  const a = draft.value.entities[0],
-    b = draft.value.entities[1] || a;
+  const a = draft.value.entities[from] || draft.value.entities[0],
+    b = draft.value.entities[to] || a;
   draft.value.relationships.push({
     name: fresh(
       "Reference",
@@ -438,6 +479,7 @@ function addRelationship() {
     minSources: 0,
     maxSources: 0,
   });
+  selectCanvas({kind:'relationship',index:draft.value.relationships.length-1});
 }
 function changeName(kind: "record" | "entity", old: string, e: Event) {
   const value = (e.target as HTMLInputElement).value,
@@ -457,6 +499,7 @@ function changeName(kind: "record" | "entity", old: string, e: Event) {
     draft.value.entities.forEach((x) => {
       if (x.record === old) x.record = value;
     });
+    if(recordPositions.value[old]) { recordPositions.value[value]=recordPositions.value[old]; delete recordPositions.value[old]; }
     selectedRecord.value = value;
   } else {
     draft.value.relationships.forEach((r) => {
@@ -523,6 +566,8 @@ const autosave = useWorkspaceDraft("data", {
   tab,
   selectedEntity,
   selectedRecord,
+  canvasSelection,
+  recordPositions,
   jsonKind,
   jsonText,
   jsonBaseline,
@@ -701,13 +746,8 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
     </details>
     <WorkspaceModes :active="tab" :structure='["model", "relationships"]' :behavior='["compare"]' :execution='["fixture", "history"]' @select='tab = $event as "model" | "relationships" | "compare" | "fixture" | "history"' />
     <nav class="data-tabs">
-      <button v-show="['model', 'relationships'].includes(tab)" :class="{ active: tab === 'model' }" @click="tab = 'model'">
-        Types & entities</button
-      ><button
-        v-show="['model', 'relationships'].includes(tab)" :class="{ active: tab === 'relationships' }"
-        @click="tab = 'relationships'"
-      >
-        Relationships</button
+      <button v-show="['model', 'relationships'].includes(tab)" class="active" @click="tab = 'model'">
+        Data canvas</button
       ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'fixture' }" @click="tab = 'fixture'">
         Fixture validation</button
       ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
@@ -725,50 +765,37 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
         Add first record type
       </button>
     </section>
-    <template v-if="tab === 'model' || tab === 'relationships'"
-      ><DataGraph
-        :contract="draft"
-        :selected="selectedEntity"
-        :disabled="!!busy"
-        @select="selectedEntity = $event"
-        @move="
-          (name, position) => {
-            const e = draft.entities.find((e) => e.name === name);
-            if (e && !busy) e.position = position;
-          }
-        "
-      />
-      <div v-if="tab === 'model'" class="data-columns">
-        <section class="data-panel">
-          <div class="panel-heading">
-            <h3>Record types</h3>
-            <button
-              class="button secondary"
-              :disabled="!!busy || draft.records.length >= 32"
-              @click="addRecord"
-            >
-              Add record type
-            </button>
-          </div>
-          <label class="field"
-            >Selected record<select
-              v-model="selectedRecord"
-              aria-label="Selected record type"
-            >
-              <option v-for="r in draft.records" :key="r.name">
-                {{ r.name }}
-              </option>
-            </select></label
-          >
-          <fieldset v-if="currentRecord" :disabled="!!busy">
+    <DataGraph v-if="tab === 'model' || tab === 'relationships'"
+      :contract="draft" :selection="canvasSelection" :disabled="!!busy"
+      :record-positions="recordPositions" :connection-source="connectionSource" :issues="issues"
+      @select="selectCanvas" @close="closeCanvasEditor" @add-record="addRecord" @add-entity="addEntity()"
+      @add-relationship="addRelationship()" @connect="connectEntities" @cancel-connect="connectionSource=null"
+      @validate="validateDefinition"
+      @move="(name,position) => { const e=draft.entities.find(e => e.name===name); if(e && !busy) e.position=position; }"
+      @move-record="(name,position) => { if(!busy) recordPositions[name]=position; }"
+    >
+      <template #editor>
+        <p v-if="error" class="data-error" role="alert">{{ error }}</p>
+        <div class="canvas-context-actions" v-if="canvasSelection?.kind === 'entity'">
+          <button class="button secondary" :aria-pressed="canvasMode === 'properties'" @click="canvasMode='properties'">Entity &amp; keys</button>
+          <button class="button secondary" :aria-pressed="canvasMode === 'fields'" @click="canvasMode='fields'">Record fields</button>
+          <button class="button secondary" :disabled="!!busy || draft.relationships.length >= 64" @click="connectionSource=canvasSelection.index; closeCanvasEditor()">Connect to…</button>
+        </div>
+        <div v-if="canvasSelection?.kind === 'record'" class="canvas-context-actions">
+          <button class="button secondary" :disabled="!!busy || draft.entities.length >= 32" @click="addEntity(canvasRecord?.name)">Create entity from this record</button>
+        </div>
+        <p v-if="canvasRecord && (canvasSelection?.kind === 'record' || canvasMode === 'fields')" class="help">Record {{ canvasRecord.name }} · shared by {{ draft.entities.filter(e => e.record === canvasRecord?.name).length }} entities. All fields are required; edits affect every entity using this type.</p>
+        <ul v-if="canvasIssues.length" class="issue-list"><li v-for="issue in canvasIssues" :key="issue.path"><button class="issue-link" @click="focusIssue(issue)">{{ issue.path }} · {{ issue.message }}</button></li></ul>
+        <section v-if="canvasSelection?.kind === 'record' || canvasMode === 'fields'">
+          <fieldset v-if="canvasRecord && (canvasSelection?.kind === 'record' || canvasMode === 'fields')" :disabled="!!busy">
             <label class="field"
               >Record name<input
-                :value="currentRecord.name"
+                :value="canvasRecord.name"
                 aria-label="Record type name"
-                @change="changeName('record', currentRecord.name, $event)"
+                @change="changeName('record', canvasRecord.name, $event)"
             /></label>
             <div
-              v-for="(f, i) in currentRecord.fields"
+              v-for="(f, i) in canvasRecord.fields"
               :key="i"
               class="field-row"
             >
@@ -785,27 +812,22 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
                 </select></label
               ><button
                 class="button quiet"
-                :disabled="currentRecord.fields.length <= 1"
-                @click="currentRecord.fields.splice(i, 1)"
+                :disabled="canvasRecord.fields.length <= 1"
+                @click="canvasRecord.fields.splice(i, 1)"
               >
                 Remove field {{ i + 1 }}
               </button>
             </div>
             <button
               class="button secondary"
-              :disabled="currentRecord.fields.length >= 16"
+              :disabled="canvasRecord.fields.length >= 16"
               @click="addField"
             >
               Add record field</button
             ><button
               class="button danger"
               :disabled="draft.records.length <= 1"
-              @click="
-                draft.records = draft.records.filter(
-                  (r) => r !== currentRecord,
-                );
-                selectedRecord = draft.records[0]?.name || '';
-              "
+              @click="removeCanvasRecord"
             >
               Remove record type
             </button>
@@ -815,30 +837,9 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
             keys, relationships and existing fixture rows; validate to inspect
             the affected paths.
           </p>
+
         </section>
-        <section class="data-panel">
-          <div class="panel-heading">
-            <h3>Entities & keys</h3>
-            <button
-              class="button secondary"
-              :disabled="
-                !!busy || !currentRecord || draft.entities.length >= 32
-              "
-              @click="addEntity"
-            >
-              Add entity
-            </button>
-          </div>
-          <label class="field"
-            >Selected entity<select
-              v-model="selectedEntity"
-              aria-label="Selected data entity"
-            >
-              <option v-for="e in draft.entities" :key="e.name">
-                {{ e.name }}
-              </option>
-            </select></label
-          >
+        <section v-if="canvasSelection?.kind === 'entity' && canvasMode === 'properties'">
           <fieldset v-if="currentEntity" :disabled="!!busy">
             <label class="field"
               >Entity name<input
@@ -910,12 +911,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
             </div>
             <button
               class="button danger"
-              @click="
-                draft.entities = draft.entities.filter(
-                  (e) => e !== currentEntity,
-                );
-                selectedEntity = draft.entities[0]?.name || '';
-              "
+              @click="removeCanvasEntity"
             >
               Remove entity
             </button>
@@ -925,26 +921,12 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
             unique key constrains the complete ordered tuple. Removing an entity
             leaves its references and fixture rows visible for correction.
           </p>
+
         </section>
-      </div>
-      <section v-else class="data-panel">
-        <div class="panel-heading">
-          <h3>Required foreign keys</h3>
-          <button
-            class="button secondary"
-            :disabled="
-              !!busy ||
-              !draft.entities.length ||
-              draft.relationships.length >= 64
-            "
-            @click="addRelationship"
-          >
-            Add relationship
-          </button>
-        </div>
+        <section v-if="canvasSelection?.kind === 'relationship'">
         <fieldset :disabled="!!busy">
           <article
-            v-for="(r, i) in draft.relationships"
+            v-for="{r,i} in draft.relationships.map((r,i) => ({r,i})).filter(x => x.i === canvasSelection?.index)"
             :key="i"
             class="relationship"
           >
@@ -1009,7 +991,7 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
             </div>
             <button
               class="button danger"
-              @click="draft.relationships.splice(i, 1)"
+              @click="removeCanvasRelationship(i)"
             >
               Remove relationship {{ i + 1 }}
             </button>
@@ -1020,8 +1002,10 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
           key with matching ordered field types. Model many-to-many with a join
           entity and two foreign keys. Cycles do not imply cascade behavior.
         </p>
-      </section></template
-    >
+
+        </section>
+      </template>
+    </DataGraph>
     <section v-if="tab === 'fixture'" class="data-panel">
       <DataFixtureEditor
         :contract="draft"
@@ -1229,6 +1213,12 @@ watchInspection(() => inspectionProps.inspectionRequest, async request => {
   </section>
 </template>
 <style scoped>
+.canvas-context-actions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.canvas-context-actions button[aria-pressed=true] { background:#e6f4ee; border-color:#23846e; }
+.data-workbench :deep(.canvas-editor) .field-row { grid-template-columns:minmax(0,1fr) minmax(85px,.65fr); }
+.data-workbench :deep(.canvas-editor) .field-row .button { grid-column:1/-1; justify-self:end; margin:0 0 8px; }
+.data-workbench :deep(.canvas-editor) .data-grid { grid-template-columns:1fr; }
+.data-workbench :deep(.canvas-editor) fieldset { min-width:0; }
 .data-workbench {
   padding: 24px 30px;
   background: #f5f8fa;

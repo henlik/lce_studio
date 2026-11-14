@@ -4,6 +4,20 @@ Navigation update: Types/relationships are under **Structure**, compatibility co
 
 A data contract gives an exact meaning to the records exchanged by components and to the complete sample datasets checked in the Data workspace. It is a reusable specification, not a database connection or a generated database schema. The precise JSON contract is in [DATA_CONTRACT.md](DATA_CONTRACT.md).
 
+## Edit directly on the canvas
+
+Open **Data → Structure → Data canvas**. Record types, entities and relationships share one editing surface.
+
+1. Click **+ Record**. Its settings open beside the new record card. Name the type and add its required fields.
+2. Click **Create entity from this record**. Configure its name, primary key and unique keys in the same canvas.
+3. Select an entity and choose **Record fields** to edit its reusable record without navigating away. The usage count reminds you which entities share that type.
+4. Create another entity. Select the source, click **Connect to…**, then click the target entity (including the same entity for a self-reference). Configure the relationship's ordered source fields, target key and cardinality beside the connection.
+5. Click any card or relationship line to reopen its settings. Drag cards to arrange them; use **Expand** for a larger workspace. Press **Escape** or close the settings to return to the diagram.
+6. Click **Validate data**. Invalid cards and connections are highlighted. An issue's **Fix** button opens the relevant element; broken endpoint references also remain accessible above the canvas.
+7. Wait for **Draft saved** before reloading. Definition edits and the selected element are recovered locally. Record-card positions are view preferences; they do not change the reusable contract.
+
+Changes update the draft directly. Record/entity names commit when leaving the field. Removing definitions can leave references that must be repaired; validation identifies them. On narrow screens settings stay inside the canvas with their own scrolling area.
+
 ## Start from a shared definition
 
 The bundled organization registry contains three record types: Organization, Subject and Resource. Their fields are required Boolean, safe-integer or string values. Healthcare and education examples use the same definitions with different organization names, roles and scopes. Domain vocabulary belongs in reusable contracts and components; it does not require a different execution engine.
