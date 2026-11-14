@@ -1,5 +1,14 @@
 # Verification
 
+## Shared owners and offline broker — 14 November 2026
+
+- Added pinned message actor mappings to existing system state owners; exact machine identities and provider versions are checked. Delivery reuses the same state sessions, revisions, receipts, budgets and effects as graph and owner calls.
+- Added modeled-broker@1.0.0, explicit dispatch/delivery/retry/broker restart steps, typed message expectations, contextual inspector bindings and a sequential message journey. Envelopes and acknowledgements persist across modeled broker restarts.
+- The 14-step stock-to-ledger exercise covers source rollback, missing intents, dropped delivery, recipient rollback, lost acknowledgement, owner/broker restart, duplicate suppression and repeated dispatch. Additional tests interleave graph calls and later direct owner writes with delivery, preserving current state while replaying historical receipts.
+- New versions system-dataflow-4/system-scenario-3 preserve old reports. Frozen transport plans replay without current artifact catalogs. Invalid mappings, unsupported providers, malformed transport steps and independently wrong expectations are rejected or fail as appropriate.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL. After the final trace refinement, focused systemrun/delivery race tests, `go vet ./...`, backend build and Vue production build passed again. All 40 frontend tests and the full live API acceptance suite passed, including the new message exercise and replay. Browser/mobile interaction remains unverified; the environment previously blocked Chromium Unix sockets. Vite retains its existing chunk-size warning.
+- Roadmap remains **28% overall; M1 80% (+0 points)**. The four message steps are implemented; workflow, continuum, live-provider and general implementation-conformance integration remain open. Walkthrough: [SYSTEM_MESSAGES.md](SYSTEM_MESSAGES.md).
+
 ## Shared multi-command owners — 14 November 2026
 
 - System instances can select a graph entry command for each state aspect.

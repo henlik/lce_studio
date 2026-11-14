@@ -82,6 +82,17 @@ func Validate(d SystemDesign) model.Validation {
 			add(p+".id", "Component instance IDs must be nonempty and unique")
 		}
 		components[c.ID] = true
+		messageOwners := map[string]bool{}
+		if len(c.MessageOwners) > 64 {
+			add(p+".messageOwners", "At most 64 actor bindings")
+		}
+		for j, o := range c.MessageOwners {
+			key := o.Slot + "/" + o.InstanceID
+			if c.Definition.Kind != "definition" || !definitionID.MatchString(o.Slot) || !definitionID.MatchString(o.InstanceID) || o.ComponentID == "" || !definitionID.MatchString(o.StateSlot) || messageOwners[key] {
+				add(fmt.Sprintf("%s.messageOwners[%d]", p, j), "Choose a unique message slot/actor and a component state slot")
+			}
+			messageOwners[key] = true
+		}
 		entries := map[string]bool{}
 		if len(c.StateEntries) > 32 {
 			add(p+".stateEntries", "At most 32 state entry selections")
@@ -127,8 +138,8 @@ func Validate(d SystemDesign) model.Validation {
 			add(path+".id", "Provider IDs must be nonempty and unique")
 		}
 		providers[p.ID] = true
-		if p.Kind != "modeled-state" || p.Version != "1.0.0" {
-			add(path, "Supported provider: modeled-state@1.0.0 (offline only)")
+		if (p.Kind != "modeled-state" && p.Kind != "modeled-broker") || p.Version != "1.0.0" {
+			add(path, "Supported providers: modeled-state@1.0.0 and modeled-broker@1.0.0 (offline only)")
 		}
 	}
 	plans := map[string]bool{}

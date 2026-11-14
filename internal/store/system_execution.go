@@ -69,6 +69,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 		return prepared, err
 	}
 	tasks := []systemrun.Task{}
+	channels := []systemrun.MessageChannel{}
 	planBytes := 0
 	links := []systemrun.Link{}
 	addTask := func(component, slot, name, id, version, digest, path string) error {
@@ -105,6 +106,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 		usedBindings := map[string]bool{}
 		entries := map[string]string{}
 		usedEntries := map[string]bool{}
+		usedOwners := map[int]bool{}
 		for _, entry := range c.StateEntries {
 			entries[entry.Slot] = entry.Command
 		}
@@ -122,6 +124,35 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				count := 0
 				for j, a := range def.Aspects {
 					if a.Kind == "data" {
+						continue
+					}
+					if a.Kind == "messages" {
+						requirement := "messages/" + a.Slot
+						provider := system.ExecutionProvider{}
+						for _, b := range c.Bindings {
+							if b.Requirement == requirement {
+								provider = providers[b.ResourceID]
+								usedBindings[requirement] = true
+							}
+						}
+						if provider.ID == "" {
+							add(path+".bindings", "Bind "+requirement+" to modeled-broker@1.0.0")
+							continue
+						}
+						usedProviders[provider.ID] = true
+						record, err := s.DeliveryModel(ctx, a.ID, a.Version, a.Digest)
+						if err != nil {
+							return prepared, err
+						}
+						channel := systemrun.MessageChannel{ID: systemrun.Key(c.ID, a.Slot), Model: model.DeliveryModelLock{Model: record.Model, Digest: record.Digest}, Provider: provider}
+						for k, o := range c.MessageOwners {
+							if o.Slot == a.Slot {
+								usedOwners[k] = true
+								channel.Owners = append(channel.Owners, systemrun.MessageOwner{InstanceID: o.InstanceID, TaskID: systemrun.Key(o.ComponentID, o.StateSlot)})
+							}
+						}
+						channels = append(channels, channel)
+						count++
 						continue
 					}
 					if a.Kind == "state" {
@@ -160,7 +191,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 						continue
 					}
 					if a.Kind != "component" {
-						add(fmt.Sprintf("%s.definition.aspects[%d]", path, j), "Message and workflow aspects need execution adapters; they are not ignored")
+						add(fmt.Sprintf("%s.definition.aspects[%d]", path, j), "Workflow aspects need execution adapters; they are not ignored")
 						continue
 					}
 					count++
@@ -189,9 +220,14 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				return prepared, err
 			}
 		}
+		for j := range c.MessageOwners {
+			if !usedOwners[j] {
+				add(fmt.Sprintf("%s.messageOwners[%d]", path, j), "Mapping must name an owned message aspect")
+			}
+		}
 		for j, binding := range c.Bindings {
 			if !usedBindings[binding.Requirement] {
-				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot> requirement")
+				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot> or messages/<slot> requirement")
 			}
 		}
 		for j, entry := range c.StateEntries {
@@ -202,7 +238,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	}
 	for i, p := range d.ExecutionProviders {
 		if !usedProviders[p.ID] {
-			add(fmt.Sprintf("executionProviders[%d]", i), "Provider is unused by executable state aspects")
+			add(fmt.Sprintf("executionProviders[%d]", i), "Provider is unused by executable state or message aspects")
 		}
 	}
 	for i, c := range d.Connections {
@@ -222,7 +258,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	if len(issues) > 0 {
 		return prepared, &systemrun.Invalid{Issues: issues}
 	}
-	prepared.Plan, err = systemrun.Prepare(tasks, links)
+	prepared.Plan, err = systemrun.Prepare(tasks, links, channels...)
 	if err != nil {
 		return prepared, err
 	}

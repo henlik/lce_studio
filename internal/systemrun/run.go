@@ -51,17 +51,20 @@ type RequiredInput struct {
 	Fields []model.DataField `json:"fields,omitempty"`
 }
 type Plan struct {
-	EngineVersion string          `json:"engineVersion"`
-	Tasks         []Task          `json:"tasks"`
-	Links         []Link          `json:"links"`
-	Order         []string        `json:"order"`
-	Inputs        []RequiredInput `json:"inputs"`
+	Channels      []MessageChannel `json:"channels,omitempty"`
+	EngineVersion string           `json:"engineVersion"`
+	Tasks         []Task           `json:"tasks"`
+	Links         []Link           `json:"links"`
+	Order         []string         `json:"order"`
+	Inputs        []RequiredInput  `json:"inputs"`
 }
 type Inputs struct {
 	TaskID string                      `json:"taskId"`
 	Values map[string]model.TypedValue `json:"values"`
 }
 type Event struct {
+	IntentIDs    []string                    `json:"intentIds,omitempty"`
+	Message      *MessageEvidence            `json:"message,omitempty"`
 	ScenarioStep int                         `json:"scenarioStep,omitempty"`
 	State        *StateEvidence              `json:"state,omitempty"`
 	Sequence     int                         `json:"sequence"`
@@ -109,7 +112,7 @@ func root(t Task) model.ComponentPackage {
 	return model.ComponentPackage{}
 }
 
-func Prepare(tasks []Task, links []Link) (Plan, error) {
+func Prepare(tasks []Task, links []Link, channels ...MessageChannel) (Plan, error) {
 	plan := Plan{EngineVersion: "system-pure-1", Tasks: tasks, Links: links, Order: []string{}, Inputs: []RequiredInput{}}
 	issues := []model.ValidationIssue{}
 	add := func(path, message string) {
@@ -249,10 +252,27 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 	if len(issues) > 0 {
 		return plan, &Invalid{issues}
 	}
+	if len(channels) > 0 {
+		if issues := validateChannels(byID, channels); len(issues) > 0 {
+			return plan, &Invalid{issues}
+		}
+		plan.Channels = channels
+		plan.EngineVersion = MessageVersion
+		b, err := json.Marshal(plan)
+		if err != nil {
+			return plan, err
+		}
+		if len(b) > MaxBytes {
+			return plan, &Invalid{[]model.ValidationIssue{{Path: "channels", Message: "Plan exceeds 4 MiB"}}}
+		}
+	}
 	return plan, nil
 }
 
 func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
+	if len(plan.Channels) > 0 {
+		return Report{}, &Invalid{[]model.ValidationIssue{{Path: "scenario", Message: "Message channels require an explicit shared scenario"}}}
+	}
 	return runGraph(ctx, plan, inputs, nil)
 }
 func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenarioRuntime) (Report, error) {
@@ -260,7 +280,7 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 		return Report{}, err
 	}
 	// Re-derive order and input requirements; never trust a caller-supplied schedule.
-	plan, err := Prepare(plan.Tasks, plan.Links)
+	plan, err := Prepare(plan.Tasks, plan.Links, plan.Channels...)
 	if err != nil {
 		return Report{}, err
 	}
@@ -388,7 +408,7 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 				return Report{}, err
 			}
 			result.State = &StateEvidence{Provider: task.State.Provider, Step: step, Instance: snapshot[0]}
-			if plan.EngineVersion == MultiCommandVersion {
+			if plan.EngineVersion == MultiCommandVersion || plan.EngineVersion == MessageVersion {
 				result.State.Command = command.Name
 			}
 			result.Outputs, result.BundleHash = map[string]model.TypedValue{}, task.State.Machine.Digest

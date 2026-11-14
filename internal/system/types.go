@@ -35,12 +35,13 @@ type Binding struct {
 	ResourceID  string `json:"resourceId"`
 }
 type ComponentInstance struct {
-	StateEntries []StateEntry  `json:"stateEntries,omitempty"`
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Definition   DefinitionRef `json:"definition"`
-	Artifacts    []ArtifactRef `json:"artifacts"`
-	Bindings     []Binding     `json:"bindings"`
+	MessageOwners []MessageOwner `json:"messageOwners,omitempty"`
+	StateEntries  []StateEntry   `json:"stateEntries,omitempty"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Definition    DefinitionRef  `json:"definition"`
+	Artifacts     []ArtifactRef  `json:"artifacts"`
+	Bindings      []Binding      `json:"bindings"`
 }
 
 // StateEntry selects the command whose ports participate in a graph invocation.
@@ -104,4 +105,12 @@ type Verdict struct {
 	Status            string `json:"status"`
 	Message           string `json:"message"`
 	EvidenceSequences []int  `json:"evidenceSequences"`
+}
+
+// MessageOwner binds an actor in a pinned message aspect to a system state owner.
+type MessageOwner struct {
+	Slot        string `json:"slot"`
+	InstanceID  string `json:"instanceId"`
+	ComponentID string `json:"componentId"`
+	StateSlot   string `json:"stateSlot"`
 }

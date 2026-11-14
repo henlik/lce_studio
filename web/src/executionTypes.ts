@@ -1,13 +1,16 @@
+import type {DeliveryModelLock,DeliveryMessage,DeliveryStepResult} from './deliveryTypes';
 import type {StateMachineLock} from './stateTypes';
 import type {ComponentBundle} from './behaviorTypes';
 import type {SharedScenario,ScenarioOutcome} from './systemScenario';
 import type {SystemDesign,SystemResolution} from './systemTypes';
 export interface ValueType {type:string;recordRef?:{contractId:string;version:string;digest:string;record:string}}
 export interface ExecutionInput extends ValueType {taskId:string;name:string;fields?:{name:string;type:string}[]}
-export interface ExecutionPlan {engineVersion:string;tasks:{id:string;componentId:string;slot:string;name:string;bundle:ComponentBundle;state?:{entryCommand?:string;provider:{id:string;kind:string;version:string};machine:StateMachineLock}}[];links:{id:string;source:string;target:string;output:string;input:string;connectionId?:string}[];order:string[];inputs:ExecutionInput[]}
+export interface MessageChannel {id:string;model:DeliveryModelLock;provider:{id:string;kind:string;version:string};owners:{instanceId:string;taskId:string}[]}
+export interface MessageEvidence {channelId:string;provider:{id:string;kind:string;version:string};step:DeliveryStepResult;messages:DeliveryMessage[]}
+export interface ExecutionPlan {channels?:MessageChannel[];engineVersion:string;tasks:{id:string;componentId:string;slot:string;name:string;bundle:ComponentBundle;state?:{entryCommand?:string;provider:{id:string;kind:string;version:string};machine:StateMachineLock}}[];links:{id:string;source:string;target:string;output:string;input:string;connectionId?:string}[];order:string[];inputs:ExecutionInput[]}
 export interface Preparation {plan:ExecutionPlan;resolution:SystemResolution;designHash:string}
 export interface StateEvidence {command?:string;provider:{id:string;kind:string;version:string};step:{replyLost?:boolean;status:string;beforeRevision:number;afterRevision:number;before:unknown;after:unknown;receipt?:unknown};instance:{state:unknown;revision:number;receipts:unknown[];effects:unknown[]}}
-export interface ExecutionEvent {scenarioStep?:number;state?:StateEvidence;sequence:number;kind:string;taskId:string;target?:string;linkId?:string;connectionId?:string;values:Record<string,unknown>}
+export interface ExecutionEvent {intentIds?:string[];message?:MessageEvidence;scenarioStep?:number;state?:StateEvidence;sequence:number;kind:string;taskId:string;target?:string;linkId?:string;connectionId?:string;values:Record<string,unknown>}
 export interface ReplayVerification {id:string;executionId:string;createdAt:string;verifierVersion:string;snapshotHash:string;status:'matched'|'mismatch'|'unverified';message:string;checks:{path:string;status:string;message:string}[];recordedReportHash:string;replayedReportHash?:string;report?:ExecutionEvidence['report'];differences:{path:string;recorded:string;replayed:string}[];differencesTruncated:boolean}
 export type ReplaySummary=Pick<ReplayVerification,'id'|'createdAt'|'status'|'message'>;
 export interface ExecutionEvidence extends Preparation {scenario?:SharedScenario;id:string;createdAt:string;design:SystemDesign;inputs:unknown[];inputHash:string;report:{scenario?:ScenarioOutcome;engineVersion:string;mode:string;claimsEvaluated:boolean;events:ExecutionEvent[];results:{scenarioStep?:number;status?:string;state?:StateEvidence;taskId:string;outputs:Record<string,unknown>;operations:number;invocations:number;bundleHash:string}[];limitations:string[]}}

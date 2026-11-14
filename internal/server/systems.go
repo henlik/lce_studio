@@ -55,6 +55,19 @@ func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, resolution)
+	case path == "/message-example":
+		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
+			return
+		}
+		example, err := s.store.InstallMessageExample(r.Context())
+		if errors.Is(err, store.ErrStateMachineConflict) || errors.Is(err, store.ErrStateCatalogFull) || errors.Is(err, store.ErrDeliveryModelConflict) || errors.Is(err, store.ErrDeliveryCatalogFull) || errors.Is(err, store.ErrDefinitionConflict) || errors.Is(err, store.ErrDefinitionCapacity) {
+			fail(w, 409, "Could not install the complete message example; existing versions were preserved. Resolve catalog conflicts and retry.", nil)
+			return
+		}
+		if s.storageError(w, err, "Message example") {
+			return
+		}
+		respond(w, 200, example)
 	case path == "/state-execution-example" || path == "/multi-command-example":
 		if !method(w, r, http.MethodPost) || !s.systemStoreReady(w) {
 			return

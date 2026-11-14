@@ -1,5 +1,7 @@
 # Execute connected components
 
+Current message integration: [Shared system messages](SYSTEM_MESSAGES.md) documents actor-to-owner bindings, modeled brokers, transport scenarios and replay. Earlier pure/state exercises remain supported.
+
 Engineering → Design → System architecture → Execution runs a bounded, acyclic
 graph of pure behavior components. State aspects with selected graph entry commands are also supported
 with explicit offline provider bindings; see [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md). It routes actual typed model values and records

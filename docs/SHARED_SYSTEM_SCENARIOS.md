@@ -1,5 +1,7 @@
 # Shared command scenarios
 
+Current message integration: [Shared system messages](SYSTEM_MESSAGES.md) documents actor-to-owner bindings, modeled brokers, transport scenarios and replay. Earlier pure/state exercises remain supported.
+
 A shared scenario runs several graph invocations and owner restarts against the
 same in-memory state sessions. The sessions exist only inside this run; another
 run starts from its pinned initial definitions. PostgreSQL retains the complete

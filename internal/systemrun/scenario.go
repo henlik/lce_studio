@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"software-studio/internal/delivery"
 	"software-studio/internal/model"
 	"software-studio/internal/state"
 )
@@ -19,6 +20,9 @@ type StateCall struct {
 }
 
 func ScenarioEngineVersion(plan Plan, scenario Scenario) string {
+	if len(plan.Channels) > 0 {
+		return "system-scenario-3"
+	}
 	if plan.EngineVersion == MultiCommandVersion {
 		return "system-scenario-2"
 	}
@@ -31,11 +35,13 @@ func ScenarioEngineVersion(plan Plan, scenario Scenario) string {
 }
 
 type ScenarioStep struct {
-	Kind             string            `json:"kind"`
-	TaskID           string            `json:"taskId,omitempty"`
-	Inputs           []Inputs          `json:"inputs,omitempty"`
-	Calls            []StateCall       `json:"calls,omitempty"`
-	ExpectedStatuses map[string]string `json:"expectedStatuses,omitempty"`
+	Message               *MessageCall      `json:"message,omitempty"`
+	ExpectedMessageStatus string            `json:"expectedMessageStatus,omitempty"`
+	Kind                  string            `json:"kind"`
+	TaskID                string            `json:"taskId,omitempty"`
+	Inputs                []Inputs          `json:"inputs,omitempty"`
+	Calls                 []StateCall       `json:"calls,omitempty"`
+	ExpectedStatuses      map[string]string `json:"expectedStatuses,omitempty"`
 }
 type FinalExpectation struct {
 	TaskID   string                      `json:"taskId"`
@@ -45,9 +51,10 @@ type FinalExpectation struct {
 	Effects  *int                        `json:"effects"`
 }
 type Scenario struct {
-	Name     string             `json:"name"`
-	Steps    []ScenarioStep     `json:"steps"`
-	Expected []FinalExpectation `json:"expected"`
+	ExpectedMessages []MessageExpectation `json:"expectedMessages,omitempty"`
+	Name             string               `json:"name"`
+	Steps            []ScenarioStep       `json:"steps"`
+	Expected         []FinalExpectation   `json:"expected"`
 }
 type ScenarioAssertion struct {
 	Path    string `json:"path"`
@@ -59,12 +66,14 @@ type FinalState struct {
 	Instance state.InstanceResult `json:"instance"`
 }
 type ScenarioOutcome struct {
+	Messages   []FinalMessages     `json:"messages,omitempty"`
 	Verified   bool                `json:"verified"`
 	Passed     bool                `json:"passed"`
 	Assertions []ScenarioAssertion `json:"assertions"`
 	Final      []FinalState        `json:"final"`
 }
 type scenarioRuntime struct {
+	brokers                        map[string]*delivery.SharedSession
 	sessions                       map[string]*state.Session
 	budget                         *state.Budget
 	calls                          map[string]StateCall
@@ -80,7 +89,7 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	if err := ctx.Err(); err != nil {
 		return Report{}, err
 	}
-	if scenario.Name == "" || len(scenario.Name) > 200 || len(scenario.Steps) < 1 || len(scenario.Steps) > 64 || len(scenario.Expected) > 64 {
+	if scenario.Name == "" || len(scenario.Name) > 200 || len(scenario.Steps) < 1 || len(scenario.Steps) > 64 || len(scenario.Expected) > 64 || len(scenario.ExpectedMessages) > 32 {
 		return fail("scenario", "Name, 1–64 steps and at most 64 final expectations required")
 	}
 	encoded, err := json.Marshal(scenario)
@@ -90,7 +99,7 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	if len(encoded) > 1<<20 {
 		return fail("scenario", "Scenario exceeds 1 MiB")
 	}
-	plan, err := Prepare(original.Tasks, original.Links)
+	plan, err := Prepare(original.Tasks, original.Links, original.Channels...)
 	if err != nil {
 		return Report{}, err
 	}
@@ -110,11 +119,16 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	if len(runtime.sessions) == 0 {
 		return fail("scenario", "A shared scenario requires at least one state task")
 	}
+	if err := prepareMessages(ctx, plan, scenario, runtime); err != nil {
+		return Report{}, err
+	}
 	// Validate all envelopes and independent expectations before any transition.
 	activations := 0
 	for i, step := range scenario.Steps {
 		path := fmt.Sprintf("scenario.steps[%d]", i)
 		switch step.Kind {
+		case "dispatch", "deliver", "retry", "broker_restart":
+			activations++
 		case "invoke":
 			activations += len(plan.Tasks)
 			if step.TaskID != "" || len(step.Calls) != len(runtime.sessions) {
@@ -190,8 +204,11 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 	}
 	report := Report{EngineVersion: "system-scenario-1", Mode: "shared-scenario", Events: []Event{}, Results: []TaskResult{}, Scenario: &ScenarioOutcome{Assertions: []ScenarioAssertion{}, Final: []FinalState{}}, Limitations: []string{"One explicitly ordered interleaving; no exhaustive race detection or parallel timing.", "State persists between steps within this run only. Each state aspect still exposes one command; invocations may repeat it.", "Lost replies and missing receipts block downstream transfers; independent branches may still execute. Effects are intents, not deliveries.", "Scenario expectations are checked independently; system contract claims, live providers and deployment are not evaluated."}}
 	report.EngineVersion = ScenarioEngineVersion(plan, scenario)
-	if report.EngineVersion == "system-scenario-2" {
+	if report.EngineVersion == "system-scenario-2" || report.EngineVersion == "system-scenario-3" {
 		report.Limitations[1] = "State persists between steps within this run only. Graph invocations use each owner's selected entry; explicit owner commands share its revision and receipt history without invoking graph links."
+	}
+	if len(plan.Channels) > 0 {
+		report.Limitations[2] = "Durable offline broker: explicit dispatch and retry, immutable recipient request, acknowledgement only on a recipient receipt. No network clock, automatic retries or live service."
 	}
 	assert := func(path string, passed bool, message string) {
 		report.Scenario.Assertions = append(report.Scenario.Assertions, ScenarioAssertion{Path: path, Passed: passed, Message: message})
@@ -209,6 +226,15 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 			return fmt.Errorf("scenario trace exceeds 2 MiB")
 		}
 		report.Events = append(report.Events, event)
+		if len(plan.Channels) > 0 && event.State != nil && event.Kind == "completed" && event.State.Step.Status == "committed" && event.State.Step.Receipt != nil && len(event.State.Step.Receipt.EffectIDs) > 0 {
+			intent := Event{Sequence: len(report.Events) + 1, ScenarioStep: index + 1, Kind: "intent_created", IntentIDs: event.State.Step.Receipt.EffectIDs, TaskID: event.TaskID, Values: map[string]model.TypedValue{}}
+			b, _ := json.Marshal(intent)
+			traceBytes += len(b)
+			if traceBytes > MaxBytes/2 {
+				return fmt.Errorf("scenario trace exceeds 2 MiB")
+			}
+			report.Events = append(report.Events, intent)
+		}
 		return nil
 	}
 	for i, step := range scenario.Steps {
@@ -217,7 +243,20 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 		}
 		runtime.index = i
 		statuses := map[string]string{}
-		if step.Kind == "restart" {
+		if step.Message != nil {
+			events, status, err := runMessageStep(ctx, plan, step, runtime)
+			if err != nil {
+				return Report{}, err
+			}
+			for _, event := range events {
+				if err = appendEvent(event, i); err != nil {
+					return Report{}, err
+				}
+			}
+			if step.ExpectedMessageStatus != "" {
+				assert(fmt.Sprintf("steps[%d].message", i), status == step.ExpectedMessageStatus, fmt.Sprintf("Expected %s; observed %s", step.ExpectedMessageStatus, status))
+			}
+		} else if step.Kind == "restart" {
 			task := tasks[step.TaskID]
 			owner := fmt.Sprintf("owner%x", sha256.Sum256([]byte(task.ID)))[:37]
 			result, err := runtime.sessions[task.ID].Apply(ctx, i, model.StateStep{Kind: "restart", InstanceID: owner}, nil)
@@ -298,6 +337,24 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 			}
 			passed := reflect.DeepEqual(actual.State, e.State) && actual.Revision == *e.Revision && len(actual.Receipts) == *e.Receipts && len(actual.Effects) == *e.Effects
 			assert("final."+id, passed, "Compare complete owned state, revision, receipts and effect counts with the declared expectation")
+		}
+	}
+	for _, channel := range plan.Channels {
+		messages := runtime.brokers[channel.ID].Messages()
+		report.Scenario.Messages = append(report.Scenario.Messages, FinalMessages{ChannelID: channel.ID, Messages: messages})
+		for i, e := range scenario.ExpectedMessages {
+			if e.ChannelID != channel.ID {
+				continue
+			}
+			status, attempts := "absent", 0
+			acceptedOK := e.Accepted == nil
+			for _, m := range messages {
+				if m.Name == e.Name {
+					status, attempts = m.Status, m.Attempts
+					acceptedOK = e.Accepted == nil || (m.Acknowledgement != nil && m.Acknowledgement.Accepted == *e.Accepted)
+				}
+			}
+			assert(fmt.Sprintf("expectedMessages[%d]", i), status == e.Status && attempts == e.Attempts && acceptedOK, "Compare transport status, attempts and optional acknowledged business verdict")
 		}
 	}
 	report.Scenario.Verified = len(report.Scenario.Assertions) > 0

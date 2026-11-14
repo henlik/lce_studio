@@ -67,6 +67,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **28%** — Corrected Design routing and library categories; separated timing simulation navigation and profiles. UX correction adds no engine checkpoint credit.
 - 2026-11-14: **28%** — Added UI/API catalog-independent replay verification, stored plan/report hashes, bounded mismatch inspection and immutable verification history. Reproducibility does not close joint-engine or implementation-conformance checkpoints; no additional credit.
 - 2026-11-14: **28%** — Added selected graph entry commands and explicit owner-command scenario steps sharing revisions and receipts, typed configuration, reference exercise and replay. Message/workflow and live-provider integration remain open; no additional checkpoint credit.
+- 2026-11-14: **28%** — Connected pinned message actors to shared state owners, added the durable modeled broker, explicit transport scenarios, journey traces and portable replay. Workflow, continuum and live implementation/provider integration remain open; no additional checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -196,8 +197,8 @@ Define owned state, commands and transition rules.
 
 Define component message contracts and delivery behavior.
 
-- Today: Typed owner routes, delivery retries and acknowledgements run as bounded experiments.
-- Next: Bind these requirements to concrete broker adapters in system designs.
+- Today: Typed routes bind to existing system owners; explicit dispatch/retry, lost acknowledgements and durable broker restarts run in shared scenarios.
+- Next: Add live broker adapters and measured delivery/timing behavior beyond explicit offline scenarios.
 - Acceptance: Duplicate delivery and retry scenarios retain the declared business result.
 - Dependencies: State
 
@@ -214,8 +215,8 @@ Compose tasks, decisions, owned commands and handoffs.
 
 Own all aspects under one selected, versioned component.
 
-- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and selected state entry commands execute together with saved token traces; explicit owner commands share revisions and receipts.
-- Next: Integrate message/workflow adapters, automatic command routing and live provider bindings.
+- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and selected state entry commands execute together with saved token traces; owner commands and broker deliveries share revisions and receipts.
+- Next: Integrate workflow adapters, automatic command routing and live provider bindings.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
@@ -225,8 +226,8 @@ Own all aspects under one selected, versioned component.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared multi-command scenarios record routed values, faults, restarts and independent assertions.
-- Next: Integrate message/workflow engines, live providers and feedback/delivery scheduling.
+- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared multi-command scenarios record routed values, faults, restarts, message journeys and independent assertions.
+- Next: Integrate workflows, live providers and feedback/timed delivery scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Installed component library
 
@@ -234,7 +235,7 @@ Assemble exact component references, bindings, contracts and deployment plans.
 
 Bind component requirements to storage, cache, routing and messaging services.
 
-- Today: Exact modeled-state@1.0.0 bindings execute offline state semantics; deployment resources remain separate and are not provisioned.
+- Today: Exact modeled-state@1.0.0 and modeled-broker@1.0.0 bindings execute shared owner/delivery semantics offline; deployment resources are not provisioned.
 - Next: Add typed provider capabilities and executable PostgreSQL, cache and broker adapters.
 - Acceptance: An incompatible provider is rejected and a supported binding executes through its adapter.
 - Dependencies: System architecture, Component definitions
@@ -443,7 +444,7 @@ Enforce identity, authorization, isolation and trustworthy changes by default.
 
 Trace intent through implementation, release and runtime decisions.
 
-- Today: Saved pure/state/shared executions support catalog-independent replay verification, immutable verification history and bounded report differences. New snapshots retain plan/report hashes; release provenance remains unsigned.
+- Today: Saved pure/state/message scenarios support catalog-independent replay verification, immutable verification history and bounded report differences. New snapshots retain plan/report hashes; release provenance remains unsigned.
 - Next: Link source revisions, build artifacts, signatures and runtime observations with retention policies.
 - Acceptance: Every deployed release and adaptation can be traced to its authority and supporting evidence.
 - Dependencies: Contracts & conformance, Security & trust

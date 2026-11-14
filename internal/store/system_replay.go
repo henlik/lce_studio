@@ -92,7 +92,7 @@ func verifyExecution(ctx context.Context, saved SystemExecution, executionID str
 		r.Message = "Saved snapshot integrity checks failed; no replay was attempted"
 		return r, nil
 	}
-	plan, err := systemrun.Prepare(saved.Plan.Tasks, saved.Plan.Links)
+	plan, err := systemrun.Prepare(saved.Plan.Tasks, saved.Plan.Links, saved.Plan.Channels...)
 	if err != nil {
 		r.Message = "Pinned plan cannot be replayed: " + err.Error()
 		return r, nil

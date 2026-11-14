@@ -1,5 +1,7 @@
 # Verify a saved system execution
 
+Current message integration: [Shared system messages](SYSTEM_MESSAGES.md) documents actor-to-owner bindings, modeled brokers, transport scenarios and replay. Earlier pure/state exercises remain supported.
+
 Replay checks whether an experiment can reproduce its entire recorded report
 using the saved executable plan, inputs or scenario. It queries no component,
 state, data or definition catalog. It does not execute the current editor draft.
