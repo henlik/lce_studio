@@ -45,7 +45,8 @@ Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
-Joint execution, scheduling and provider compatibility remain unfinished. System architecture currently records references;
+Bounded pure behavior graphs execute with deterministic token traces.
+Stateful execution, feedback/delivery scheduling and provider integration remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
 

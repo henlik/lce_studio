@@ -67,6 +67,7 @@ export const progressHistory=[
  {date:'2026-11-14',percentage:18,reason:'Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.'},
  {date:'2026-11-14',percentage:23,reason:'Versioned component ownership and contextual aspect editing (+5 percentage points).'},
  {date:'2026-11-14',percentage:23,reason:'Added manifest dependency inspection and typed aspect links. Compatibility gate remains open for system-wide connections; no additional checkpoint credit.'},
- {date:'2026-11-14',percentage:28,reason:'Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).'}
+ {date:'2026-11-14',percentage:28,reason:'Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).'},
+ {date:'2026-11-14',percentage:28,reason:'Added bounded pure component execution, token traces and saved replayable snapshots. Stateful/provider execution remains unfinished; no additional checkpoint credit.'}
 ];
 export const progressMethod='Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.';

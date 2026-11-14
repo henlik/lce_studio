@@ -41,6 +41,11 @@ their inspector. Untyped legacy edges stay explicitly unchecked. See
 exercise. Structural validation, static compatibility and execution support are
 separate checks.
 
+System architecture also includes **Execution** for bounded pure component graphs,
+with input forms, token stepping and saved snapshots. **Evidence** continues to
+show the separate model-versus-implementation conformance experiment. See
+[SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
+
 ## Workspace ribbons
 
 The studio uses a compact ribbon above each workspace. Data retains its existing ribbon; Components, State, Messages, Workflows, project views and Inspection Lab use the shared ribbon.

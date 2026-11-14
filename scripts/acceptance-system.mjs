@@ -108,3 +108,18 @@ await request('/conformance','POST',{design:connectionFixture.design},422);
 await request('/'+connectionFixture.design.id,'PUT',connectionFixture.design);
 assert.deepEqual(await request('/'+connectionFixture.design.id),connectionFixture.design);
 console.log('PASS reception-to-consultation typed connections, contract-version rejection, incomplete-draft port inspection and legacy disclosure');
+
+const executionPlan=await request('/execution/prepare','POST',{design:connectionFixture.design});
+assert.equal(executionPlan.plan.tasks.length,2);assert.equal(executionPlan.plan.inputs.length,1);
+const inputPort=executionPlan.plan.inputs[0];
+const executionInputs=[{taskId:inputPort.taskId,values:{[inputPort.name]:{type:'record',recordRef:inputPort.recordRef,record:{encounterId:{type:'string',string:'synthetic-encounter-001'},patientId:{type:'string',string:'synthetic-patient-001'}}}}}];
+const execution=await request('/execution/run','POST',{design:connectionFixture.design,inputs:executionInputs});
+assert.equal(execution.report.mode,'pure-dataflow');assert.equal(execution.report.claimsEvaluated,false);
+assert.deepEqual(execution.report.events.map(e=>e.kind),['started','completed','transfer','started','completed']);
+assert.deepEqual(execution.report.results[1].outputs.encounter,executionInputs[0].values.encounter);
+assert.deepEqual(await request('/executions/'+execution.id),execution);
+assert.ok((await request('/executions?systemId='+connectionFixture.design.id)).some(e=>e.id===execution.id));
+await request('/execution/run','POST',{design:connectionFixture.design,inputs:[]},422);
+await request('/execution/prepare','POST',{design:connectionFixture.mismatch},422);
+await request('/execution/prepare','POST',{design:await request('/example')},422);
+console.log('PASS bounded pure execution, routed encounter values, ordered token trace, immutable snapshots and unsupported-path rejection');

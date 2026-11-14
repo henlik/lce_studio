@@ -5,7 +5,8 @@ A component definition owns named references to reusable artifacts. For example,
 `encounter` (state), `dispatch` (messages), and `intake` (workflow). Each reference
 pins kind, ID, exact version and SHA-256 digest. These are ownership links;
 explicit typed links can now be checked between their declared interfaces.
-These links do not yet wire the five execution engines together.
+Pure behavior links can now execute in System architecture; the five execution
+engines are not yet integrated. See [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
 
 Deployment remains a system design concern. Definitions cannot own deployment
 plans or other definitions in this increment. Existing behavior and workflow
@@ -109,8 +110,8 @@ It is a type-checking exercise, not a recommended access-control architecture.
 Limits: checks cover declared manifest links, not every unconnected required
 input, trigger ordering, task response bindings, cycles between aspects, delivery
 semantics or provider capabilities. System-instance connections are checked
-separately in System architecture. This is not an
-execution plan. Component definitions still cannot be nested. Reports are bounded
+separately in System architecture. This static report is not an execution plan; preparing pure execution separately
+checks supported tasks, required inputs and cycles. Component definitions still cannot be nested. Reports are bounded
 at 4096 dependency occurrences and manifests at 128 links.
 
 ## Saving and portability

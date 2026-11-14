@@ -2,7 +2,8 @@
 
 Engineering → Design → System architecture now supports typed output-to-input
 connections. It checks dependency integrity and declared port types before
-execution. It does not execute linked components or implement clinical workflows.
+execution. These static checks do not implement clinical workflows. Pure behavior
+graphs can now run separately using [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
 
 ## Reception-to-consultation exercise
 
@@ -80,7 +81,8 @@ already bound by a manifest-internal link cannot acquire another system producer
 
 Not checked yet: all required inputs being supplied, control-flow sequencing,
 cycles/liveness, scheduling, request/reply or event transport semantics, provider
-capabilities, deployment feasibility or joint execution. Connection kinds remain
+capabilities or deployment feasibility. Pure execution is a separate operation
+with stricter completeness and acyclicity checks. Connection kinds remain
 intent labels. Type-compatible cycles are not a proof of executable behavior.
 
 Limits: 64 instances, 256 connections, 32 attached artifacts per instance and

@@ -1,5 +1,34 @@
 # Verification
 
+## Connected pure execution and token traces — 14 November 2026
+
+- Connected pure behavior packages and behavior-only component definitions execute
+  as bounded acyclic dataflow graphs. Tests cover exact typed values, deterministic
+  scheduling, fan-out/fan-in, internal aspect links, input completeness, conflicting
+  producers, cancellation and aggregate operation limits. Failures return no
+  successful partial report.
+- Successful runs persist immutable design/input snapshots, exact portable bundles,
+  content hashes, outputs and ordered start/completion/transfer events in PostgreSQL.
+  Regression tests remove the installed catalog and replay the saved plan, comparing
+  the complete report. Duplicate execution IDs cannot overwrite existing evidence.
+- Full Go race tests (`go test -race -count=1 ./...`), `go vet ./...`, backend build,
+  Vue production build and all **31 frontend tests** passed. The final aggregate-budget
+  regression also passed in a fresh focused race run. Live PostgreSQL/API acceptance
+  passed, retaining seven conformance scenarios and adding execution preparation,
+  the five-event reception handoff, immutable history and unsupported-input rejection.
+- The Execution perspective provides generated input forms, task/link highlighting,
+  trace stepping, saved history and JSON export. Frontend tests cover typed-value
+  conversion; browser/mobile interaction and visual checks remain outstanding.
+  Vite retains its existing large-chunk warning. Follow [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md)
+  for the reproducible manual walkthrough and exact limitations.
+- This runner evaluates pure models only: `claimsEvaluated` is false. Cycles,
+  state/message/workflow aspects, external effects, resource bindings and deployment
+  plans are rejected. The example uses synthetic record pass-through boundaries,
+  not the full reception workflow. UI/API replay and signed provenance remain future work.
+- Roadmap v1 stays **28% (+0 points), M1 80%**. This implements the pure portion of
+  the remaining M1 checkpoint; stateful integration and typed provider bindings are
+  still incomplete. No checkpoint weights or acceptance scope were changed.
+
 ## System-wide static compatibility — 14 November 2026
 
 - Optional source/target aspect ports are preserved in system design persistence
