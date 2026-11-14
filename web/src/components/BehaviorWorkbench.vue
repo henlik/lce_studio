@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { watch as watchInspection } from "vue";
+const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
+import WorkspaceModes from "./WorkspaceModes.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -1163,6 +1166,13 @@ onMounted(async () => {
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
+watchInspection(() => inspectionProps.inspectionRequest, async request => {
+  if (!request) return;
+  await autosave.ready;
+  if (busy.value || !canReplace()) return;
+  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.bundle); tab.value = 'interface'; notice.value = 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; }
+  catch (e) { error.value = (e as Error).message; }
+}, { immediate:true });
 </script>
 
 <template>
@@ -1445,20 +1455,21 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
         </div>
       </fieldset>
     </details>
+    <WorkspaceModes :active="tab" :structure='["interface"]' :behavior='["compose"]' :execution='["evaluate", "history"]' @select='tab = $event as "interface" | "compose" | "evaluate" | "history"' />
     <nav class="workbench-tabs" aria-label="Component workbench views">
-      <button :class="{ active: tab === 'compose' }" @click="tab = 'compose'">
+      <button v-show="['compose'].includes(tab)" :class="{ active: tab === 'compose' }" @click="tab = 'compose'">
         <Layers3 :size="15" /> Composition</button
       ><button
-        :class="{ active: tab === 'interface' }"
+        v-show="['interface'].includes(tab)" :class="{ active: tab === 'interface' }"
         @click="tab = 'interface'"
       >
         <Braces :size="15" /> Typed interface</button
       ><button
-        :class="{ active: tab === 'evaluate' }"
+        v-show="['evaluate', 'history'].includes(tab)" :class="{ active: tab === 'evaluate' }"
         @click="tab = 'evaluate'"
       >
         <Play :size="15" /> Evaluate & test</button
-      ><button :class="{ active: tab === 'history' }" @click="tab = 'history'">
+      ><button v-show="['evaluate', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
         <History :size="15" /> Evaluation history
         <span>{{ history.length }}</span>
       </button>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ExecutionStepper from "./ExecutionStepper.vue";
 import { computed, ref, watch } from "vue";
 import type { DeliveryRun } from "../deliveryTypes";
 import StateValueMap from "./StateValueMap.vue";
@@ -226,6 +227,7 @@ const trace = computed(
     </section>
     <section class="state-panel">
       <h3>Ordered dispatch & delivery trace</h3>
+      <ExecutionStepper :steps="record.result.steps" :selected="selected" @select="selected = $event" />
       <div class="delivery-trace-layout">
         <div class="delivery-step-list">
           <button

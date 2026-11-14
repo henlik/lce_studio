@@ -4,6 +4,8 @@ A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow,
 
 Version **0.8.1** adds a searchable left-side component palette, a right-side binding inspector, visual node/pin/feedback conventions, validation navigation, action notifications and automatic browser draft recovery with protection against conflicting edits from multiple tabs. See [visual authoring and recovery](docs/STUDIO_UX.md) for the workflow and its limits. Portable bundles and publishing to the local catalog are available; a public community marketplace is still planned.
 
+The studio also provides **Structure / Behavior / Execution** perspectives, nested workflow stage focus, token-following replay, and a **Regional care ecosystem inspection lab**. Open the lab to run reference exercises across all implemented engines and track manual UX checks. See the [step-by-step inspection guide](docs/STAGED_INSPECTION.md). Stages organize the workflow view; executable child-workflow calls and cross-engine orchestration are not implemented.
+
 Executable task workflows connect human/adapter tasks, exact pure decisions and owned-state commands; follow automatic branches, interrupt an active task, and retain complete experiment evidence. The **Workflows** workspace includes hospital reception and a service-desk reuse example. See [the reception replication guide](docs/HOSPITAL_RECEPTION_REPLICATION.md).
 
 Navigation and side panels remain collapsible, diagrams can expand, and new projects/definitions start empty with examples loaded only on request. The design-context guide distinguishes primitives, components, applications and systems from their data/state/deployment views. See [DESIGN_HIERARCHY.md](docs/DESIGN_HIERARCHY.md).

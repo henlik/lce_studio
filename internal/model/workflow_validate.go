@@ -499,6 +499,17 @@ func ValidateWorkflowDefinition(w WorkflowDefinition) []ValidationIssue {
 		} else {
 			v.count(node.Name)
 		}
+		if node.Stage != "" {
+			if !behaviorTextValid(node.Stage, 240, true) || len(strings.Split(node.Stage, "/")) > 6 {
+				v.add(at+".stage", "Stage paths require nonblank text, at most 240 bytes and six levels.")
+			}
+			for _, part := range strings.Split(node.Stage, "/") {
+				if strings.TrimSpace(part) == "" {
+					v.add(at+".stage", "Stage path segments cannot be empty.")
+				}
+			}
+			v.count(node.Stage)
+		}
 		if node.Color != "" && !nodeColor.MatchString(node.Color) {
 			v.add(at+".color", "Node color must be a six-digit hexadecimal color.")
 		}

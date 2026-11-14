@@ -6,6 +6,8 @@ import type {
   WorkflowScenario,
 } from "../workflowTypes";
 import { workflowTokenVisits } from "../workflowPresentation";
+import WorkflowStages from "./WorkflowStages.vue";
+import { stagePath, stageBoundary } from "../workflowStages";
 import WorkflowCanvas from "./WorkflowCanvas.vue";
 const props = defineProps<{
   workflow: WorkflowDefinition;
@@ -26,6 +28,10 @@ const cursor = computed(() =>
   ),
 );
 const visit = computed(() => visits.value[cursor.value]);
+const stage = ref("");
+const followToken = ref(true);
+const fullMap = ref(false);
+watch([visit, followToken], () => { if (followToken.value) stage.value = stagePath(props.workflow.nodes.find(n => n.id === visit.value?.nodeId)?.stage); }, { immediate: true });
 const name = (id: string) =>
   props.workflow.nodes.find((n) => n.id === id)?.name || id;
 const visitedIds = computed(() =>
@@ -50,6 +56,7 @@ watch(
   { immediate: true },
 );
 function inspectNode(id: string) {
+  if (!visits.value.some(v => v.nodeId === id)) { followToken.value = false; stage.value = stagePath(props.workflow.nodes.find(n => n.id === id)?.stage); fullMap.value = !stage.value; return; }
   const index = visits.value.findIndex(
     (v, i) => i >= cursor.value && v.nodeId === id,
   );
@@ -108,8 +115,11 @@ function inspectNode(id: string) {
           <small v-if="visit.message">{{ visit.message }}</small>
         </div>
       </div>
+      <div class="journey-controls"><label><input type="checkbox" v-model="followToken" /> Follow token</label><label><input type="checkbox" v-model="fullMap" /> Full map</label></div>
+      <WorkflowStages :workflow="workflow" :path="fullMap ? '' : stage" :visits="visits" :cursor="cursor" @update:path="stage = $event; followToken = false; fullMap = !$event" @select="inspectNode" />
       <WorkflowCanvas
         :workflow="workflow"
+        :visible-ids="!fullMap && stage ? stageBoundary(workflow,stage).ids : undefined"
         :selected="visit.nodeId"
         :active-node="visit.nodeId"
         :active-route="visit.route"

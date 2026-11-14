@@ -1,5 +1,7 @@
 # Authoring owned state and transitions
 
+Navigation update: Definition is under **Structure**, scenarios under **Behavior**, and evidence/history under **Execution**. See [staged inspection](STAGED_INSPECTION.md) for the complete use case.
+
 The State workspace connects pure component decisions to an explicit owner of mutable state. Use it to answer practical questions: what changes when a command succeeds, what survives a restart, what happens when the reply is lost, and whether retrying creates another effect intent. The exact machine, scenario and API contract is in [STATE_CONTRACT.md](STATE_CONTRACT.md).
 
 ## Start with the reservation examples

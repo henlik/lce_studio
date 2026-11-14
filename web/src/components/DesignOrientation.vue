@@ -6,6 +6,7 @@ const props = defineProps<{ workspace: string }>();
 const open = ref(false);
 const flow = ref<"top-down" | "bottom-up">("top-down");
 const contexts: Record<string, { kind: string; detail: string }> = {
+  inspection: { kind: "Reference use case", detail: "Inspect implemented capabilities through independent experiments and manual UX checks." },
   plan: { kind: "System requirements", detail: "Define the boundary, assumptions and measurable outcomes." },
   design: { kind: "Application / system model", detail: "Assemble a processing topology for timed simulation." },
   deployment: { kind: "Deployment view", detail: "Place application instances on computing resources." },

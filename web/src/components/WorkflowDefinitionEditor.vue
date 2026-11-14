@@ -38,6 +38,8 @@ import StatePortEditor from "./StatePortEditor.vue";
 import StateTypeSelect from "./StateTypeSelect.vue";
 import TypedValueEditor from "./TypedValueEditor.vue";
 import DeliveryPositionEditor from "./DeliveryPositionEditor.vue";
+import WorkflowStages from "./WorkflowStages.vue";
+import { stageBoundary, stagePath, workflowStages } from "../workflowStages";
 import WorkflowCanvas from "./WorkflowCanvas.vue";
 import { workflowFlowLayout } from "../workflowPresentation";
 import WorkflowBindingsEditor from "./WorkflowBindingsEditor.vue";
@@ -60,6 +62,11 @@ const emit = defineEmits<{
   "embed-data": [key: string];
   "import-dependency": [kind: "decision" | "machine"];
 }>();
+const stage = ref("");
+const showFullMap = ref(false);
+const hasStages = computed(() => props.workflow.nodes.some(n => stagePath(n.stage)));
+watch(stage, path => { if (selected.value && path && !stageBoundary(props.workflow,path).ids.includes(selected.value)) selected.value = ""; });
+watch(() => props.workflow, () => { stage.value = ""; showFullMap.value = false; });
 const selected = ref(""),
   treeOpen = ref(true),
   inspectorOpen = ref(true),
@@ -76,6 +83,7 @@ watch(
     inspectCommand.value = null;
   },
 );
+watch(selected, id => { if (id) stage.value = stagePath(props.workflow.nodes.find(n => n.id === id)?.stage); });
 const flowNodes = computed(() =>
   workflowFlowLayout(props.workflow).order.map((id) =>
     props.workflow.nodes.find((n) => n.id === id)!,
@@ -138,6 +146,7 @@ function addNode(kind: WorkflowNode["kind"]) {
     ),
     i = props.workflow.nodes.length;
   const n: WorkflowNode = {
+    stage: stage.value || undefined,
     id,
     name: kind === "task" ? "New human task" : `New ${kind}`,
     kind,
@@ -291,6 +300,8 @@ function inspectNode(n: WorkflowNode) {
         Add {{ kind }}
       </button>
     </div>
+    <label v-if="hasStages" class="wf-help"><input type="checkbox" v-model="showFullMap" @change="stage = ''" /> Full map · all {{ workflow.nodes.length }} steps</label>
+    <WorkflowStages :workflow="workflow" v-model:path="stage" @select="selected = $event; inspectorOpen = true" />
     <div
       class="wf-designer"
       :class="{ 'wf-no-tree': !treeOpen, 'wf-no-inspector': !inspectorOpen }"
@@ -299,8 +310,8 @@ function inspectNode(n: WorkflowNode) {
         <button :class="{ active: !selected }" @click="selected = ''">
           {{ workflow.name || "Workflow root"
           }}<small>ROOT · {{ workflow.nodes.length }} steps</small></button
-        ><button
-          v-for="n in flowNodes"
+        ><button v-for="group in !stage && hasStages && !showFullMap ? workflowStages(workflow) : []" :key="group.path" @click="stage = group.path">{{ group.name }}<small>{{ group.nodes.length }} steps · open stage</small></button><button
+          v-for="n in flowNodes.filter(n => stage ? stageBoundary(workflow,stage).ids.includes(n.id) : !hasStages || showFullMap)"
           :key="stateUIKey(n)"
           :class="{ active: selected === n.id }"
           @click="
@@ -313,8 +324,14 @@ function inspectNode(n: WorkflowNode) {
           >
         </button>
       </aside>
+      <section v-if="hasStages && !stage && !showFullMap" class="wf-stage-overview wf-panel">
+        <h3>{{ workflow.name }}</h3><p class="wf-help">Choose a stage to inspect its steps and boundary routes. The full map remains available for tracing connections across stages.</p>
+        <button v-for="group in workflowStages(workflow)" :key="group.path" class="button secondary" @click="stage = group.path"><strong>{{ group.name }}</strong><span>{{ group.nodes.length }} steps · {{ stageBoundary(workflow,group.path).outgoing.length }} outgoing routes →</span></button>
+      </section>
       <WorkflowCanvas
+        v-else
         :workflow="workflow"
+        :visible-ids="stage ? stageBoundary(workflow,stage).ids : undefined"
         :selected="selected"
         :invalid-ids="invalidIds"
         :disabled="disabled"
@@ -387,6 +404,8 @@ function inspectNode(n: WorkflowNode) {
           :key="stateUIKey(n)"
         >
           <h3>{{ n.kind }} step</h3>
+          <label class="field">Stage path (optional)<input v-model="n.stage" :disabled="disabled" :aria-label="`Stage path for ${n.id}`" placeholder="Arrival/Identification" maxlength="240" /></label>
+          <p class="wf-help">Use / to nest stages. Stages organize the view; explicit routes still control execution.</p>
           <p
             v-for="issue in (issues || []).filter(
               (i) => issueNode(i.path) === workflow.nodes.indexOf(n),
@@ -1059,6 +1078,9 @@ function inspectNode(n: WorkflowNode) {
   </div>
 </template>
 <style scoped>
+.wf-stage-overview { min-width:0; align-self:start; }
+.wf-stage-overview button { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; width:100%; margin:8px 0; text-align:left; }
+.wf-stage-overview button span { font-size:11px; color:#6b8492; }
 .wf-designer {
   display: grid;
   grid-template-columns: 190px minmax(260px, 1fr) 315px;

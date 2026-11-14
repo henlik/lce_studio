@@ -1,5 +1,7 @@
 # Recreate and test Hospital Reception
 
+Navigation update: Workflow definition is under **Structure**; scenario configuration is under **Behavior**; interactive tasks, evidence and history are under **Execution**. See [staged inspection](STAGED_INSPECTION.md) for the complete use case.
+
 This guide accompanies the executable reception reference package in LCE Studio 0.8. It follows the [top-down design](HOSPITAL_RECEPTION_DESIGN.md), then rebuilds from reusable decisions and owners upward. The studio runs bounded synthetic workflow experiments. Registry, affiliation, clinical and payment services supply explicit typed responses in those experiments; the package is not connected to a live hospital database or payment provider.
 
 ## What is being built

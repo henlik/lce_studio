@@ -20,6 +20,7 @@ const props = defineProps<{
   travelledRoutes?: WorkflowRoute[];
   activeRoute?: WorkflowRoute;
   invalidIds?: string[];
+  visibleIds?: string[];
 }>();
 const emit = defineEmits<{
   select: [id: string];
@@ -32,9 +33,9 @@ const wrapper = ref<HTMLElement | null>(null),
 const mode = ref<"flow" | "manual">("flow"),
   zoom = ref(1),
   overview = ref(false);
-const layout = computed(() => workflowFlowLayout(props.workflow));
+const layout = computed(() => workflowFlowLayout(props.visibleIds ? { ...props.workflow, nodes: props.workflow.nodes.filter(n => props.visibleIds!.includes(n.id)) } : props.workflow));
 const safeNodes = computed(() =>
-  props.workflow.nodes.map((n, i) => ({
+  props.workflow.nodes.filter(n => !props.visibleIds || props.visibleIds.includes(n.id)).map((n, i) => ({
     ...n,
     position:
       mode.value === "flow"
@@ -258,6 +259,7 @@ watch(
     readable();
   },
 );
+watch(() => props.visibleIds?.join("|"), () => { mode.value = "flow"; void nextTick(() => { readable(); void focusNode(props.activeNode || props.selected || safeNodes.value[0]?.id); }); });
 watch(
   () => props.activeNode,
   () => {

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { watch as watchInspection } from "vue";
+const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
+import WorkspaceModes from "./WorkspaceModes.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -79,6 +82,7 @@ const workflow = ref(blankWorkflow()),
   dataCatalog = ref<DataContractRecord[]>([]),
   primitives = ref<PrimitiveSpec[]>([]),
   history = ref<WorkflowRunSummary[]>([]);
+const perspectiveTabs = computed(() => [["definition"], ["scenario"], ["interactive", "evidence", "history"]].find(group => group.includes(tab.value)) || []);
 const tab = ref<
     "definition" | "interactive" | "scenario" | "evidence" | "history"
   >("definition"),
@@ -709,6 +713,13 @@ onMounted(async () => {
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
+watchInspection(() => inspectionProps.inspectionRequest, async request => {
+  if (!request) return;
+  await autosave.ready;
+  if (busy.value || !replaceAllowed()) return;
+  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.workflow,e.scenario); tab.value = 'definition'; notice.value = 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; }
+  catch (e) { error.value = (e as Error).message; }
+}, { immediate:true });
 </script>
 <template>
   <section
@@ -824,6 +835,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
     <p v-if="busy" class="wf-notice" role="status">
       Working with the workflow engine…
     </p>
+    <WorkspaceModes :active="tab" :structure='["definition"]' :behavior='["scenario"]' :execution='["interactive", "evidence", "history"]' @select='tab = $event as "definition" | "scenario" | "interactive" | "evidence" | "history"' />
     <nav class="wf-tabs">
       <button
         v-for="item in [
@@ -833,7 +845,7 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
           ['evidence', 'Execution evidence'],
           ['history', 'Run history'],
         ] as const"
-        :key="item[0]"
+        :key="item[0]" v-show="perspectiveTabs.includes(item[0])"
         :class="{ active: tab === item[0] }"
         @click="tab = item[0]"
       >

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { watch as watchInspection } from "vue";
+const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
+import WorkspaceModes from "./WorkspaceModes.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -565,6 +568,13 @@ onMounted(async () => {
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
+watchInspection(() => inspectionProps.inspectionRequest, async request => {
+  if (!request) return;
+  await autosave.ready;
+  if (busy.value || !replaceAllowed()) return;
+  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.model,e.scenario); tab.value = 'model'; notice.value = 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; }
+  catch (e) { error.value = (e as Error).message; }
+}, { immediate:true });
 </script>
 <template>
   <section
@@ -683,20 +693,21 @@ onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
     <p v-if="busy" class="state-notice" role="status">
       Working with the message engine…
     </p>
+    <WorkspaceModes :active="tab" :structure='["model"]' :behavior='["scenario"]' :execution='["evidence", "history"]' @select='tab = $event as "model" | "scenario" | "evidence" | "history"' />
     <nav class="state-tabs">
-      <button :class="{ active: tab === 'model' }" @click="tab = 'model'">
+      <button v-show="['model'].includes(tab)" :class="{ active: tab === 'model' }" @click="tab = 'model'">
         Owners & routes</button
       ><button
-        :class="{ active: tab === 'scenario' }"
+        v-show="['scenario'].includes(tab)" :class="{ active: tab === 'scenario' }"
         @click="tab = 'scenario'"
       >
         Delivery scenario</button
       ><button
-        :class="{ active: tab === 'evidence' }"
+        v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'evidence' }"
         @click="tab = 'evidence'"
       >
         Message evidence</button
-      ><button :class="{ active: tab === 'history' }" @click="tab = 'history'">
+      ><button v-show="['evidence', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
         Message run history
       </button>
     </nav>

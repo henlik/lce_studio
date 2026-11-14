@@ -62,6 +62,9 @@ import {
   PanelRightOpen,
 } from "lucide-vue-next";
 import StudioNode from "./components/StudioNode.vue";
+import WorkspaceModes from "./components/WorkspaceModes.vue";
+import InspectionWorkbench from "./components/InspectionWorkbench.vue";
+import type { InspectionCase } from "./inspection";
 import DesignOrientation from "./components/DesignOrientation.vue";
 import CanvasControls from "./components/CanvasControls.vue";
 import { useCanvasFocus } from "./composables/useCanvasFocus";
@@ -104,7 +107,17 @@ const view = ref<
   | "state"
   | "messages"
   | "workflows"
+  | "inspection"
 >("design");
+const inspectionOpened = ref(false);
+const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
+async function openInspection(item: InspectionCase) {
+ if (item.body.project) {
+  if (needsProjectDiscard.value && !confirm("Replace the current draft with this inspection exercise? A recovery checkpoint is retained.")) return;
+  adopt(JSON.parse(JSON.stringify(item.body.project)), false);
+ } else { inspectionRequests.value[item.workspace] = { nonce: Date.now(), body: item.body }; }
+ view.value = item.workspace;
+}
 const workbenchOpened = ref(false);
 const dataOpened = ref(false);
 const stateOpened = ref(false);
@@ -116,9 +129,10 @@ const definitionView = computed(
     view.value === "data" ||
     view.value === "state" ||
     view.value === "messages" ||
-    view.value === "workflows",
+    view.value === "workflows" || view.value === "inspection",
 );
 watch(view, (next) => {
+  if (next === "inspection") inspectionOpened.value = true;
   if (next === "components") workbenchOpened.value = true;
   if (next === "data") dataOpened.value = true;
   if (next === "state") stateOpened.value = true;
@@ -1089,6 +1103,7 @@ onUnmounted(() => {
           <GitBranch :size="18" /><span>Workflows</span
           ><span class="nav-number">09</span>
         </button>
+        <button :class="{active:view === 'inspection'}" @click="view = 'inspection'" aria-label="Inspection lab" title="Inspection lab"><FlaskConical :size="18" /><span>Inspection lab</span><span class="nav-number">10</span></button>
       </nav>
       <div class="rail-divider" />
       <button
@@ -1133,7 +1148,7 @@ onUnmounted(() => {
         <div class="project-heading">
           <span class="breadcrumb"
             >{{
-              view === "workflows"
+              view === "inspection" ? "Inspection" : view === "workflows"
                 ? "Workflows"
                 : view === "messages"
                   ? "Messages"
@@ -1147,7 +1162,7 @@ onUnmounted(() => {
             }}
             <span>/</span>
             {{
-              view === "workflows"
+              view === "inspection" ? "Regional care ecosystem" : view === "workflows"
                 ? "Tasks, decisions & handoffs"
                 : view === "messages"
                   ? "Typed delivery & acknowledgements"
@@ -1169,7 +1184,7 @@ onUnmounted(() => {
             />
             <h1 v-else>
               {{
-                view === "workflows"
+                view === "inspection" ? "Inspection lab" : view === "workflows"
                   ? "Workflow workbench"
                   : view === "messages"
                     ? "Messages workbench"
@@ -1237,6 +1252,7 @@ onUnmounted(() => {
         />
       </header>
       <DesignOrientation :workspace="view" />
+      <WorkspaceModes v-if="!definitionView" :active="view" :structure="['plan', 'deployment']" :behavior="['design']" :execution="['results']" @select="view = $event as typeof view" />
 
       <DraftStatus v-if="!definitionView" :draft="autosave" />
       <div v-if="error && !definitionView" class="alert error" role="alert">
@@ -1265,11 +1281,12 @@ onUnmounted(() => {
         </ul>
       </div>
 
-      <DeliveryWorkbench v-if="messagesOpened" v-show="view === 'messages'" />
-      <WorkflowWorkbench v-if="workflowsOpened" v-show="view === 'workflows'" />
-      <StateWorkbench v-if="stateOpened" v-show="view === 'state'" />
-      <DataWorkbench v-if="dataOpened" v-show="view === 'data'" />
-      <BehaviorWorkbench
+      <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
+      <DeliveryWorkbench :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
+      <WorkflowWorkbench :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
+      <StateWorkbench :inspection-request="inspectionRequests.state" v-if="stateOpened" v-show="view === 'state'" />
+      <DataWorkbench :inspection-request="inspectionRequests.data" v-if="dataOpened" v-show="view === 'data'" />
+      <BehaviorWorkbench :inspection-request="inspectionRequests.components"
         v-if="workbenchOpened"
         v-show="view === 'components'"
       />

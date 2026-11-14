@@ -50,6 +50,8 @@ type WorkflowEnd struct {
 	Outputs map[string]WorkflowBinding `json:"outputs"`
 }
 type WorkflowNode struct {
+	// Stage is a presentation path, not an execution boundary.
+	Stage    string            `json:"stage,omitempty"`
 	Color    string            `json:"color,omitempty"`
 	ID       string            `json:"id"`
 	Name     string            `json:"name"`

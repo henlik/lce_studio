@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { watch as watchInspection } from "vue";
+const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
+import WorkspaceModes from "./WorkspaceModes.vue";
 import { useWorkspaceDraft } from "../composables/useWorkspaceDraft";
 import { useActionFeedback } from "../composables/useNotifications";
 import DraftStatus from "./DraftStatus.vue";
@@ -544,6 +547,13 @@ onMounted(async () => {
   window.addEventListener("beforeunload", unload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", unload));
+watchInspection(() => inspectionProps.inspectionRequest, async request => {
+  if (!request) return;
+  await autosave.ready;
+  if (busy.value || !replaceAllowed()) return;
+  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.contract,e.fixture); tab.value = 'model'; notice.value = 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; }
+  catch (e) { error.value = (e as Error).message; }
+}, { immediate:true });
 </script>
 <template>
   <section class="data-workbench" :inert="autosave.status.value === 'loading'">
@@ -689,19 +699,20 @@ onUnmounted(() => window.removeEventListener("beforeunload", unload));
         </div>
       </fieldset>
     </details>
+    <WorkspaceModes :active="tab" :structure='["model", "relationships"]' :behavior='["compare"]' :execution='["fixture", "history"]' @select='tab = $event as "model" | "relationships" | "compare" | "fixture" | "history"' />
     <nav class="data-tabs">
-      <button :class="{ active: tab === 'model' }" @click="tab = 'model'">
+      <button v-show="['model', 'relationships'].includes(tab)" :class="{ active: tab === 'model' }" @click="tab = 'model'">
         Types & entities</button
       ><button
-        :class="{ active: tab === 'relationships' }"
+        v-show="['model', 'relationships'].includes(tab)" :class="{ active: tab === 'relationships' }"
         @click="tab = 'relationships'"
       >
         Relationships</button
-      ><button :class="{ active: tab === 'fixture' }" @click="tab = 'fixture'">
+      ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'fixture' }" @click="tab = 'fixture'">
         Fixture validation</button
-      ><button :class="{ active: tab === 'history' }" @click="tab = 'history'">
+      ><button v-show="['fixture', 'history'].includes(tab)" :class="{ active: tab === 'history' }" @click="tab = 'history'">
         Data validation history</button
-      ><button :class="{ active: tab === 'compare' }" @click="tab = 'compare'">
+      ><button v-show="['compare'].includes(tab)" :class="{ active: tab === 'compare' }" @click="tab = 'compare'">
         Compatibility
       </button>
     </nav>

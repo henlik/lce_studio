@@ -1,5 +1,7 @@
 # Authoring reusable data contracts
 
+Navigation update: Types/relationships are under **Structure**, compatibility comparison under **Behavior**, and fixture validation/history under **Execution**. See [staged inspection](STAGED_INSPECTION.md) for the complete use case.
+
 A data contract gives an exact meaning to the records exchanged by components and to the complete sample datasets checked in the Data workspace. It is a reusable specification, not a database connection or a generated database schema. The precise JSON contract is in [DATA_CONTRACT.md](DATA_CONTRACT.md).
 
 ## Start from a shared definition

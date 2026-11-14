@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ExecutionStepper from "./ExecutionStepper.vue";
 import { computed, ref, watch } from "vue";
 import type { StateRun } from "../stateTypes";
 import StateValueMap from "./StateValueMap.vue";
@@ -161,6 +162,7 @@ const trace = computed(() => step.value?.decision?.events[traceIndex.value]);
     </section>
     <section class="state-panel">
       <h3>Ordered transition trace</h3>
+      <ExecutionStepper :steps="record.result.steps" :selected="selected" @select="selected = $event" />
       <div class="state-trace-layout">
         <div class="state-step-list">
           <button

@@ -1,5 +1,7 @@
 # Authoring typed message delivery
 
+Navigation update: Owners/routes are under **Structure**, scenarios under **Behavior**, and evidence/history under **Execution**. See [staged inspection](STAGED_INSPECTION.md) for the complete use case.
+
 The Messages workspace connects independently owned state machines. Use it to test what happens between a committed intention and a recipient's acknowledged response. It builds on [State](STATE_AUTHORING.md) and its pure decision components; the exact implementation rules are in [DELIVERY_CONTRACT.md](DELIVERY_CONTRACT.md).
 
 ## Start with the reference experiments

@@ -50,6 +50,7 @@ export interface WorkflowCommand {
   errorNext: string;
 }
 export interface WorkflowNode {
+  stage?: string;
   color?: string;
   id: string;
   name: string;

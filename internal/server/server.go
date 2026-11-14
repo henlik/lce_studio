@@ -103,6 +103,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Valid  bool                    `json:"valid"`
 			Issues []model.ValidationIssue `json:"issues"`
 		}{len(issues) == 0, issues})
+	case path == "/api/inspection":
+		if method(w, r, http.MethodGet) {
+			respond(w, 200, model.StudioInspectionPack())
+		}
 	case path == "/api/workflow/examples":
 		s.workflowExamples(w, r)
 	case path == "/api/workflow/prepare":
