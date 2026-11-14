@@ -98,11 +98,11 @@ func verifyExecution(ctx context.Context, saved SystemExecution, executionID str
 		return r, nil
 	}
 	engine, mode := plan.EngineVersion, "pure-dataflow"
-	if plan.EngineVersion == systemrun.Version {
+	if plan.EngineVersion == systemrun.Version || plan.EngineVersion == systemrun.MultiCommandVersion {
 		mode = "stateful-dataflow"
 	}
 	if saved.Scenario != nil {
-		engine, mode = "system-scenario-1", "shared-scenario"
+		engine, mode = systemrun.ScenarioEngineVersion(plan, *saved.Scenario), "shared-scenario"
 	}
 	if saved.Plan.EngineVersion != plan.EngineVersion || saved.Report.EngineVersion != engine || saved.Report.Mode != mode || saved.Report.ClaimsEvaluated {
 		r.Message = "Recorded engine version, mode or claim semantics are unsupported; no replay was attempted"

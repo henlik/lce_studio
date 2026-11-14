@@ -17,6 +17,11 @@ test('system import roundtrips complete structured definitions',()=>{
  design.contract.claims.push({id:'unique',kind:'exactly_one_record',description:'One encounter'});
  assert.deepEqual(parseSystemImport(JSON.stringify(design)),design);
 });
+test('state entry selections survive import while malformed command mappings are rejected',()=>{
+ const design=emptySystem();design.components.push({id:'stock',name:'Stock',definition:{kind:'definition',id:'example.stock',version:'2.0.0'},artifacts:[],bindings:[],stateEntries:[{slot:'stock',command:'reserve'}]});
+ assert.deepEqual(parseSystemImport(JSON.stringify(design)),design);
+ for(const entries of [null,{},[{slot:'stock'}],[{slot:'stock',command:9}]])assert.throws(()=>parseSystemImport(JSON.stringify({...design,components:[{...design.components[0],stateEntries:entries}]})));
+});
 test('system import rejects structurally unsafe or unrelated JSON before editor adoption',()=>{
  for(const source of ['null','[]','{}','{"schemaVersion":99}',JSON.stringify({...emptySystem(),components:[null]}),JSON.stringify({...emptySystem(),contract:{claims:[]}}),JSON.stringify({...emptySystem(),deploymentPlans:[{id:'x',name:'x',resources:null,placements:[]}]})])assert.throws(()=>parseSystemImport(source));
 });

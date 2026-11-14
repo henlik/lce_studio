@@ -102,10 +102,11 @@ assertions are valid, recordable experiment outcomes.
 
 ## Remaining scope
 
-Each state aspect still exposes one selected command definition, invoked repeatedly
-with distinct or repeated command identities. Multi-entry state-machine selection,
-message delivery, workflow adapters, cycles, live providers and distributed deployment
-remain outside this runner. Effects are pending intents only.
+Graph invocations use one selected entry per owner. Explicit owner-command steps
+can now call other commands with the same owned state and receipt history; see
+[MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md). Message delivery, workflow
+adapters, cycles, live providers and distributed deployment remain outside this
+runner. Effects are pending intents only.
 
 Roadmap remains **28% overall, M1 80% (+0 points)**. This completes the shared-scenario
 increment, not the broader joint-engine or shared workload/failure checkpoints.

@@ -1,7 +1,8 @@
 # Connect stateful components to an offline provider
 
-The system graph can now execute pure components and owned, single-command state
-aspects together. The state transition reuses the existing state engine. Its
+The system graph can now execute pure components and owned state aspects through selected graph
+entry commands. This walkthrough uses the original sole-command example.
+For multiple commands on one owner, see [MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md). The state transition reuses the existing state engine. Its
 provider is explicitly **modeled-state@1.0.0**: an offline semantic adapter with
 atomic state updates, revision checks, durable receipts and pending effect intents
 inside one experiment. It is not PostgreSQL, Redis, a live application or deployment.
@@ -48,8 +49,9 @@ still starts fresh for each invocation.
 
 ## Build your own component
 
-Create and install a state machine in the component State editor, with exactly one
-command, declared inputs/outputs and initial state. Its decision uses a locked pure
+Create and install a state machine in the component State editor, with one or more
+commands, declared inputs/outputs and initial state. For multiple commands, select
+the graph entry in the component inspector after adding it to your system. Its decision uses a locked pure
 behavior bundle. Create a component definition with a named `state` aspect pinned
 to that exact machine digest, then install the definition and add it to your system.
 
@@ -72,8 +74,8 @@ bindings, and does not infer provider behavior from a resource's name.
 ## Semantics and limits
 
 - One invocation per task, deterministic topological order, fresh state per aspect.
-  A single-command machine is selected explicitly by its sole command definition;
-  multi-command machines are rejected until scheduling is designed.
+  A sole command is selected automatically for legacy owners. Multi-command owners
+  require an explicit entry selection; direct scenario commands share that owner.
 - The invocation uses a run-local `execute` command ID and expected revision `0`.
   The single-run mode does not exercise retries or faults. The separate shared-scenario
   mode now supports repeated invocations, explicit faults and owner restarts. The
@@ -97,7 +99,8 @@ bindings, and does not infer provider behavior from a resource's name.
 ## Progress and verification boundary
 
 Roadmap v1 remains **28% (+0 points), M1 80%**. This advances the joint-execution
-checkpoint without closing multi-command, message/workflow and live-provider work.
+checkpoint without closing message/workflow and live-provider work. Selected-entry
+and direct multi-command steps are documented in the companion guide.
 No milestone scope or weights changed. Browser and mobile interaction checks for
 this walkthrough remain outstanding; engine, persistence, API and form tests are
 recorded in [VERIFICATION.md](VERIFICATION.md).

@@ -11,11 +11,25 @@ import (
 )
 
 type StateCall struct {
+	Command          string `json:"command,omitempty"`
 	TaskID           string `json:"taskId"`
 	CommandID        string `json:"commandId"`
 	ExpectedRevision *int64 `json:"expectedRevision"`
 	Fault            string `json:"fault,omitempty"`
 }
+
+func ScenarioEngineVersion(plan Plan, scenario Scenario) string {
+	if plan.EngineVersion == MultiCommandVersion {
+		return "system-scenario-2"
+	}
+	for _, step := range scenario.Steps {
+		if step.Kind == "command" {
+			return "system-scenario-2"
+		}
+	}
+	return "system-scenario-1"
+}
+
 type ScenarioStep struct {
 	Kind             string            `json:"kind"`
 	TaskID           string            `json:"taskId,omitempty"`
@@ -108,17 +122,33 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 			}
 			seen := map[string]bool{}
 			for _, call := range step.Calls {
+				if call.Command != "" {
+					return fail(path+".calls", "Graph invocations use the pinned entry command; use an owner command step to call another command")
+				}
 				task, ok := tasks[call.TaskID]
 				if !ok || task.State == nil || seen[call.TaskID] {
 					return fail(path+".calls", "Unknown or duplicate state task")
 				}
 				seen[call.TaskID] = true
-				if call.CommandID == "" || len(call.CommandID) > 64 || call.ExpectedRevision == nil || *call.ExpectedRevision < 0 || *call.ExpectedRevision > model.MaxBehaviorInteger {
-					return fail(path+".calls", "Supply command identity and a nonnegative safe expected revision")
+				if message := validateCall(call); message != "" {
+					return fail(path+".calls", message)
 				}
-				if call.Fault != "" && call.Fault != "before_commit" && call.Fault != "after_commit_before_reply" {
-					return fail(path+".calls", "Unsupported fault")
-				}
+			}
+		case "command":
+			activations++
+			if runtime.sessions[step.TaskID] == nil || len(step.Calls) != 1 || step.Calls[0].TaskID != step.TaskID || len(step.Inputs) != 1 || step.Inputs[0].TaskID != step.TaskID {
+				return fail(path, "Owner command requires one matching owner, envelope and input set")
+			}
+			call := step.Calls[0]
+			if message := validateCall(call); message != "" {
+				return fail(path+".calls", message)
+			}
+			command, ok := namedCommand(tasks[step.TaskID], call.Command)
+			if !ok {
+				return fail(path+".calls", "Choose an existing command on this state owner")
+			}
+			if issues := model.ValidateStructuredBehaviorValues(step.Inputs[0].Values, command.Inputs, mustContracts(tasks[step.TaskID])); len(issues) > 0 {
+				return fail(path+".inputs", issues[0].Message)
 			}
 		case "restart":
 			activations++
@@ -126,10 +156,10 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 				return fail(path, "Restart requires only an owned state task target")
 			}
 		default:
-			return fail(path+".kind", "Choose invoke or restart")
+			return fail(path+".kind", "Choose invoke, command or restart")
 		}
 		for id, status := range step.ExpectedStatuses {
-			if _, ok := tasks[id]; !ok || (step.Kind == "restart" && id != step.TaskID) {
+			if _, ok := tasks[id]; !ok || (step.Kind != "invoke" && id != step.TaskID) {
 				return fail(path+".expectedStatuses", "Expected task is absent from this step")
 			}
 			switch status {
@@ -159,6 +189,10 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 		}
 	}
 	report := Report{EngineVersion: "system-scenario-1", Mode: "shared-scenario", Events: []Event{}, Results: []TaskResult{}, Scenario: &ScenarioOutcome{Assertions: []ScenarioAssertion{}, Final: []FinalState{}}, Limitations: []string{"One explicitly ordered interleaving; no exhaustive race detection or parallel timing.", "State persists between steps within this run only. Each state aspect still exposes one command; invocations may repeat it.", "Lost replies and missing receipts block downstream transfers; independent branches may still execute. Effects are intents, not deliveries.", "Scenario expectations are checked independently; system contract claims, live providers and deployment are not evaluated."}}
+	report.EngineVersion = ScenarioEngineVersion(plan, scenario)
+	if report.EngineVersion == "system-scenario-2" {
+		report.Limitations[1] = "State persists between steps within this run only. Graph invocations use each owner's selected entry; explicit owner commands share its revision and receipt history without invoking graph links."
+	}
 	assert := func(path string, passed bool, message string) {
 		report.Scenario.Assertions = append(report.Scenario.Assertions, ScenarioAssertion{Path: path, Passed: passed, Message: message})
 	}
@@ -199,6 +233,19 @@ func RunScenario(ctx context.Context, original Plan, scenario Scenario) (Report,
 				return Report{}, err
 			}
 			statuses[task.ID] = "restarted"
+		} else if step.Kind == "command" {
+			events, result, err := runOwnerCommand(ctx, tasks[step.TaskID], step, runtime)
+			if err != nil {
+				return Report{}, err
+			}
+			for _, event := range events {
+				if err = appendEvent(event, i); err != nil {
+					return Report{}, err
+				}
+			}
+			result.ScenarioStep = i + 1
+			report.Results = append(report.Results, result)
+			statuses[result.TaskID] = result.Status
 		} else {
 			runtime.calls = map[string]StateCall{}
 			for _, call := range step.Calls {

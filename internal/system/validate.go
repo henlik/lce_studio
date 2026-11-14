@@ -82,6 +82,16 @@ func Validate(d SystemDesign) model.Validation {
 			add(p+".id", "Component instance IDs must be nonempty and unique")
 		}
 		components[c.ID] = true
+		entries := map[string]bool{}
+		if len(c.StateEntries) > 32 {
+			add(p+".stateEntries", "At most 32 state entry selections")
+		}
+		for j, entry := range c.StateEntries {
+			if !definitionID.MatchString(entry.Slot) || !definitionID.MatchString(entry.Command) || entries[entry.Slot] || c.Definition.Kind != "definition" {
+				add(fmt.Sprintf("%s.stateEntries[%d]", p, j), "Choose a unique state slot and command on a unified definition")
+			}
+			entries[entry.Slot] = true
+		}
 		if c.Definition.Kind != "" && c.Definition.Kind != "component" && c.Definition.Kind != "definition" {
 			add(p+".definition.kind", "Choose a component package or a unified definition")
 		}

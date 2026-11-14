@@ -4,7 +4,7 @@ export interface SystemDesign {
  executionProviders?: {id:string;kind:string;version:string}[];
  components: ComponentInstance[]; connections: SystemConnection[]; deploymentPlans: DeploymentPlan[]; contract: SystemContract;
 }
-export interface ComponentInstance { id:string; name:string; definition:{kind?:'component'|'definition';id:string;version:string}; artifacts:{kind:string;id:string;version:string}[]; bindings:{requirement:string;resourceId:string}[] }
+export interface ComponentInstance { id:string; name:string; definition:{kind?:'component'|'definition';id:string;version:string}; artifacts:{kind:string;id:string;version:string}[]; bindings:{requirement:string;resourceId:string}[];stateEntries?:{slot:string;command:string}[] }
 export interface SystemConnection {id:string; source:string; target:string; kind:string;sourcePort?:AspectEndpoint;targetPort?:AspectEndpoint}
 export interface DeploymentPlan {id:string; name:string; resources:{id:string;kind:string}[]; placements:{componentId:string;resourceId:string}[]}
 export interface SystemContract {id:string; revision:string; claims:{id:string;kind:string;description:string}[]; assumptions:{id:string;description:string}[]}
@@ -29,7 +29,7 @@ export function parseSystemImport(source:string):SystemDesign {
  const arrayOf=(x:unknown,check:(v:unknown)=>boolean)=>Array.isArray(x)&&x.every(check);
  if(!object(value)||value.schemaVersion!==1||!stringFields(value,['id','name','revision'])||
  (value.executionProviders!==undefined&&!arrayOf(value.executionProviders,p=>stringFields(p,['id','kind','version'])))||
- !arrayOf(value.components,c=>object(c)&&stringFields(c,['id','name'])&&object(c.definition)&&stringFields(c.definition,['id','version'])&&(!('kind' in c.definition)||c.definition.kind==='component'||c.definition.kind==='definition')&&arrayOf(c.artifacts,a=>stringFields(a,['kind','id','version']))&&arrayOf(c.bindings,b=>stringFields(b,['requirement','resourceId'])))||
+ !arrayOf(value.components,c=>object(c)&&stringFields(c,['id','name'])&&object(c.definition)&&stringFields(c.definition,['id','version'])&&(!('kind' in c.definition)||c.definition.kind==='component'||c.definition.kind==='definition')&&arrayOf(c.artifacts,a=>stringFields(a,['kind','id','version']))&&arrayOf(c.bindings,b=>stringFields(b,['requirement','resourceId']))&&(c.stateEntries===undefined||arrayOf(c.stateEntries,e=>stringFields(e,['slot','command']))))||
  !arrayOf(value.connections,c=>object(c)&&stringFields(c,['id','source','target','kind'])&&((c.sourcePort===undefined&&c.targetPort===undefined)||(endpoint(c.sourcePort)&&endpoint(c.targetPort))))||
  !arrayOf(value.deploymentPlans,p=>object(p)&&stringFields(p,['id','name'])&&arrayOf(p.resources,r=>stringFields(r,['id','kind']))&&arrayOf(p.placements,r=>stringFields(r,['componentId','resourceId'])))||
  !object(value.contract)||!stringFields(value.contract,['id','revision'])||!arrayOf(value.contract.claims,c=>stringFields(c,['id','kind','description']))||!arrayOf(value.contract.assumptions,a=>stringFields(a,['id','description']))) {

@@ -178,3 +178,22 @@ for(const source of [execution,stateRun,sharedRun,wrongRun]){
 await request('/executions/'+execution.id+'/replays','POST',{inputs:executionInputs},400);
 await request('/executions/missing/replays','POST',{},404);
 console.log('PASS immutable catalog-independent replay verification for pure, state, shared and failed scenarios');
+
+const multiFixture=await request('/multi-command-example','POST',{});
+const multiPlan=await request('/execution/prepare','POST',{design:multiFixture.design});
+assert.equal(multiPlan.plan.engineVersion,'system-dataflow-3');
+const multiOwner=multiPlan.plan.tasks.find(t=>t.state);
+assert.equal(multiOwner.state.entryCommand,'reserve');assert.equal(multiOwner.state.machine.machine.commands.length,2);
+const direct=(command,commandId,expectedRevision,values,status,fault='')=>({kind:'command',taskId:ownerId,calls:[{taskId:ownerId,command,commandId,expectedRevision,fault}],inputs:[{taskId:ownerId,values}],expectedStatuses:{[ownerId]:status}});
+const lostMulti=wave('reserveB',2,1,'reply_lost','skipped','after_commit_before_reply');
+const multiScenario={name:'Reserve and adjust one owner',steps:[wave('reserveA',0,2,'committed'),direct('adjust','adjustA',1,{count:{type:'integer',integer:8}},'committed'),direct('adjust','adjustA',1,{count:{type:'integer',integer:8}},'replayed'),lostMulti,{kind:'restart',taskId:ownerId},direct('reserve','reserveB',2,lostMulti.inputs[0].values,'replayed'),direct('adjust','reserveA',0,{count:{type:'integer',integer:4}},'id_conflict'),direct('adjust','staleAdjust',2,{count:{type:'integer',integer:6}},'revision_conflict'),direct('adjust','rollbackAdjust',3,{count:{type:'integer',integer:9}},'rolled_back','before_commit'),direct('adjust','invalidAdjust',3,{count:{type:'integer',integer:-1}},'denied')],expected:[{...sharedScenario.expected[0],revision:3,receipts:4,effects:2,state:{...sharedScenario.expected[0].state,available:{type:'integer',integer:7}}}]};
+const multiRun=await request('/execution/run','POST',{design:multiFixture.design,scenario:multiScenario});
+assert.equal(multiRun.report.engineVersion,'system-scenario-2');assert.equal(multiRun.report.scenario.passed,true);assert.equal(multiRun.report.claimsEvaluated,false);
+assert.equal(multiRun.report.scenario.final[0].instance.state.available.integer,7);
+assert.ok(!multiRun.report.events.some(e=>e.kind==='transfer'&&![1,4].includes(e.scenarioStep)));
+assert.deepEqual(await request('/executions/'+multiRun.id),multiRun);
+const multiReplay=await request('/executions/'+multiRun.id+'/replays','POST',{});assert.equal(multiReplay.status,'matched');assert.deepEqual(multiReplay.report,multiRun.report);
+const absentEntry=structuredClone(multiFixture.design);delete absentEntry.components[1].stateEntries;await request('/execution/prepare','POST',{design:absentEntry},422);
+const wrongEntry=structuredClone(multiFixture.design);wrongEntry.components[1].stateEntries[0].command='adjust';await request('/execution/prepare','POST',{design:wrongEntry},422);
+const wrongCall=structuredClone(multiScenario);wrongCall.steps[1].calls[0].command='unknown';await request('/execution/run','POST',{design:multiFixture.design,scenario:wrongCall},422);
+console.log('PASS selected graph entry, shared multi-command receipts/revisions, direct-call isolation, negative inputs and replay');

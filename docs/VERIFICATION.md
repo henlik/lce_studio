@@ -1,5 +1,40 @@
 # Verification
 
+## Shared multi-command owners — 14 November 2026
+
+- System instances can select a graph entry command for each state aspect.
+  Preparation checks the named slot/command and rejects connections to another
+  command's interfaces. The inspector loads choices from the exact pinned state
+  artifact; ambiguous owners require an explicit selection.
+- Shared scenarios add explicit owner-command steps with typed inputs, command
+  name, request identity, expected revision and fault. They share ownership,
+  revisions and receipts with graph calls but do not traverse graph connections.
+  Direct command/restart trace views focus on the targeted owner.
+- The versioned stock reference adds an independently reusable pure adjustment
+  decision and a second command. Its ten-step scenario exercises reserve/adjust,
+  duplicate replay, lost reply, restart, cross-command identity conflict, stale
+  revision, rollback and denial. Handwritten final expectations are availability
+  7, revision 3, four receipts, two intents and a reset volatile counter.
+- `system-dataflow-3` and `system-scenario-2` identify the new behavior. Legacy
+  unselected sole-command plans and invocation/restart scenarios retain their
+  previous version identifiers and report shapes. Replay verification recognizes
+  both generations; store tests remove catalogs before reproducing new reports.
+- Full `go test -race -count=1 ./...`, `go vet ./...`, backend build, Vue production
+  build, all 37 frontend tests and the live system API acceptance suite passed.
+  Tests also cover historical receipt outputs without restoring old state,
+  owner isolation, invalid entry selections, wrong ports/inputs, malformed direct
+  envelopes, missing expectations, immutable persistence and cancellation.
+  Vite retains its existing chunk-size warning.
+- Browser/mobile interaction remains unverified due to the environment's Chromium
+  Unix-socket restriction. Manual checklist: install the example; load pinned
+  command choices in the inspector; prepare and run both scenario modes; change
+  owner/command and inspect reset inputs; inspect direct-step trace focus; try a
+  mismatched entry; reload drafts/history; verify replay and export; inspect narrow layouts.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. Selected entries and explicit
+  multi-command interleavings are implemented; message/workflow adapters, live
+  provider execution and general implementation conformance remain open.
+  Walkthrough: [MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md).
+
 ## Saved system execution replay verification — 14 November 2026
 
 - The Execution perspective now verifies saved pure, state and shared-scenario

@@ -5,7 +5,7 @@ A component definition owns named references to reusable artifacts. For example,
 `encounter` (state), `dispatch` (messages), and `intake` (workflow). Each reference
 pins kind, ID, exact version and SHA-256 digest. These are ownership links;
 explicit typed links can now be checked between their declared interfaces.
-Pure behavior and single-command state links can now execute in System architecture; the five execution
+Pure behavior and selected-entry state links can now execute in System architecture; the five execution
 engines are not yet integrated. See [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
 
 Deployment remains a system design concern. Definitions cannot own deployment
@@ -177,3 +177,7 @@ cover domain/API behavior and frontend types; they do not replace these UI check
 
 Single-command state aspects require an exact offline provider binding. Follow
 [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md) for the connected stock example.
+
+Multiple state commands share one owner through explicit scenario steps; see
+[MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md) for graph entry selection and
+the reserve/adjust reference. Message and workflow aspects still need adapters.

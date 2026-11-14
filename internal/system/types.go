@@ -35,11 +35,19 @@ type Binding struct {
 	ResourceID  string `json:"resourceId"`
 }
 type ComponentInstance struct {
-	ID         string        `json:"id"`
-	Name       string        `json:"name"`
-	Definition DefinitionRef `json:"definition"`
-	Artifacts  []ArtifactRef `json:"artifacts"`
-	Bindings   []Binding     `json:"bindings"`
+	StateEntries []StateEntry  `json:"stateEntries,omitempty"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Definition   DefinitionRef `json:"definition"`
+	Artifacts    []ArtifactRef `json:"artifacts"`
+	Bindings     []Binding     `json:"bindings"`
+}
+
+// StateEntry selects the command whose ports participate in a graph invocation.
+// Other commands on the same owner remain available to explicit scenario steps.
+type StateEntry struct {
+	Slot    string `json:"slot"`
+	Command string `json:"command"`
 }
 type Connection struct {
 	ID         string          `json:"id"`

@@ -50,8 +50,10 @@ The verifier first checks stored hashes and input/scenario ambiguity. It validat
 the pinned definitions and re-derives the graph's order and external inputs.
 Mismatch at this stage stops execution. Unsupported snapshot versions, engine
 versions, modes and claim semantics remain unverified; they are not silently
-migrated. The current verifier recognizes `system-pure-1`, `system-dataflow-2`
-and `system-scenario-1` in their corresponding modes.
+migrated. The current verifier recognizes `system-pure-1`, `system-dataflow-2`,
+`system-dataflow-3`, `system-scenario-1` and `system-scenario-2` in their
+corresponding modes. Multi-command selected-entry and direct-call scenarios retain
+all command definitions and selections in their snapshots.
 
 Legacy executions without `snapshotVersion`, `planHash` or `reportHash` can still
 be replayed. A visible unverified check states that stored plan/report integrity

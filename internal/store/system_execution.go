@@ -103,6 +103,11 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	for i, c := range d.Components {
 		path := fmt.Sprintf("components[%d]", i)
 		usedBindings := map[string]bool{}
+		entries := map[string]string{}
+		usedEntries := map[string]bool{}
+		for _, entry := range c.StateEntries {
+			entries[entry.Slot] = entry.Command
+		}
 		for j, a := range c.Artifacts {
 			if a.Kind != "data" {
 				add(fmt.Sprintf("%s.artifacts[%d]", path, j), "Only data attachments are allowed; compose executable behavior using owned aspect slots")
@@ -137,7 +142,11 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 						if err != nil {
 							return prepared, err
 						}
-						task := systemrun.Task{ID: systemrun.Key(c.ID, a.Slot), ComponentID: c.ID, Slot: a.Slot, Name: c.Name + " / " + a.Slot, State: &systemrun.StateTask{Machine: model.StateMachineLock{Machine: machine.Machine, Digest: machine.Digest}, Provider: provider}}
+						task := systemrun.Task{ID: systemrun.Key(c.ID, a.Slot), ComponentID: c.ID, Slot: a.Slot, Name: c.Name + " / " + a.Slot, State: &systemrun.StateTask{EntryCommand: entries[a.Slot], Machine: model.StateMachineLock{Machine: machine.Machine, Digest: machine.Digest}, Provider: provider}}
+						usedEntries[a.Slot] = true
+						if _, ok := systemrun.EntryCommand(task); !ok {
+							add(path+".stateEntries", "Select an existing graph entry command for state slot "+a.Slot)
+						}
 						encoded, err := json.Marshal(task)
 						if err != nil {
 							return prepared, err
@@ -164,7 +173,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				}
 				for _, l := range def.Links {
 					if !executionInterface(tasks, systemrun.Key(c.ID, l.Source.Slot), l.Source.Interface, false) || !executionInterface(tasks, systemrun.Key(c.ID, l.Target.Slot), l.Target.Interface, true) {
-						add(path+".definition.links", "Link must use the selected behavior or single-command state interface")
+						add(path+".definition.links", "Link must use the selected behavior or state graph-entry interface")
 					}
 					links = append(links, systemrun.Link{ID: "internal/" + systemrun.Key(c.ID, l.ID), Source: systemrun.Key(c.ID, l.Source.Slot), Target: systemrun.Key(c.ID, l.Target.Slot), Output: l.Source.Port, Input: l.Target.Port})
 				}
@@ -185,6 +194,11 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 				add(fmt.Sprintf("%s.bindings[%d]", path, j), "Binding does not identify an executable state/<slot> requirement")
 			}
 		}
+		for j, entry := range c.StateEntries {
+			if !usedEntries[entry.Slot] {
+				add(fmt.Sprintf("%s.stateEntries[%d]", path, j), "Entry selection must identify an owned state aspect")
+			}
+		}
 	}
 	for i, p := range d.ExecutionProviders {
 		if !usedProviders[p.ID] {
@@ -201,7 +215,7 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 			continue
 		}
 		if !executionInterface(tasks, systemrun.Key(c.Source, c.SourcePort.Slot), c.SourcePort.Interface, false) || !executionInterface(tasks, systemrun.Key(c.Target, c.TargetPort.Slot), c.TargetPort.Interface, true) {
-			add(path, "Link must use the selected behavior or single-command state interface")
+			add(path, "Link must use the selected behavior or state graph-entry interface")
 		}
 		links = append(links, systemrun.Link{ID: "system/" + c.ID, ConnectionID: c.ID, Source: systemrun.Key(c.Source, c.SourcePort.Slot), Target: systemrun.Key(c.Target, c.TargetPort.Slot), Output: c.SourcePort.Port, Input: c.TargetPort.Port})
 	}
@@ -310,10 +324,11 @@ func executionInterface(tasks []systemrun.Task, id, name string, input bool) boo
 		if task.State == nil {
 			return name == suffix
 		}
-		if len(task.State.Machine.Machine.Commands) != 1 {
+		command, ok := systemrun.EntryCommand(task)
+		if !ok {
 			return false
 		}
-		return name == "command/"+task.State.Machine.Machine.Commands[0].Name+"/"+suffix
+		return name == "command/"+command.Name+"/"+suffix
 	}
 	return false
 }

@@ -39,13 +39,13 @@ Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
-Bounded pure and single-command state graphs execute with deterministic token traces
+Bounded pure and selected-entry state graphs execute with deterministic token traces
 and exact offline modeled-state provider bindings. Shared graph scenarios retain state
 across repeated commands, faults and restarts with independent expectations. Saved
 executions can be replay-verified from their pinned snapshots through the UI/API;
 separate immutable checks distinguish reproduction, mismatch and unsupported replay.
-Multi-entry command, feedback/delivery
-scheduling and live provider integration remain unfinished. System architecture currently records references;
+Explicit owner-command steps now share state and receipts with graph entry calls.
+Message/workflow integration, feedback/delivery scheduling and live provider integration remain unfinished. System architecture currently records references;
 the timing/deployment simulator uses its existing project model under Simulation.
 Design opens System architecture and its installed library. Library sections distinguish
 components, supporting services and actors/workload. The separate timing-profile library
@@ -66,6 +66,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **28%** — Added shared graph scenarios with repeated commands, explicit faults/restarts, blocked transfers and independent expectations. Broader joint-engine and live-provider checkpoints remain open; no additional checkpoint credit.
 - 2026-11-14: **28%** — Corrected Design routing and library categories; separated timing simulation navigation and profiles. UX correction adds no engine checkpoint credit.
 - 2026-11-14: **28%** — Added UI/API catalog-independent replay verification, stored plan/report hashes, bounded mismatch inspection and immutable verification history. Reproducibility does not close joint-engine or implementation-conformance checkpoints; no additional credit.
+- 2026-11-14: **28%** — Added selected graph entry commands and explicit owner-command scenario steps sharing revisions and receipts, typed configuration, reference exercise and replay. Message/workflow and live-provider integration remain open; no additional checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -213,8 +214,8 @@ Compose tasks, decisions, owned commands and handoffs.
 
 Own all aspects under one selected, versioned component.
 
-- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and single-command state aspects execute together with saved token traces.
-- Next: Integrate multi-command scheduling, message/workflow adapters and live provider bindings.
+- Today: Immutable component manifests own digest-pinned aspects and checked links; pure behavior and selected state entry commands execute together with saved token traces; explicit owner commands share revisions and receipts.
+- Next: Integrate message/workflow adapters, automatic command routing and live provider bindings.
 - Acceptance: A selected definition exposes its pinned aspects; opening an editor preserves the source context and changes require a new artifact and definition version.
 - Dependencies: System architecture
 
@@ -224,8 +225,8 @@ Own all aspects under one selected, versioned component.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared scenarios record routed values, faults, restarts and independent assertions.
-- Next: Integrate message/workflow engines, multi-entry commands, live providers and feedback/delivery scheduling.
+- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared multi-command scenarios record routed values, faults, restarts and independent assertions.
+- Next: Integrate message/workflow engines, live providers and feedback/delivery scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Installed component library
 

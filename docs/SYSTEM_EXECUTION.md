@@ -1,13 +1,14 @@
 # Execute connected components
 
 Engineering → Design → System architecture → Execution runs a bounded, acyclic
-graph of pure behavior components. Single-command state aspects are also supported
+graph of pure behavior components. State aspects with selected graph entry commands are also supported
 with explicit offline provider bindings; see [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md). It routes actual typed model values and records
 an ordered token trace. It is model execution, not deployed software, a resource
 simulation, a clinical process or proof that a real implementation conforms.
 
 Repeated graph invocations with shared state are documented in
-[SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md).
+[SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md). Explicit command selection
+and owner-command steps are covered by [MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md).
 
 ## Reception-to-consultation walkthrough
 
@@ -69,7 +70,7 @@ not the full reception workflow or a consultation implementation.
   to exact typed values before submission.
 
 Rejected explicitly: cycles, timing profiles, built-in conformance adapters,
-request/event edges, message/workflow aspects, multi-command state machines, non-data attachments,
+request/event edges, message/workflow aspects, ambiguous state entry selections, non-data attachments,
 unsupported provider bindings and deployment plans. Unsupported aspects are never silently skipped.
 
 To execute a pure component model while retaining a deployment design, keep a

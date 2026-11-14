@@ -51,7 +51,7 @@ their inspector. Untyped legacy edges stay explicitly unchecked. See
 exercise. Structural validation, static compatibility and execution support are
 separate checks.
 
-System architecture also includes **Execution** for bounded pure and single-command state graphs,
+System architecture also includes **Execution** for bounded pure and selected-entry state graphs,
 with input forms, token stepping and saved snapshots. **Evidence** continues to
 show the separate model-versus-implementation conformance experiment. See
 [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md).
@@ -98,3 +98,7 @@ Validation shortcuts still open the affected editor. Changes retain the original
 
 The state handoff exercise adds offline execution providers under System settings,
 separate from Deployment resources. See [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md).
+
+In System architecture, a selected component inspector exposes **State graph entry
+commands**. Execution scenarios offer **Add owner command** and a multi-command
+reference fixture; see [MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md).

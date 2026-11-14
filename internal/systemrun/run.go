@@ -1,4 +1,4 @@
-// Package systemrun executes bounded acyclic pure and single-command state graphs.
+// Package systemrun executes bounded acyclic pure and selected-entry state graphs.
 // It performs no storage effects, timing simulation or contract verification.
 package systemrun
 
@@ -15,13 +15,16 @@ import (
 )
 
 const Version = "system-dataflow-2"
+const MultiCommandVersion = "system-dataflow-3"
 const MaxBytes = 4 << 20
 
 type StateTask struct {
-	Machine  model.StateMachineLock   `json:"machine"`
-	Provider system.ExecutionProvider `json:"provider"`
+	EntryCommand string                   `json:"entryCommand,omitempty"`
+	Machine      model.StateMachineLock   `json:"machine"`
+	Provider     system.ExecutionProvider `json:"provider"`
 }
 type StateEvidence struct {
+	Command  string                   `json:"command,omitempty"`
 	Provider system.ExecutionProvider `json:"provider"`
 	Step     state.StepResult         `json:"step"`
 	Instance state.InstanceResult     `json:"instance"`
@@ -140,13 +143,18 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 		bound[t.ID] = map[string]bool{}
 		validation := model.ValidateComponentBundle(t.Bundle)
 		if t.State != nil {
-			plan.EngineVersion = Version
+			if plan.EngineVersion != MultiCommandVersion {
+				plan.EngineVersion = Version
+			}
+			if t.State.EntryCommand != "" || len(t.State.Machine.Machine.Commands) > 1 {
+				plan.EngineVersion = MultiCommandVersion
+			}
 			validation = model.ValidateStateMachineLock(t.State.Machine)
 			if t.Bundle.SchemaVersion != 0 || len(t.Bundle.Packages) > 0 || t.Bundle.Root != (model.ComponentRef{}) {
 				add(path, "A task cannot contain both pure and state definitions")
 			}
-			if len(t.State.Machine.Machine.Commands) != 1 {
-				add(path, "State tasks require exactly one command; multi-command scheduling is not implemented")
+			if _, ok := EntryCommand(t); !ok {
+				add(path, "Select an existing graph entry command for a multi-command state owner")
 			}
 			if t.State.Provider.ID == "" || t.State.Provider.Kind != "modeled-state" || t.State.Provider.Version != "1.0.0" {
 				add(path, "State requires an exact modeled-state@1.0.0 provider")
@@ -366,7 +374,8 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 				call = runtime.calls[id]
 				index = runtime.index
 			}
-			step, err := session.Apply(ctx, index, model.StateStep{Kind: "command", InstanceID: ownerID, CommandID: call.CommandID, Command: task.State.Machine.Machine.Commands[0].Name, ExpectedRevision: call.ExpectedRevision, Inputs: values[id], Fault: call.Fault}, nil)
+			command, _ := EntryCommand(task)
+			step, err := session.Apply(ctx, index, model.StateStep{Kind: "command", InstanceID: ownerID, CommandID: call.CommandID, Command: command.Name, ExpectedRevision: call.ExpectedRevision, Inputs: values[id], Fault: call.Fault}, nil)
 			if err != nil {
 				return Report{}, err
 			}
@@ -379,6 +388,9 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 				return Report{}, err
 			}
 			result.State = &StateEvidence{Provider: task.State.Provider, Step: step, Instance: snapshot[0]}
+			if plan.EngineVersion == MultiCommandVersion {
+				result.State.Command = command.Name
+			}
 			result.Outputs, result.BundleHash = map[string]model.TypedValue{}, task.State.Machine.Digest
 			if step.Receipt != nil && !(runtime != nil && step.ReplyLost) {
 				result.Outputs = step.Receipt.Outputs
@@ -445,10 +457,10 @@ func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenario
 
 func ports(t Task, input bool) []model.BehaviorPort {
 	if t.State != nil {
-		if len(t.State.Machine.Machine.Commands) != 1 {
+		c, ok := EntryCommand(t)
+		if !ok {
 			return nil
 		}
-		c := t.State.Machine.Machine.Commands[0]
 		if input {
 			return c.Inputs
 		}
@@ -462,6 +474,22 @@ func ports(t Task, input bool) []model.BehaviorPort {
 		return b.Inputs
 	}
 	return b.Outputs
+}
+
+func EntryCommand(t Task) (model.StateCommand, bool) {
+	if t.State == nil {
+		return model.StateCommand{}, false
+	}
+	name := t.State.EntryCommand
+	if name == "" && len(t.State.Machine.Machine.Commands) == 1 {
+		return t.State.Machine.Machine.Commands[0], true
+	}
+	for _, c := range t.State.Machine.Machine.Commands {
+		if c.Name == name {
+			return c, true
+		}
+	}
+	return model.StateCommand{}, false
 }
 func contracts(t Task) ([]model.DataContractLock, []model.ValidationIssue) {
 	if t.State != nil {

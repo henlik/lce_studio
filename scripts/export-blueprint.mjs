@@ -45,13 +45,13 @@ Their artifacts remain independently versioned. Component definitions now own
 named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
-Bounded pure and single-command state graphs execute with deterministic token traces
+Bounded pure and selected-entry state graphs execute with deterministic token traces
 and exact offline modeled-state provider bindings. Shared graph scenarios retain state
 across repeated commands, faults and restarts with independent expectations. Saved
 executions can be replay-verified from their pinned snapshots through the UI/API;
 separate immutable checks distinguish reproduction, mismatch and unsupported replay.
-Multi-entry command, feedback/delivery
-scheduling and live provider integration remain unfinished. System architecture currently records references;
+Explicit owner-command steps now share state and receipts with graph entry calls.
+Message/workflow integration, feedback/delivery scheduling and live provider integration remain unfinished. System architecture currently records references;
 the timing/deployment simulator uses its existing project model under Simulation.
 Design opens System architecture and its installed library. Library sections distinguish
 components, supporting services and actors/workload. The separate timing-profile library
