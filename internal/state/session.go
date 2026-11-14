@@ -18,6 +18,17 @@ type Budget struct {
 	effects  int
 }
 
+// AccountPure includes outer pure decisions in the shared experiment budget.
+// Failed state decisions already reserve their work in this same budget.
+func (b *Budget) AccountPure(operations, invocations int) error {
+	if operations < 0 || invocations < 0 || b.reserved.operations+operations > MaxOperations || b.reserved.invocations+invocations > MaxInvocations {
+		return fmt.Errorf("%w: shared decision work budget exceeded", ErrLimit)
+	}
+	b.reserved.operations += operations
+	b.reserved.invocations += invocations
+	return nil
+}
+
 // Projection contains only scalar accounting, never mutable owned values. An
 // outer experiment admits its complete projected evidence before state commits
 // or snapshots are deep-copied. InstanceBytes excludes array delimiters/commas.

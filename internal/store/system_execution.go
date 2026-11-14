@@ -23,6 +23,7 @@ type ExecutionPreparation struct {
 	DesignHash string            `json:"designHash"`
 }
 type SystemExecution struct {
+	Scenario  *systemrun.Scenario `json:"scenario,omitempty"`
 	ID        string              `json:"id"`
 	CreatedAt string              `json:"createdAt"`
 	Design    system.SystemDesign `json:"design"`
@@ -218,11 +219,22 @@ func (s *Store) PrepareSystemExecution(ctx context.Context, d system.SystemDesig
 	return prepared, nil
 }
 func (s *Store) ExecuteSystem(ctx context.Context, id string, d system.SystemDesign, inputs []systemrun.Inputs) (SystemExecution, error) {
+	return s.executeSystem(ctx, id, d, inputs, nil)
+}
+func (s *Store) ExecuteSystemScenario(ctx context.Context, id string, d system.SystemDesign, scenario systemrun.Scenario) (SystemExecution, error) {
+	return s.executeSystem(ctx, id, d, nil, &scenario)
+}
+func (s *Store) executeSystem(ctx context.Context, id string, d system.SystemDesign, inputs []systemrun.Inputs, scenario *systemrun.Scenario) (SystemExecution, error) {
 	p, err := s.PrepareSystemExecution(ctx, d)
 	if err != nil {
 		return SystemExecution{}, err
 	}
-	report, err := systemrun.Run(ctx, p.Plan, inputs)
+	var report systemrun.Report
+	if scenario != nil {
+		report, err = systemrun.RunScenario(ctx, p.Plan, *scenario)
+	} else {
+		report, err = systemrun.Run(ctx, p.Plan, inputs)
+	}
 	if err != nil {
 		var invalid *systemrun.Invalid
 		if errors.As(err, &invalid) || ctx.Err() != nil {
@@ -231,6 +243,10 @@ func (s *Store) ExecuteSystem(ctx context.Context, id string, d system.SystemDes
 		return SystemExecution{}, fmt.Errorf("%w: %v", ErrPureExecution, err)
 	}
 	e := SystemExecution{ID: id, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), Design: d, Inputs: inputs, ExecutionPreparation: p, InputHash: executionHash(inputs), Report: report}
+	if scenario != nil {
+		e.Scenario = scenario
+		e.InputHash = executionHash(scenario)
+	}
 	b, err := json.Marshal(e)
 	if err != nil {
 		return SystemExecution{}, err
@@ -260,7 +276,7 @@ func (s *Store) SystemExecution(ctx context.Context, id string) (SystemExecution
 	return e, err
 }
 func (s *Store) SystemExecutions(ctx context.Context, systemID string) ([]ExecutionSummary, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,created_at,body->'design'->>'name',json_array_length(body->'report'->'results') FROM system_executions WHERE system_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50`, systemID)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,created_at,body->'design'->>'name',json_array_length(body->'plan'->'tasks') FROM system_executions WHERE system_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50`, systemID)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,10 @@ provider is explicitly **modeled-state@1.0.0**: an offline semantic adapter with
 atomic state updates, revision checks, durable receipts and pending effect intents
 inside one experiment. It is not PostgreSQL, Redis, a live application or deployment.
 
+For repeated commands, faults and restarts in one run, follow
+[SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md). The single-run mode below
+still starts fresh for each invocation.
+
 ## Inspect the example
 
 1. Open **Engineering → Design → System architecture → File**.
@@ -71,9 +75,9 @@ bindings, and does not infer provider behavior from a resource's name.
   A single-command machine is selected explicitly by its sole command definition;
   multi-command machines are rejected until scheduling is designed.
 - The invocation uses a run-local `execute` command ID and expected revision `0`.
-  The receipt and state kernel retain their normal semantics, but this graph does
-  not exercise concurrent commands, retries, restart or failure injection. Use the
-  dedicated State workspace for those existing ordered scenarios.
+  The single-run mode does not exercise retries or faults. The separate shared-scenario
+  mode now supports repeated invocations, explicit faults and owner restarts. The
+  dedicated State workspace remains available for its existing ordered scenarios.
 - Accepted commands commit writes, increment revision and retain effect intents.
   Denied commands retain a receipt and outputs without changing state or emitting
   effects. Both outcomes can feed downstream typed ports. An evaluation failure

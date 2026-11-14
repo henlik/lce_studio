@@ -40,7 +40,8 @@ named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
 Bounded pure and single-command state graphs execute with deterministic token traces
-and exact offline modeled-state provider bindings. Multi-command, feedback/delivery
+and exact offline modeled-state provider bindings. Shared graph scenarios retain state
+across repeated commands, faults and restarts with independent expectations. Multi-entry command, feedback/delivery
 scheduling and live provider integration remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.
@@ -57,6 +58,7 @@ Roadmap v1: six weighted milestones, five equal checkpoints within each. Only ac
 - 2026-11-14: **28%** — Completed static system-connection compatibility and closure checks with positive and negative reception-to-consultation evidence (+5 percentage points).
 - 2026-11-14: **28%** — Added bounded pure component execution, token traces and saved replayable snapshots. Stateful/provider execution remains unfinished; no additional checkpoint credit.
 - 2026-11-14: **28%** — Added single-command state handoffs and exact modeled-state provider bindings with commit/denial evidence. Multi-command, message/workflow and live-provider integration remain open; no additional checkpoint credit.
+- 2026-11-14: **28%** — Added shared graph scenarios with repeated commands, explicit faults/restarts, blocked transfers and independent expectations. Broader joint-engine and live-provider checkpoints remain open; no additional checkpoint credit.
 
 ### M1. Connect the engineering model
 
@@ -224,8 +226,8 @@ Capture intent and measurable acceptance conditions.
 
 Assemble exact component references, bindings, contracts and deployment plans.
 
-- Today: System designs check typed connections and dependencies; bounded pure/state dataflow execution records routed values, state transitions and replayable snapshots.
-- Next: Extend single-command execution to shared scenarios, live providers and explicit feedback/delivery scheduling.
+- Today: System designs check typed connections and dependencies; bounded pure/state dataflow and shared scenarios record routed values, faults, restarts and independent assertions.
+- Next: Integrate message/workflow engines, multi-entry commands, live providers and feedback/delivery scheduling.
 - Acceptance: Changing a referenced artifact detects unresolved or incompatible dependencies before execution.
 - Dependencies: Local catalog
 

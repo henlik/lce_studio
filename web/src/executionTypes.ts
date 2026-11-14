@@ -1,11 +1,14 @@
+import type {StateMachineLock} from './stateTypes';
+import type {ComponentBundle} from './behaviorTypes';
+import type {SharedScenario,ScenarioOutcome} from './systemScenario';
 import type {SystemDesign,SystemResolution} from './systemTypes';
 export interface ValueType {type:string;recordRef?:{contractId:string;version:string;digest:string;record:string}}
 export interface ExecutionInput extends ValueType {taskId:string;name:string;fields?:{name:string;type:string}[]}
-export interface ExecutionPlan {engineVersion:string;tasks:{id:string;componentId:string;slot:string;name:string;bundle:unknown;state?:{provider:{id:string;kind:string;version:string};machine:unknown}}[];links:{id:string;source:string;target:string;output:string;input:string;connectionId?:string}[];order:string[];inputs:ExecutionInput[]}
+export interface ExecutionPlan {engineVersion:string;tasks:{id:string;componentId:string;slot:string;name:string;bundle:ComponentBundle;state?:{provider:{id:string;kind:string;version:string};machine:StateMachineLock}}[];links:{id:string;source:string;target:string;output:string;input:string;connectionId?:string}[];order:string[];inputs:ExecutionInput[]}
 export interface Preparation {plan:ExecutionPlan;resolution:SystemResolution;designHash:string}
-export interface StateEvidence {provider:{id:string;kind:string;version:string};step:{status:string;beforeRevision:number;afterRevision:number;before:unknown;after:unknown;receipt?:unknown};instance:{state:unknown;revision:number;receipts:unknown[];effects:unknown[]}}
-export interface ExecutionEvent {state?:StateEvidence;sequence:number;kind:string;taskId:string;target?:string;linkId?:string;connectionId?:string;values:Record<string,unknown>}
-export interface ExecutionEvidence extends Preparation {id:string;createdAt:string;design:SystemDesign;inputs:unknown[];inputHash:string;report:{engineVersion:string;mode:string;claimsEvaluated:boolean;events:ExecutionEvent[];results:{state?:StateEvidence;taskId:string;outputs:Record<string,unknown>;operations:number;invocations:number;bundleHash:string}[];limitations:string[]}}
+export interface StateEvidence {provider:{id:string;kind:string;version:string};step:{replyLost?:boolean;status:string;beforeRevision:number;afterRevision:number;before:unknown;after:unknown;receipt?:unknown};instance:{state:unknown;revision:number;receipts:unknown[];effects:unknown[]}}
+export interface ExecutionEvent {scenarioStep?:number;state?:StateEvidence;sequence:number;kind:string;taskId:string;target?:string;linkId?:string;connectionId?:string;values:Record<string,unknown>}
+export interface ExecutionEvidence extends Preparation {scenario?:SharedScenario;id:string;createdAt:string;design:SystemDesign;inputs:unknown[];inputHash:string;report:{scenario?:ScenarioOutcome;engineVersion:string;mode:string;claimsEvaluated:boolean;events:ExecutionEvent[];results:{scenarioStep?:number;status?:string;state?:StateEvidence;taskId:string;outputs:Record<string,unknown>;operations:number;invocations:number;bundleHash:string}[];limitations:string[]}}
 export function inputKey(p:ExecutionInput){return JSON.stringify([p.taskId,p.name]);}
 function scalar(type:string,value:unknown):Record<string,unknown>{
  if(type==='string'){if(typeof value!=='string')throw new Error('A string is required');return {type,string:value};}

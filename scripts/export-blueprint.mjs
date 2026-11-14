@@ -46,7 +46,8 @@ named aspect pins and open exact artifacts in their editors with return context.
 Definitions inspect dependency closures and check declared aspect-link types.
 System-wide typed connections and dependency closures are now checked.
 Bounded pure and single-command state graphs execute with deterministic token traces
-and exact offline modeled-state provider bindings. Multi-command, feedback/delivery
+and exact offline modeled-state provider bindings. Shared graph scenarios retain state
+across repeated commands, faults and restarts with independent expectations. Multi-entry command, feedback/delivery
 scheduling and live provider integration remain unfinished. System architecture currently records references;
 the application flow/deployment simulator still uses its existing project model.
 Grouping them under Design does not silently migrate or merge their data models.

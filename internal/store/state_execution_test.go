@@ -43,6 +43,31 @@ func TestConnectedStateProviderPersistenceAndPortableReplay(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(saved, run) {
 		t.Fatal("roundtrip", err)
 	}
+	zero := int64(0)
+	scenario := systemrun.Scenario{Name: "Repeated handoff", Steps: []systemrun.ScenarioStep{{Kind: "invoke", Inputs: in, Calls: []systemrun.StateCall{{TaskID: systemrun.Key("stock", "stock"), CommandID: "reserveA", ExpectedRevision: &zero}}, ExpectedStatuses: map[string]string{systemrun.Key("stock", "stock"): "committed"}}, {Kind: "invoke", Inputs: in, Calls: []systemrun.StateCall{{TaskID: systemrun.Key("stock", "stock"), CommandID: "reserveA", ExpectedRevision: &zero}}, ExpectedStatuses: map[string]string{systemrun.Key("stock", "stock"): "replayed"}}}}
+	shared, err := s.ExecuteSystemScenario(ctx, "shared-handoff", e.Design, scenario)
+	if err != nil || !shared.Report.Scenario.Passed {
+		t.Fatal("shared scenario", err)
+	}
+	stored, err := s.SystemExecution(ctx, shared.ID)
+	if err != nil || !reflect.DeepEqual(stored, shared) {
+		t.Fatal("shared roundtrip", err)
+	}
+	if _, err = s.ExecuteSystemScenario(ctx, shared.ID, e.Design, scenario); err == nil {
+		t.Fatal("overwrote scenario evidence")
+	}
+	scenario.Steps[1].ExpectedStatuses[systemrun.Key("stock", "stock")] = "committed"
+	failed, err := s.ExecuteSystemScenario(ctx, "failed-expectation", e.Design, scenario)
+	if err != nil || failed.Report.Scenario.Passed {
+		t.Fatal("failed verdict not recordable", err)
+	}
+	scenario.Steps[0].Calls = nil
+	if _, err = s.ExecuteSystemScenario(ctx, "malformed-scenario", e.Design, scenario); err == nil {
+		t.Fatal("bad envelope accepted")
+	}
+	if _, err = s.SystemExecution(ctx, "malformed-scenario"); err != ErrNotFound {
+		t.Fatal("bad scenario persisted", err)
+	}
 	e.Design.Components[1].Bindings[0].ResourceID = "missing"
 	if _, err = s.ExecuteSystem(ctx, "bad-provider", e.Design, in); err == nil {
 		t.Fatal("missing provider accepted")
@@ -57,6 +82,10 @@ func TestConnectedStateProviderPersistenceAndPortableReplay(t *testing.T) {
 	}
 	if _, err = s.db.ExecContext(ctx, `DELETE FROM state_machines`); err != nil {
 		t.Fatal(err)
+	}
+	sharedReplay, err := systemrun.RunScenario(ctx, stored.Plan, *stored.Scenario)
+	if err != nil || !reflect.DeepEqual(sharedReplay, stored.Report) {
+		t.Fatal("shared portable replay", err)
 	}
 	replay, err := systemrun.Run(ctx, saved.Plan, saved.Inputs)
 	if err != nil || !reflect.DeepEqual(replay, saved.Report) {

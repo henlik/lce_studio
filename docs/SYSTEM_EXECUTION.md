@@ -6,6 +6,9 @@ with explicit offline provider bindings; see [STATE_SYSTEM_EXECUTION.md](STATE_S
 an ordered token trace. It is model execution, not deployed software, a resource
 simulation, a clinical process or proof that a real implementation conforms.
 
+Repeated graph invocations with shared state are documented in
+[SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md).
+
 ## Reception-to-consultation walkthrough
 
 1. Open **System architecture → File → Install connection example**. Existing

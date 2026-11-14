@@ -146,3 +146,22 @@ await request('/execution/prepare','POST',{design:missingProvider},422);
 const liveProvider=structuredClone(stateFixture.design);liveProvider.executionProviders[0].kind='postgresql';
 await request('/execution/prepare','POST',{design:liveProvider},422);
 console.log('PASS connected state commit/denial, provider rejection, owned revisions/receipts/intents and immutable snapshots');
+
+const ownerId=statePlan.plan.tasks.find(t=>t.state).id;
+const summaryId=statePlan.plan.tasks.find(t=>t.componentId==='summary').id;
+const wave=(commandId,expectedRevision,quantity,status,downstream='completed',fault='')=>{
+ const inputs=structuredClone(stateInputs);inputs[0].values.request.record.quantity.integer=quantity;
+ return {kind:'invoke',inputs,calls:[{taskId:ownerId,commandId,expectedRevision,fault}],expectedStatuses:{[ownerId]:status,[summaryId]:downstream}};
+};
+const sharedScenario={name:'Stock shared scenario',steps:[wave('reserveA',0,2,'committed'),wave('reserveA',0,2,'replayed'),wave('stale',0,1,'revision_conflict','skipped'),wave('reserveB',1,1,'reply_lost','skipped','after_commit_before_reply'),{kind:'restart',taskId:ownerId,expectedStatuses:{[ownerId]:'restarted'}},wave('reserveB',1,1,'replayed')],expected:[{taskId:ownerId,revision:2,receipts:2,effects:2,state:{tenantId:{type:'string',string:'tenantDefault'},resourceId:{type:'string',string:'resourceDefault'},available:{type:'integer',integer:2},acceptedSinceRestart:{type:'integer',integer:0}}}]};
+const sharedRun=await request('/execution/run','POST',{design:stateFixture.design,scenario:sharedScenario});
+assert.equal(sharedRun.report.mode,'shared-scenario');assert.equal(sharedRun.report.scenario.verified,true);assert.equal(sharedRun.report.scenario.passed,true);assert.equal(sharedRun.report.claimsEvaluated,false);
+assert.equal(sharedRun.report.scenario.final[0].instance.state.available.integer,2);
+assert.ok(!sharedRun.report.events.some(e=>[3,4].includes(e.scenarioStep)&&e.kind==='transfer'&&e.taskId===ownerId));
+assert.deepEqual(await request('/executions/'+sharedRun.id),sharedRun);
+const wrongScenario=structuredClone(sharedScenario);wrongScenario.expected[0].state.available.integer=99;
+const wrongRun=await request('/execution/run','POST',{design:stateFixture.design,scenario:wrongScenario});assert.equal(wrongRun.report.scenario.passed,false);
+const invalidScenario=structuredClone(sharedScenario);delete invalidScenario.steps[0].calls[0].expectedRevision;
+await request('/execution/run','POST',{design:stateFixture.design,scenario:invalidScenario},422);
+await request('/execution/run','POST',{design:stateFixture.design,scenario:sharedScenario,inputs:stateInputs},400);
+console.log('PASS shared-scenario state continuity, blocked reply transfers, independent failed verdicts and immutable snapshots');

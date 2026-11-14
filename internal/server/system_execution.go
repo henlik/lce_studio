@@ -45,10 +45,15 @@ func (s *Server) systemExecutionAPI(w http.ResponseWriter, r *http.Request, path
 		return
 	}
 	var body struct {
-		Design system.SystemDesign `json:"design"`
-		Inputs []systemrun.Inputs  `json:"inputs"`
+		Design   system.SystemDesign `json:"design"`
+		Inputs   []systemrun.Inputs  `json:"inputs"`
+		Scenario *systemrun.Scenario `json:"scenario,omitempty"`
 	}
 	if !decode(w, r, &body) {
+		return
+	}
+	if body.Scenario != nil && (len(body.Inputs) > 0 || path == "/execution/prepare") {
+		fail(w, 400, "Submit either a scenario or single-run inputs; preparation accepts the design only", nil)
 		return
 	}
 	select {
@@ -88,7 +93,12 @@ func (s *Server) systemExecutionAPI(w http.ResponseWriter, r *http.Request, path
 		fail(w, 500, "Could not identify execution", nil)
 		return
 	}
-	e, err := s.store.ExecuteSystem(ctx, id, body.Design, body.Inputs)
+	var e store.SystemExecution
+	if body.Scenario != nil {
+		e, err = s.store.ExecuteSystemScenario(ctx, id, body.Design, *body.Scenario)
+	} else {
+		e, err = s.store.ExecuteSystem(ctx, id, body.Design, body.Inputs)
+	}
 	if handle(err) {
 		return
 	}

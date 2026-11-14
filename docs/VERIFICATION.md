@@ -1,5 +1,38 @@
 # Verification
 
+## Shared graph scenarios — 14 November 2026
+
+- Shared scenarios retain isolated state sessions across ordered graph invocations
+  and explicit owner restarts. Envelopes carry command IDs, expected revisions and
+  optional before-commit or after-commit-before-reply faults. Pure and state work
+  share the execution budget; existing single-run report shapes remain compatible.
+- The six-step stock example commits 5 → 3, replays without another write, rejects
+  a stale revision, commits 3 → 2 with a lost reply, restarts, then replays the saved
+  receipt. Final revision is 2 with two receipts, two effect intents and volatile
+  counter 0. Conflicts and lost replies produce no downstream response transfers;
+  consumers with missing inputs are recorded as skipped.
+- Engine tests cover rollback, identity conflict, historical receipts without state
+  restoration, fresh independent runs, deterministic replay, malformed envelopes,
+  bounds/cancellation, failed expectations and unverified runs without assertions.
+  PostgreSQL tests preserve immutable scenario snapshots, record failed verdicts,
+  reject malformed runs without success records, and reproduce complete reports
+  after deleting the state catalog.
+- Full `go test -race -count=1 ./...`, `go vet`, backend build and live system API
+  acceptance passed against PostgreSQL. Acceptance retains previous conformance,
+  ownership and execution checks and adds shared-scenario continuity, blocked
+  transfers, expected-state failures and mixed-body rejection. Vue production build
+  and all **34 frontend tests** passed. Browser/mobile interaction checks remain
+  outstanding, and the existing Vite chunk-size warning remains.
+- The editor supports typed step inputs, explicit envelopes, reorder/duplicate,
+  restart/fault choices, step outcomes and full final-state expectations. Drafts
+  autosave per system. The report distinguishes passed, failed and unverified
+  scenarios; system contract claims remain unevaluated. See
+  [SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md).
+- Scope: one declared interleaving and repeated invocations of each state aspect's
+  single command definition. This is not exhaustive race exploration, parallel
+  timing, multi-entry command selection, message delivery or live deployment.
+  Roadmap remains **28% (+0 points), M1 80%**, with unchanged checkpoint weights.
+
 ## Connected state execution and offline provider bindings — 14 November 2026
 
 - Pure tasks and single-command state aspects execute in one bounded graph through

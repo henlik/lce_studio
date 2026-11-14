@@ -59,6 +59,7 @@ type Inputs struct {
 	Values map[string]model.TypedValue `json:"values"`
 }
 type Event struct {
+	ScenarioStep int                         `json:"scenarioStep,omitempty"`
 	State        *StateEvidence              `json:"state,omitempty"`
 	Sequence     int                         `json:"sequence"`
 	Kind         string                      `json:"kind"`
@@ -69,20 +70,23 @@ type Event struct {
 	Values       map[string]model.TypedValue `json:"values"`
 }
 type TaskResult struct {
-	State       *StateEvidence              `json:"state,omitempty"`
-	TaskID      string                      `json:"taskId"`
-	Outputs     map[string]model.TypedValue `json:"outputs"`
-	BundleHash  string                      `json:"bundleHash"`
-	Operations  int                         `json:"operations"`
-	Invocations int                         `json:"invocations"`
+	Status       string                      `json:"status,omitempty"`
+	ScenarioStep int                         `json:"scenarioStep,omitempty"`
+	State        *StateEvidence              `json:"state,omitempty"`
+	TaskID       string                      `json:"taskId"`
+	Outputs      map[string]model.TypedValue `json:"outputs"`
+	BundleHash   string                      `json:"bundleHash"`
+	Operations   int                         `json:"operations"`
+	Invocations  int                         `json:"invocations"`
 }
 type Report struct {
-	EngineVersion   string       `json:"engineVersion"`
-	Mode            string       `json:"mode"`
-	ClaimsEvaluated bool         `json:"claimsEvaluated"`
-	Events          []Event      `json:"events"`
-	Results         []TaskResult `json:"results"`
-	Limitations     []string     `json:"limitations"`
+	Scenario        *ScenarioOutcome `json:"scenario,omitempty"`
+	EngineVersion   string           `json:"engineVersion"`
+	Mode            string           `json:"mode"`
+	ClaimsEvaluated bool             `json:"claimsEvaluated"`
+	Events          []Event          `json:"events"`
+	Results         []TaskResult     `json:"results"`
+	Limitations     []string         `json:"limitations"`
 }
 type Invalid struct{ Issues []model.ValidationIssue }
 
@@ -241,6 +245,9 @@ func Prepare(tasks []Task, links []Link) (Plan, error) {
 }
 
 func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
+	return runGraph(ctx, plan, inputs, nil)
+}
+func runGraph(ctx context.Context, plan Plan, inputs []Inputs, runtime *scenarioRuntime) (Report, error) {
 	if err := ctx.Err(); err != nil {
 		return Report{}, err
 	}
@@ -296,6 +303,9 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 		report.Limitations = []string{"One invocation per task; each state aspect owns a fresh instance initialized from its immutable definition.", "modeled-state@1.0.0 supplies in-memory atomic state, revisions, receipts and effect intents within this run; it is not live PostgreSQL storage.", "Independent tasks are serialized. Effects are not delivered; no clock, restart scenario, deployment or claim evaluation is performed."}
 	}
 	stateBudget := &state.Budget{}
+	if runtime != nil {
+		stateBudget = runtime.budget
+	}
 	eventBytes := 0
 	operations, invocations := 0, 0
 	emit := func(e Event) error {
@@ -315,6 +325,13 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 		if err := ctx.Err(); err != nil {
 			return Report{}, err
 		}
+		if runtime != nil && len(model.ValidateStructuredBehaviorValues(values[id], ports(byID[id], true), mustContracts(byID[id]))) > 0 {
+			report.Results = append(report.Results, TaskResult{TaskID: id, Status: "skipped", Outputs: map[string]model.TypedValue{}})
+			if err := emit(Event{Kind: "skipped", TaskID: id, Values: map[string]model.TypedValue{}}); err != nil {
+				return Report{}, err
+			}
+			continue
+		}
 		if err := emit(Event{Kind: "started", TaskID: id, Values: values[id]}); err != nil {
 			return Report{}, err
 		}
@@ -326,28 +343,64 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 				return Report{}, fmt.Errorf("task %s: %w", id, err)
 			}
 			result.Outputs, result.BundleHash, result.Operations, result.Invocations = evaluated.Outputs, evaluated.BundleHash, evaluated.Operations, evaluated.Invocations
+			if runtime != nil {
+				if err := runtime.budget.AccountPure(evaluated.Operations, evaluated.Invocations); err != nil {
+					return Report{}, err
+				}
+			}
 		} else {
 			ownerID := fmt.Sprintf("owner%x", sha256.Sum256([]byte(id)))[:37]
-			session, err := state.NewSession(ctx, task.State.Machine, []model.StateInstance{{ID: ownerID, Name: task.Name, Initial: map[string]model.TypedValue{}}}, stateBudget)
-			if err != nil {
-				return Report{}, err
+			var session *state.Session
+			if runtime != nil {
+				session = runtime.sessions[id]
+			} else {
+				session, err = state.NewSession(ctx, task.State.Machine, []model.StateInstance{{ID: ownerID, Name: task.Name, Initial: map[string]model.TypedValue{}}}, stateBudget)
+				if err != nil {
+					return Report{}, err
+				}
 			}
 			zero := int64(0)
-			step, err := session.Apply(ctx, 0, model.StateStep{Kind: "command", InstanceID: ownerID, CommandID: "execute", Command: task.State.Machine.Machine.Commands[0].Name, ExpectedRevision: &zero, Inputs: values[id]}, nil)
+			call := StateCall{TaskID: id, CommandID: "execute", ExpectedRevision: &zero}
+			index := 0
+			if runtime != nil {
+				call = runtime.calls[id]
+				index = runtime.index
+			}
+			step, err := session.Apply(ctx, index, model.StateStep{Kind: "command", InstanceID: ownerID, CommandID: call.CommandID, Command: task.State.Machine.Machine.Commands[0].Name, ExpectedRevision: call.ExpectedRevision, Inputs: values[id], Fault: call.Fault}, nil)
 			if err != nil {
 				return Report{}, err
 			}
-			if step.Receipt == nil {
+			if step.Receipt == nil && runtime == nil {
 				return Report{}, fmt.Errorf("state task %s produced no receipt: %s %s", id, step.Status, step.Message)
 			}
+
 			snapshot, err := session.Snapshot(ctx)
 			if err != nil {
 				return Report{}, err
 			}
 			result.State = &StateEvidence{Provider: task.State.Provider, Step: step, Instance: snapshot[0]}
-			result.Outputs, result.BundleHash = step.Receipt.Outputs, task.State.Machine.Digest
+			result.Outputs, result.BundleHash = map[string]model.TypedValue{}, task.State.Machine.Digest
+			if step.Receipt != nil && !(runtime != nil && step.ReplyLost) {
+				result.Outputs = step.Receipt.Outputs
+			}
+			if runtime != nil {
+				result.Status = step.Status
+				if step.ReplyLost {
+					result.Status = "reply_lost"
+				}
+			}
 			if step.Decision != nil {
 				result.Operations, result.Invocations = step.Decision.Operations, step.Decision.Invocations
+			}
+		}
+		if runtime != nil {
+			runtime.operations += result.Operations
+			runtime.invocations += result.Invocations
+			if runtime.operations > 4096 || runtime.invocations > 4096 {
+				return Report{}, fmt.Errorf("scenario work budget exceeded")
+			}
+			if result.Status == "" {
+				result.Status = "completed"
 			}
 		}
 		operations += result.Operations
@@ -366,6 +419,9 @@ func Run(ctx context.Context, plan Plan, inputs []Inputs) (Report, error) {
 			}
 			v, ok := result.Outputs[l.Output]
 			if !ok {
+				if runtime != nil {
+					continue
+				}
 				return Report{}, fmt.Errorf("missing output for link %s", l.ID)
 			}
 			values[l.Target][l.Input] = v
@@ -413,3 +469,5 @@ func contracts(t Task) ([]model.DataContractLock, []model.ValidationIssue) {
 	}
 	return model.BundleDataContracts(t.Bundle)
 }
+
+func mustContracts(t Task) []model.DataContractLock { c, _ := contracts(t); return c }
