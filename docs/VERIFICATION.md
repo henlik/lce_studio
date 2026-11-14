@@ -1,5 +1,368 @@
 # Verification
 
+## M1 connected offline engineering model — 14 November 2026
+
+- Workflows now use the existing system state sessions and budget. Pure decisions,
+  command responses, human responses, signals, bounded loops and typed broker
+  handoffs run in one scenario. Broker tasks resume only from their correlated
+  acknowledgement; direct human responses cannot forge that completion.
+- Added exact modeled-workflow@1.0.0 and versioned capability checks for workflow,
+  state and broker bindings. Inspectors configure exact owner pins and typed
+  handoffs. The scenario editor exposes workflow starts/events/delivery/retry/
+  checkpoint restarts, independent final assertions and a sequential token trace.
+- The M1 fixture owns all five aspects and supplies six scenarios: complete
+  journey, lost acknowledgement, stock rejection, atomic rollback, review loop
+  with duplicate event, and cancellation with late acknowledgement. Handwritten
+  expectations check shared revisions, receipts, intents, state, task correlation
+  and workflow outcomes. Store tests also check subsequent direct owner access,
+  malformed bindings/inputs, reserved identities, instance limits, cancellation,
+  failed expectations and portable replay after all artifact catalogs are removed.
+- system-dataflow-5/system-scenario-4 preserve older plans and omitted-field report
+  formats. Saved evidence retains its provider checks, portable workflow locks,
+  mappings, hashes and reports; replay remains separate and immutable.
+- Full Go race tests against PostgreSQL, the live API acceptance suite, all 43
+  frontend tests and Vue production build passed. The final cancellation guard
+  has focused systemrun/workflow race coverage; go vet and backend build passed.
+  The frontend regression includes editing API scenarios whose empty optional
+  assertion maps were omitted. Vite retains its existing chunk-size warning.
+- **M1 100%; overall 33% (+5 percentage points)** on the unchanged weighted
+  roadmap. This closes the bounded offline joint-execution gate. Manual desktop
+  and mobile interaction remain pending; automated results do not establish UX
+  quality. Use [M1_MANUAL_ACCEPTANCE.md](M1_MANUAL_ACCEPTANCE.md) for the complete
+  joint inspection, with a pending-results table.
+- Scope: supported dataflow arrows remain acyclic; workflow control uses its
+  pinned node graph and explicit owner/message mappings. Model restarts do not
+  test live process/disk recovery. Live providers, nested workflow calls,
+  clock-driven delivery, calibrated continuum deployment, general implementation
+  conformance, production security and autonomous runtime remain later work.
+  Scenario assertions and exact replay do not evaluate system contract claims.
+
+## Shared owners and offline broker — 14 November 2026
+
+- Added pinned message actor mappings to existing system state owners; exact machine identities and provider versions are checked. Delivery reuses the same state sessions, revisions, receipts, budgets and effects as graph and owner calls.
+- Added modeled-broker@1.0.0, explicit dispatch/delivery/retry/broker restart steps, typed message expectations, contextual inspector bindings and a sequential message journey. Envelopes and acknowledgements persist across modeled broker restarts.
+- The 14-step stock-to-ledger exercise covers source rollback, missing intents, dropped delivery, recipient rollback, lost acknowledgement, owner/broker restart, duplicate suppression and repeated dispatch. Additional tests interleave graph calls and later direct owner writes with delivery, preserving current state while replaying historical receipts.
+- New versions system-dataflow-4/system-scenario-3 preserve old reports. Frozen transport plans replay without current artifact catalogs. Invalid mappings, unsupported providers, malformed transport steps and independently wrong expectations are rejected or fail as appropriate.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL. After the final trace refinement, focused systemrun/delivery race tests, `go vet ./...`, backend build and Vue production build passed again. All 40 frontend tests and the full live API acceptance suite passed, including the new message exercise and replay. Browser/mobile interaction remains unverified; the environment previously blocked Chromium Unix sockets. Vite retains its existing chunk-size warning.
+- Roadmap remains **28% overall; M1 80% (+0 points)**. The four message steps are implemented; workflow, continuum, live-provider and general implementation-conformance integration remain open. Walkthrough: [SYSTEM_MESSAGES.md](SYSTEM_MESSAGES.md).
+
+## Shared multi-command owners — 14 November 2026
+
+- System instances can select a graph entry command for each state aspect.
+  Preparation checks the named slot/command and rejects connections to another
+  command's interfaces. The inspector loads choices from the exact pinned state
+  artifact; ambiguous owners require an explicit selection.
+- Shared scenarios add explicit owner-command steps with typed inputs, command
+  name, request identity, expected revision and fault. They share ownership,
+  revisions and receipts with graph calls but do not traverse graph connections.
+  Direct command/restart trace views focus on the targeted owner.
+- The versioned stock reference adds an independently reusable pure adjustment
+  decision and a second command. Its ten-step scenario exercises reserve/adjust,
+  duplicate replay, lost reply, restart, cross-command identity conflict, stale
+  revision, rollback and denial. Handwritten final expectations are availability
+  7, revision 3, four receipts, two intents and a reset volatile counter.
+- `system-dataflow-3` and `system-scenario-2` identify the new behavior. Legacy
+  unselected sole-command plans and invocation/restart scenarios retain their
+  previous version identifiers and report shapes. Replay verification recognizes
+  both generations; store tests remove catalogs before reproducing new reports.
+- Full `go test -race -count=1 ./...`, `go vet ./...`, backend build, Vue production
+  build, all 37 frontend tests and the live system API acceptance suite passed.
+  Tests also cover historical receipt outputs without restoring old state,
+  owner isolation, invalid entry selections, wrong ports/inputs, malformed direct
+  envelopes, missing expectations, immutable persistence and cancellation.
+  Vite retains its existing chunk-size warning.
+- Browser/mobile interaction remains unverified due to the environment's Chromium
+  Unix-socket restriction. Manual checklist: install the example; load pinned
+  command choices in the inspector; prepare and run both scenario modes; change
+  owner/command and inspect reset inputs; inspect direct-step trace focus; try a
+  mismatched entry; reload drafts/history; verify replay and export; inspect narrow layouts.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. Selected entries and explicit
+  multi-command interleavings are implemented; message/workflow adapters, live
+  provider execution and general implementation conformance remain open.
+  Walkthrough: [MULTI_COMMAND_SYSTEMS.md](MULTI_COMMAND_SYSTEMS.md).
+
+## Saved system execution replay verification — 14 November 2026
+
+- The Execution perspective now verifies saved pure, state and shared-scenario
+  reports using their pinned snapshots without querying current artifact catalogs.
+  Source identity, design/input hashes, new plan/report hashes, engine/mode support
+  and re-derived schedule/input requirements are checked before replay.
+- Separate immutable verification records retain source snapshot identity,
+  verifier version, checks, replay report and up to 32 deterministic JSON-pointer
+  differences with bounded previews. Matched, mismatched and unverified results
+  have distinct UI labels; failed or unverified scenario assertions are never
+  promoted by exact reproduction. History and JSON export are available.
+- Legacy snapshots remain replayable with an explicit missing-plan/report-hash
+  limitation. Unknown snapshot/engine versions and unsupported claim semantics
+  remain unverified. No signatures, live implementation checks or contract verdicts
+  are introduced. The API rejects client-supplied replacement inputs/plans.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL. After the final
+  source-identity check and additional unverified-scenario regression, focused
+  replay/state/API race tests passed again. `go vet ./...`, backend build, Vue
+  production build, all 34 frontend tests and the live system API acceptance
+  suite passed. Vite retains its existing chunk-size warning.
+- Negative checks cover changed identities/content, missing hashes, changed
+  scheduling metadata, unavailable engines, invalid pinned definitions, incomplete
+  inputs, report differences, bounded previews, immutable attempts, cancellation,
+  missing records, invalid bodies and shared execution-capacity rejection.
+  Catalog-removal tests reproduce pure, state, successful/failed/unverified
+  scenarios; stored negative verification outcomes remain inspectable.
+- Browser/mobile interaction checks remain unverified because system Chromium
+  cannot open its required Unix socket in this environment. Manual checklist:
+  open a saved execution; Verify replay; inspect original failed assertions;
+  reopen Previous verifications after reload; export; switch executions during
+  a pending request; inspect narrow-screen controls and mismatch tables.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. This makes reproducibility
+  accessible, without completing joint engine or implementation-conformance gates.
+  Walkthrough and API contract: [SYSTEM_REPLAY.md](SYSTEM_REPLAY.md).
+
+## Design library and navigation correction — 14 November 2026
+
+- Design opens System architecture, and new sessions start there. Recovered
+  sessions keep their workspace and draft. The global installed-library shortcut
+  opens the design library; Databases & brokers opens its Supporting services tab.
+- The design library separates installed components/definitions, supporting
+  services and actors/workload. Catalog kernel metadata distinguishes reusable
+  behavior packages from timing profiles. Fixed conformance adapters and offline
+  state providers are labelled explicitly; unavailable live integrations are not
+  presented as executable services. Advanced artifact attachments remain accessible.
+- Timing flow, its requirements, deployment simulation, results and history now
+  live under Simulation. The old catalog is labelled Timing profile library, its
+  nodes are simulation blocks, and a visible button returns to system design.
+  Existing project models, saved artifacts and execution semantics are preserved.
+- Vue production build and all 34 frontend tests passed, including the updated
+  canonical workspace navigation checks. Focused Go race tests for System,
+  Definition and Catalog in system/store/server passed against PostgreSQL, together
+  with vet, backend build and the complete live system API acceptance script.
+- Desktop/mobile visual verification remains incomplete: the available system
+  Chromium exits during launch with `socket() failed: Operation not permitted`.
+  Manual checks: select Design from Simulation; open the global installed library;
+  switch all three library sections; add/configure a modeled provider; open the
+  component editor; browse timing profiles; return to Design; inspect narrow layouts.
+- Roadmap remains **28% overall, M1 80% (+0 points)**. This corrects navigation and
+  terminology without adding engine-checkpoint credit. See [STUDIO_NAVIGATION.md](STUDIO_NAVIGATION.md).
+
+## Shared graph scenarios — 14 November 2026
+
+- Shared scenarios retain isolated state sessions across ordered graph invocations
+  and explicit owner restarts. Envelopes carry command IDs, expected revisions and
+  optional before-commit or after-commit-before-reply faults. Pure and state work
+  share the execution budget; existing single-run report shapes remain compatible.
+- The six-step stock example commits 5 → 3, replays without another write, rejects
+  a stale revision, commits 3 → 2 with a lost reply, restarts, then replays the saved
+  receipt. Final revision is 2 with two receipts, two effect intents and volatile
+  counter 0. Conflicts and lost replies produce no downstream response transfers;
+  consumers with missing inputs are recorded as skipped.
+- Engine tests cover rollback, identity conflict, historical receipts without state
+  restoration, fresh independent runs, deterministic replay, malformed envelopes,
+  bounds/cancellation, failed expectations and unverified runs without assertions.
+  PostgreSQL tests preserve immutable scenario snapshots, record failed verdicts,
+  reject malformed runs without success records, and reproduce complete reports
+  after deleting the state catalog.
+- Full `go test -race -count=1 ./...`, `go vet`, backend build and live system API
+  acceptance passed against PostgreSQL. Acceptance retains previous conformance,
+  ownership and execution checks and adds shared-scenario continuity, blocked
+  transfers, expected-state failures and mixed-body rejection. Vue production build
+  and all **34 frontend tests** passed. Browser/mobile interaction checks remain
+  outstanding, and the existing Vite chunk-size warning remains.
+- The editor supports typed step inputs, explicit envelopes, reorder/duplicate,
+  restart/fault choices, step outcomes and full final-state expectations. Drafts
+  autosave per system. The report distinguishes passed, failed and unverified
+  scenarios; system contract claims remain unevaluated. See
+  [SHARED_SYSTEM_SCENARIOS.md](SHARED_SYSTEM_SCENARIOS.md).
+- Scope: one declared interleaving and repeated invocations of each state aspect's
+  single command definition. This is not exhaustive race exploration, parallel
+  timing, multi-entry command selection, message delivery or live deployment.
+  Roadmap remains **28% (+0 points), M1 80%**, with unchanged checkpoint weights.
+
+## Connected state execution and offline provider bindings — 14 November 2026
+
+- Pure tasks and single-command state aspects execute in one bounded graph through
+  exact `modeled-state@1.0.0` bindings. The existing state kernel supplies atomic
+  commits/denials, revision and receipt semantics, and pending effect intents.
+  Shared providers preserve isolated component ownership and distinct effect IDs.
+- The synthetic request → stock owner → summary example produces eight events.
+  Quantity 2 changes stock 5 → 3 at revision 1 and emits one intent. Quantity 9 is
+  denied at revision 0 with stock 5, one denied receipt and no intent. Each fresh
+  run starts from its declared state. Missing/unknown bindings and live provider
+  kinds are rejected rather than ignored.
+- Full `go test -race -count=1 ./...` passed against PostgreSQL, as did `go vet`,
+  the backend build and live system API acceptance. Acceptance retained all prior
+  scenarios and added commit/denial, provider rejection, design persistence and
+  immutable execution round trips. Store tests removed the state catalog and
+  reproduced the complete saved report using its portable plan.
+- Vue production build and all **32 frontend tests** passed, including provider
+  import shape validation. The UI adds provider editing, provider notices and
+  before/after state, revision, receipt and intent inspection at the token step.
+  Browser/mobile interaction checks remain outstanding; Vite's existing chunk
+  size warning remains. See [STATE_SYSTEM_EXECUTION.md](STATE_SYSTEM_EXECUTION.md).
+- Pure reports retain engine `system-pure-1`; state reports use `system-dataflow-2`.
+  This is offline model execution with claims unevaluated. One command per state
+  aspect is supported; multi-command schedules, shared state, delivery, workflows,
+  live database adapters, deployment and runtime conformance remain outside it.
+- Roadmap remains **28% (+0 points), M1 80%**. The final joint-execution checkpoint
+  remains open; its scope and weights are unchanged.
+
+## Connected pure execution and token traces — 14 November 2026
+
+- Connected pure behavior packages and behavior-only component definitions execute
+  as bounded acyclic dataflow graphs. Tests cover exact typed values, deterministic
+  scheduling, fan-out/fan-in, internal aspect links, input completeness, conflicting
+  producers, cancellation and aggregate operation limits. Failures return no
+  successful partial report.
+- Successful runs persist immutable design/input snapshots, exact portable bundles,
+  content hashes, outputs and ordered start/completion/transfer events in PostgreSQL.
+  Regression tests remove the installed catalog and replay the saved plan, comparing
+  the complete report. Duplicate execution IDs cannot overwrite existing evidence.
+- Full Go race tests (`go test -race -count=1 ./...`), `go vet ./...`, backend build,
+  Vue production build and all **31 frontend tests** passed. The final aggregate-budget
+  regression also passed in a fresh focused race run. Live PostgreSQL/API acceptance
+  passed, retaining seven conformance scenarios and adding execution preparation,
+  the five-event reception handoff, immutable history and unsupported-input rejection.
+- The Execution perspective provides generated input forms, task/link highlighting,
+  trace stepping, saved history and JSON export. Frontend tests cover typed-value
+  conversion; browser/mobile interaction and visual checks remain outstanding.
+  Vite retains its existing large-chunk warning. Follow [SYSTEM_EXECUTION.md](SYSTEM_EXECUTION.md)
+  for the reproducible manual walkthrough and exact limitations.
+- This runner evaluates pure models only: `claimsEvaluated` is false. Cycles,
+  state/message/workflow aspects, external effects, resource bindings and deployment
+  plans are rejected. The example uses synthetic record pass-through boundaries,
+  not the full reception workflow. UI/API replay and signed provenance remain future work.
+- Roadmap v1 stays **28% (+0 points), M1 80%**. This implements the pure portion of
+  the remaining M1 checkpoint; stateful integration and typed provider bindings are
+  still incomplete. No checkpoint weights or acceptance scope were changed.
+
+## System-wide static compatibility — 14 November 2026
+
+- Optional source/target aspect ports are preserved in system design persistence
+  and imports. Typed edges are scoped to exact component instances and check
+  direction, scalar or nominal record identity and single-producer inputs.
+  Internally bound manifest inputs reject additional external producers.
+- System resolution inspects direct behavior roots, owned manifest aspects and
+  legacy attachments, including transitive and embedded dependencies. Conflicting
+  content for one artifact identity across instances is rejected. Untyped legacy
+  connections remain readable with explicit `incomplete`/`untyped` status; they
+  do not receive a typed compatibility verdict.
+- Interface inspection works independently of unfinished claims, connections and
+  deployment data. It returns no whole-system validity verdict. UI changes clear
+  stale port options; full checks reject stale response snapshots.
+- The explicit reception-to-consultation exercise installs three reusable synthetic
+  record-boundary packages atomically. Matching encounter contracts pass; version
+  mismatch, missing/wrong endpoints and multiple producers fail. The fixed
+  conformance runner rejects this static fixture as an unsupported implementation.
+- Full Go race tests (`go test -race -count=1 ./...`), vet, backend build, Vue
+  production build, all 28 frontend tests and live PostgreSQL/API acceptance passed.
+  Acceptance retains seven conformance scenarios and adds fixture installation,
+  positive/negative typed links, incomplete-draft inspection, legacy disclosure
+  and typed design round-trip persistence. Vite retains its large-chunk warning.
+- Browser interaction and mobile visual checks remain outstanding. The manual
+  exercise and exact limitations are in [SYSTEM_CONNECTIONS.md](SYSTEM_CONNECTIONS.md).
+- Roadmap v1 is **28%**, previously **23%** (+5 points), with M1 **80%**. The
+  compatibility/closure checkpoint is accepted within the declared static model;
+  joint execution and provider bindings remain unfinished. No execution ordering,
+  liveness, required-input completeness, clinical correctness, deployment readiness
+  or formal proof is claimed by a compatible connection.
+
+## Manifest compatibility and dependency inspection — 14 November 2026
+
+- Optional immutable aspect links declare source and target slot/interface/port.
+  Backend validation rejects missing endpoints, wrong direction, scalar or nominal
+  record type mismatches and multiple producers for one input. Link-free manifest
+  digests remain compatible; frontend installed comparison normalizes empty links.
+- Definitions inspect catalog-resolved composite closures and validated embedded
+  state/message/workflow dependencies. Conflicting content under one kind/ID/version
+  is rejected across aspects. A missing transitive behavior dependency blocks
+  installation and resolution of an already installed definition.
+- Timing-profile roots intentionally expose no ports. A timing profile used as a
+  composite's descendant is rejected, rather than silently treated as a root.
+- The full Go race suite, vet, backend build and live PostgreSQL/API acceptance
+  passed. After the timing-descendant fix, focused race tests for definitions,
+  aspect links and catalog resolution, vet, build and live acceptance passed again.
+  Vue production build and all 27 frontend tests passed. Vite retains its existing
+  large-chunk warning. Browser and mobile interaction verification remains pending.
+- The Connections view exposes port choices, highlights rejected link cards and
+  shows dependency occurrence paths and exact digests. A reproducible manual
+  exercise is in [COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md).
+- Roadmap remains **23% (+0 points), M1 60%**. This increment advances the
+  compatibility checkpoint but does not complete its system-wide scope. The history
+  explicitly records partial progress without changing weights or awarding credit.
+- Limits: no joint execution, inter-aspect scheduling, cycle/liveness guarantee,
+  mandatory-input completeness, typed system-instance connections or provider
+  compatibility. Type compatibility does not establish those properties.
+
+## Versioned component ownership and roadmap progress — 14 November 2026
+
+- Component definitions own 1–32 named exact aspect references. PostgreSQL versions
+  are immutable, idempotent on identical installation and integrity-checked before
+  system resolution. System evidence can expand a manifest into its pinned aspects.
+- Automated tests exercise behavior, data, state, messages and workflow editor
+  payloads; version conflicts; invalid/missing pins; manifest tampering; old and new
+  reference kinds; and preservation of unsupported joint-execution rejection.
+- Go race tests (`go test -race -count=1 ./...`), vet, backend build, Vue production
+  build and all 25 frontend tests passed. The live API acceptance passed both the
+  existing seven conformance scenarios and the new ownership/editor/resolution
+  checks against real PostgreSQL. Vite still reports its existing large-chunk warning.
+- Editor handoffs now wait for an editor's loading action and consume each request
+  once. The source-component banner and return navigation are implemented. Browser
+  interaction and mobile visual verification remain outstanding; this environment's
+  previously recorded Chromium socket restriction prevented browser verification.
+- Roadmap v1 progress is **23%**, from a retrospectively recorded **18% baseline**:
+  M1 60%, M2 40%, M3–M6 0%. The UI and generated blueprint use one weighted checkpoint
+  source. Tests require evidence for accepted gates and keep the score/history aligned.
+  This is a scoped planning estimate, not test coverage or production readiness.
+- Limits: no cross-aspect compatibility proof, joint engine execution, signed
+  publisher identity, general implementation sandbox or live autonomous controller.
+  The manual walkthrough is [COMPONENT_DEFINITIONS.md](COMPONENT_DEFINITIONS.md).
+
+## Direct system catalog resolution — 14 November 2026
+
+- System references resolve by exact kind, ID and version across component,
+  data, state, message and workflow catalogs. Typed content digests and definition
+  validity are checked. The built-in adapter namespace cannot be shadowed by
+  installed packages.
+- Tests cover all five installed kinds, missing versions, wrong kinds, ambiguous
+  identities, content tampering, missing artifact error paths and unavailable
+  storage. Unresolved references cannot start conformance execution; incomplete
+  designs remain saveable as structurally valid drafts.
+- New conformance evidence records resolved identities and digests. Older runs
+  remain readable without this metadata. The reference library exposes installed
+  definitions and explicit attachment to a selected component instance.
+- Full Go race tests, vet, backend build and live system API acceptance passed.
+  Frontend production build and all 21 frontend tests passed. Browser visual
+  verification remains outstanding under the previously recorded restriction.
+- This checks direct reference availability/integrity, not complete external
+  dependency closure, connection type compatibility or executable provenance.
+
+## Engineering/runtime navigation and blueprint — 14 November 2026
+
+- Hierarchical navigation preserves all eleven existing workspace destinations,
+  groups component aspects under Engineering → Components and system planning
+  under Engineering → Design, and adds planned runtime/foundation destinations.
+- The shared capability catalog contains 29 scoped entries: 7 available,
+  9 partial and 13 planned. Each entry includes current scope, next work,
+  dependencies and an acceptance condition; six milestone gates describe the
+  implementation sequence. These counts do not measure product completion.
+- Frontend production build and 21 frontend tests pass. New checks cover existing
+  route reachability, planned-runtime non-executability, dependency integrity and
+  the distinction between independent artifact editors and unified ownership.
+- Existing backend behavior is unchanged. The prior full backend/conformance
+  verification is recorded below. Interactive browser/mobile verification remains
+  outstanding because Chromium startup was blocked by the environment's socket
+  permissions in this session.
+
+## Unified system and reception conformance increment — 14 November 2026
+
+Verified with PostgreSQL 17.11, Go 1.25.5 and Node.js 24.22.1.
+
+- Full `go test -race -count=1 ./...`, `go vet ./...`, and backend build passed.
+- Frontend production build and all 17 frontend tests passed, including empty designs and safe import/nullable API normalization.
+- Live `scripts/acceptance-system.mjs` passed: design persistence, seven scenario expectations, model/implementation verdicts, immutable evidence retrieval after design edits, and unsupported claim rejection.
+- CLI execution of `examples/system/reception-intake.system.json` passed all seven scenario expectations against PostgreSQL. Deliberately faulty deduplication violates its contract; missing evidence is inconclusive.
+- Browser smoke testing was attempted but Chromium startup was blocked by a socket permission restriction. No new visual/mobile-browser verification is claimed.
+- CI now runs the new API acceptance script in both native and Compose jobs; remote CI status is separate from these local results.
+
+This is the bounded reference adapter described in [SYSTEM_CONFORMANCE.md](SYSTEM_CONFORMANCE.md). Existing engine tests remain green; cross-engine execution, catalog resolution, signed implementation provenance, real process crashes and production orchestration are not supplied by this increment.
+
 ## v0.8 executable task workflows and reception reference — 12 November 2026
 
 Verified with PostgreSQL 17.11, Go 1.25.5, Node.js 24.22.1, npm 11.9.0 and the production Vue build.

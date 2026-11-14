@@ -3058,3 +3058,5 @@ code,
  .main-shell .state-diagram .canvas-viewport,
  .main-shell .delivery-diagram .canvas-viewport { height:550px; }
 }
+
+.aspect-context-banner{margin:12px 16px;padding:12px 16px;border:1px solid #b6d8cd;background:#edf8f2;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;line-height:1.6;color:#345b50;min-width:0}.aspect-context-banner>span{flex:1;min-width:min(230px,100%);overflow-wrap:anywhere}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "id": "reception-intake",
+  "name": "Durable reception intake",
+  "revision": "1",
+  "components": [
+    {
+      "id": "client",
+      "name": "Intake client",
+      "definition": {
+        "id": "builtin.intake-client",
+        "version": "1.0.0"
+      },
+      "artifacts": [],
+      "bindings": []
+    },
+    {
+      "id": "intake",
+      "name": "Durable intake",
+      "definition": {
+        "id": "builtin.durable-intake",
+        "version": "1.0.0"
+      },
+      "artifacts": [],
+      "bindings": [
+        {
+          "requirement": "encounter-storage",
+          "resourceId": "encounters-db"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "submit-intake",
+      "source": "client",
+      "target": "intake",
+      "kind": "request"
+    }
+  ],
+  "deploymentPlans": [
+    {
+      "id": "local-sandbox",
+      "name": "Local conformance sandbox",
+      "resources": [
+        {
+          "id": "local-host",
+          "kind": "compute"
+        },
+        {
+          "id": "encounters-db",
+          "kind": "postgresql"
+        }
+      ],
+      "placements": [
+        {
+          "componentId": "client",
+          "resourceId": "local-host"
+        },
+        {
+          "componentId": "intake",
+          "resourceId": "local-host"
+        }
+      ]
+    }
+  ],
+  "contract": {
+    "id": "durable-intake-contract",
+    "revision": "1",
+    "assumptions": [
+      {
+        "id": "bounded-trace",
+        "description": "The adapter records all semantic boundary events for the bounded run and reports missing observations as evidence_gap."
+      },
+      {
+        "id": "durable-store",
+        "description": "Persistence events denote completed PostgreSQL commits; storage durability outside the sandbox is not established by this experiment."
+      }
+    ],
+    "claims": [
+      {
+        "id": "one-encounter",
+        "kind": "exactly_one_record",
+        "description": "A logical request creates at most one encounter; a successful request has exactly one."
+      },
+      {
+        "id": "stable-response",
+        "kind": "response_matches_record",
+        "description": "Every successful response identifies the persisted encounter for that request."
+      },
+      {
+        "id": "honest-success",
+        "kind": "no_false_success",
+        "description": "Success is reported only after matching persistence evidence."
+      },
+      {
+        "id": "complete-evidence",
+        "kind": "required_evidence",
+        "description": "Each request has received and terminal response evidence, without declared gaps."
+      }
+    ]
+  }
+}

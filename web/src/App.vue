@@ -4,6 +4,12 @@ import { useWorkspaceDraft } from "./composables/useWorkspaceDraft";
 import { useActionFeedback } from "./composables/useNotifications";
 import DraftStatus from "./components/DraftStatus.vue";
 import StudioNotifications from "./components/StudioNotifications.vue";
+import type {AspectContext,AspectEditorRequest} from "./definitionTypes";
+import {roadmapProgress} from "./implementationProgress";
+const ComponentDefinitionWorkbench = defineAsyncComponent(() => import("./components/ComponentDefinitionWorkbench.vue"));
+import StudioNavigation from "./components/StudioNavigation.vue";
+import {capabilityLocation, workspaceLocation, canOpenCapability, type StudioView} from "./studioBlueprint";
+const BlueprintWorkbench = defineAsyncComponent(() => import("./components/BlueprintWorkbench.vue"));
 import {
   computed,
   defineAsyncComponent,
@@ -64,6 +70,7 @@ import {
 import StudioNode from "./components/StudioNode.vue";
 import StudioRibbon from "./components/StudioRibbon.vue";
 import InspectionWorkbench from "./components/InspectionWorkbench.vue";
+const SystemWorkbench = defineAsyncComponent(() => import("./components/SystemWorkbench.vue"));
 import type { InspectionCase } from "./inspection";
 import CanvasControls from "./components/CanvasControls.vue";
 import { useCanvasFocus } from "./composables/useCanvasFocus";
@@ -96,19 +103,45 @@ const project = ref<Project | null>(null);
 const projects = ref<Project[]>([]);
 const runs = ref<Run[]>([]);
 const currentRun = ref<Run | null>(null);
-const view = ref<
-  | "design"
-  | "plan"
-  | "deployment"
-  | "results"
-  | "components"
-  | "data"
-  | "state"
-  | "messages"
-  | "workflows"
-  | "inspection"
->("design");
+const view = ref<StudioView>("system");
+const selectedCapability = ref("");
+const conformanceRequest = ref(0);
+const libraryRequest = ref<{nonce:number;section:string}>();
+function openTimingCatalog(){view.value='design';showCatalog.value=true;}
+const navigationContext = computed(() => capabilityLocation(view.value === 'blueprint' ? selectedCapability.value : workspaceLocation(view.value) || ''));
+const navigationBreadcrumb = computed(() => {
+  const context = navigationContext.value;
+  return context ? `${context.plane.label} / ${context.group.label} / ${context.capability.label}` : 'Product blueprint / Engineering, runtime and shared foundations';
+});
+function inspectCapability(id = '') {
+  selectedCapability.value = id;
+  view.value = 'blueprint';
+  closeMobileNavigation();
+}
+function openCapability(id: string) {
+  const item = capabilityLocation(id)?.capability;
+  if (!item || !canOpenCapability(item)) { inspectCapability(id); return; }
+  if (item.action === 'catalog' || item.action === 'services') {
+    view.value = 'system';
+    libraryRequest.value={nonce:Date.now(),section:item.action==='services'?'services':'components'};
+  } else {
+    view.value = item.id === 'conformance' ? 'system' : item.view!;
+    if (item.id === 'conformance') conformanceRequest.value++;
+  }
+  closeMobileNavigation();
+}
+const definitionsOpened = ref(false);
+const aspectContext = ref<AspectContext|null>(null);
+function openDefinitionAspect(request:AspectEditorRequest) {
+  const workspace=request.workspace;
+  if(!['components','data','state','messages','workflows'].includes(workspace))return;
+  aspectContext.value=null;
+  inspectionRequests.value[workspace]={nonce:Date.now(),body:{...request.body,aspectContext:request.context}};
+  view.value=workspace as StudioView;
+}
+function aspectOpened(context:AspectContext){aspectContext.value=context;}
 const inspectionOpened = ref(false);
+const systemOpened = ref(true);
 const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
 async function openInspection(item: InspectionCase) {
  if (item.body.project) {
@@ -128,9 +161,12 @@ const definitionView = computed(
     view.value === "data" ||
     view.value === "state" ||
     view.value === "messages" ||
-    view.value === "workflows" || view.value === "inspection",
+    view.value === "definitions" || view.value === "workflows" || view.value === "inspection" || view.value === "system" || view.value === "blueprint",
 );
 watch(view, (next) => {
+  if (next === "definitions") definitionsOpened.value = true;
+  if (aspectContext.value && next !== aspectContext.value.workspace) aspectContext.value = null;
+  if (next === "system") systemOpened.value = true;
   if (next === "inspection") inspectionOpened.value = true;
   if (next === "components") workbenchOpened.value = true;
   if (next === "data") dataOpened.value = true;
@@ -529,6 +565,7 @@ async function loadProject(p: Project) {
     return;
   await action("open", async () => {
     adopt(await api<Project>(`/projects/${encodeURIComponent(p.id)}`));
+    view.value = "design";
     showProjects.value = false;
     await refreshRuns();
     notify("Project opened");
@@ -944,6 +981,7 @@ watch(replaySpeed, () => {
 const autosave = useWorkspaceDraft("project", {
   project,
   view,
+  selectedCapability,
   saved,
   pristineProjectStamp,
   railCollapsed,
@@ -989,7 +1027,7 @@ onUnmounted(() => {
         <a
           class="brand"
           href="#"
-          @click.prevent="view = 'design'"
+          @click.prevent="inspectCapability()"
           aria-label="Software Studio home"
           ><span class="brand-mark"><Box :size="24" /></span
           ><span
@@ -1015,114 +1053,7 @@ onUnmounted(() => {
           />
         </button>
       </div>
-      <div class="rail-section">WORKSPACE</div>
-      <nav
-        class="main-nav"
-        aria-label="Workspace"
-        @click="closeMobileNavigation"
-      >
-        <button
-          :class="{ active: view === 'plan' }"
-          @click="view = 'plan'"
-          aria-label="Plan workspace"
-          title="Plan"
-        >
-          <FileCheck2 :size="18" /><span>Plan</span
-          ><span class="nav-number">01</span>
-        </button>
-        <button
-          :class="{ active: view === 'design' }"
-          @click="view = 'design'"
-          aria-label="Design workspace"
-          title="Design"
-        >
-          <GitBranch :size="18" /><span>Design</span
-          ><span class="nav-number">02</span>
-        </button>
-        <button
-          :class="{ active: view === 'deployment' }"
-          @click="view = 'deployment'"
-          aria-label="Deployment workspace"
-          title="Deployment"
-        >
-          <Server :size="18" /><span>Deployment</span
-          ><span class="nav-number">03</span>
-        </button>
-        <button
-          :class="{ active: view === 'results' }"
-          @click="view = 'results'"
-          aria-label="Experiments workspace"
-          title="Experiments"
-        >
-          <FlaskConical :size="18" /><span>Experiments</span
-          ><span class="nav-number">04</span>
-        </button>
-        <button
-          :class="{ active: view === 'components' }"
-          @click="view = 'components'"
-          aria-label="Components workspace"
-          title="Components"
-        >
-          <Layers3 :size="18" /><span>Components</span
-          ><span class="nav-number">05</span>
-        </button>
-        <button
-          :class="{ active: view === 'data' }"
-          @click="view = 'data'"
-          aria-label="Data workspace"
-          title="Data"
-        >
-          <Database :size="18" /><span>Data</span
-          ><span class="nav-number">06</span>
-        </button>
-        <button
-          :class="{ active: view === 'state' }"
-          @click="view = 'state'"
-          aria-label="State workspace"
-          title="State"
-        >
-          <RotateCcw :size="18" /><span>State</span
-          ><span class="nav-number">07</span>
-        </button>
-        <button
-          :class="{ active: view === 'messages' }"
-          @click="view = 'messages'"
-          aria-label="Messages workspace"
-          title="Messages"
-        >
-          <Send :size="18" /><span>Messages</span
-          ><span class="nav-number">08</span>
-        </button>
-        <button
-          :class="{ active: view === 'workflows' }"
-          @click="view = 'workflows'"
-          aria-label="Workflows workspace"
-          title="Workflows"
-        >
-          <GitBranch :size="18" /><span>Workflows</span
-          ><span class="nav-number">09</span>
-        </button>
-        <button :class="{active:view === 'inspection'}" @click="view = 'inspection'" aria-label="Inspection lab" title="Inspection lab"><FlaskConical :size="18" /><span>Inspection lab</span><span class="nav-number">10</span></button>
-      </nav>
-      <div class="rail-divider" />
-      <button
-        class="rail-action"
-        @click="showProjects = true"
-        aria-label="Open projects"
-        title="Projects"
-      >
-        <FolderOpen :size="17" /><span class="rail-action-label">Projects</span
-        ><span class="rail-count">{{ projects.length }}</span>
-      </button>
-      <button
-        class="rail-action"
-        @click="showRunHistory = true"
-        aria-label="Open run history"
-        title="Run history"
-      >
-        <Activity :size="17" /><span class="rail-action-label">Run history</span
-        ><span class="rail-count">{{ runs.length }}</span>
-      </button>
+      <StudioNavigation :view="view" :selected-capability="selectedCapability" :collapsed="railCollapsed" @select="openCapability" @blueprint="inspectCapability()" @expand="railCollapsed = false" @projects="showProjects = true; closeMobileNavigation()" @history="showRunHistory = true; closeMobileNavigation()" />
       <div class="rail-bottom">
         <span class="small-logo"><Layers3 :size="17" /></span
         ><strong>Make the model work.</strong>
@@ -1145,35 +1076,7 @@ onUnmounted(() => {
     <main class="main-shell">
       <header class="topbar">
         <div class="project-heading">
-          <span class="breadcrumb"
-            >{{
-              view === "inspection" ? "Inspection" : view === "workflows"
-                ? "Workflows"
-                : view === "messages"
-                  ? "Messages"
-                  : view === "state"
-                    ? "State"
-                    : view === "data"
-                      ? "Data"
-                      : view === "components"
-                        ? "Components"
-                        : "Projects"
-            }}
-            <span>/</span>
-            {{
-              view === "inspection" ? "Regional care ecosystem" : view === "workflows"
-                ? "Tasks, decisions & handoffs"
-                : view === "messages"
-                  ? "Typed delivery & acknowledgements"
-                  : view === "state"
-                    ? "Owned state & transitions"
-                    : view === "data"
-                      ? "Data contracts"
-                      : view === "components"
-                        ? "Behavior definitions"
-                        : "Engineering workspace"
-            }}</span
-          >
+          <span class="breadcrumb">{{navigationBreadcrumb}}</span>
           <div class="project-title">
             <input
               v-if="project && !definitionView"
@@ -1181,21 +1084,7 @@ onUnmounted(() => {
               aria-label="Project name"
               maxlength="120"
             />
-            <h1 v-else>
-              {{
-                view === "inspection" ? "Inspection lab" : view === "workflows"
-                  ? "Workflow workbench"
-                  : view === "messages"
-                    ? "Messages workbench"
-                    : view === "state"
-                      ? "State workbench"
-                      : view === "data"
-                        ? "Data workbench"
-                        : view === "components"
-                          ? "Component workbench"
-                          : "Software Studio"
-              }}
-            </h1>
+            <h1 v-else>{{ view === 'blueprint' ? (navigationContext?.capability.label || 'Product blueprint') : navigationContext?.capability.label || 'Software Studio' }}</h1>
             <span
               class="dirty-dot"
               v-if="dirty && !definitionView"
@@ -1213,7 +1102,7 @@ onUnmounted(() => {
           @change="importProject"
         />
       </header>
-      <div v-if="!definitionView" class="project-ribbon">
+      <div v-if="!definitionView" class="project-ribbon"><div class="simulation-context"><span><strong>Timing simulation</strong> · Separate processing and resource model</span><button class="button quiet" @click="openCapability('system-model')">Open system design</button></div>
         <StudioRibbon workspace="project" :active="view" :structure='["plan","deployment"]' :behavior='["design"]' :execution='["results"]' @select="view = $event as typeof view">
           <template #status><DraftStatus :draft="autosave" /></template>
           <template #file>        <div class="topbar-actions">
@@ -1290,12 +1179,16 @@ onUnmounted(() => {
         </ul>
       </div>
 
+      <div v-if="aspectContext && view===aspectContext.workspace" class="aspect-context-banner"><span>Source component: <strong>{{aspectContext.name}} · {{aspectContext.version}}</strong> / {{aspectContext.slot}}. Install the changed artifact as a new version, then replace its pin in the component definition.</span><button class="button secondary" @click="view='definitions'">Return to component definition</button></div>
+      <ComponentDefinitionWorkbench v-if="definitionsOpened" v-show="view==='definitions'" @open-aspect="openDefinitionAspect" />
+      <BlueprintWorkbench v-if="view === 'blueprint'" :selected="selectedCapability" @inspect="inspectCapability" @open="openCapability" />
+      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" :conformance-request="conformanceRequest" :library-request="libraryRequest" @components="openCapability('component-context')" @simulation="openTimingCatalog" />
       <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
-      <DeliveryWorkbench :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
-      <WorkflowWorkbench :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
-      <StateWorkbench :inspection-request="inspectionRequests.state" v-if="stateOpened" v-show="view === 'state'" />
-      <DataWorkbench :inspection-request="inspectionRequests.data" v-if="dataOpened" v-show="view === 'data'" />
-      <BehaviorWorkbench :inspection-request="inspectionRequests.components"
+      <DeliveryWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
+      <WorkflowWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />
+      <StateWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.state" v-if="stateOpened" v-show="view === 'state'" />
+      <DataWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.data" v-if="dataOpened" v-show="view === 'data'" />
+      <BehaviorWorkbench @aspect-opened="aspectOpened" :inspection-request="inspectionRequests.components"
         v-if="workbenchOpened"
         v-show="view === 'components'"
       />
@@ -1338,7 +1231,7 @@ onUnmounted(() => {
             'inspector-collapsed': inspectorCollapsed,
             'canvas-focus--expanded': designExpanded,
           }"
-          aria-label="Application design workspace"
+          aria-label="Timing simulation workspace"
         >
           <aside
             id="design-component-palette"
@@ -1357,12 +1250,12 @@ onUnmounted(() => {
               </button>
             </div>
             <p class="panel-caption">
-              Add a building block.<br />Connect its ports to define flow.
+              Add an abstract timing block.<br />Reusable components are in System design.
             </p>
             <button class="palette-card" @click="addNode('client')">
               <span class="palette-icon client"><Monitor :size="19" /></span
               ><span
-                ><strong>Client</strong><small>Generate requests</small></span
+                ><strong>Workload source</strong><small>Generate simulated requests</small></span
               ><Plus :size="15" /></button
             ><button class="palette-card" @click="addNode('service')">
               <span class="palette-icon service"><Server :size="19" /></span
@@ -1384,14 +1277,14 @@ onUnmounted(() => {
             >
               <span class="palette-icon router"><GitBranch :size="19" /></span
               ><span
-                ><strong>Router</strong><small>Choose one output</small></span
+                ><strong>Routing model</strong><small>Choose one simulated output</small></span
               ><Plus :size="15" />
             </button>
             <button
               class="button secondary full catalog-open-button"
               @click="showCatalog = true"
             >
-              <Box :size="14" /> Component catalog
+              <Box :size="14" /> Timing profile library
             </button>
             <div class="palette-note">
               <GitBranch :size="17" /><strong>{{
@@ -2209,8 +2102,10 @@ onUnmounted(() => {
       <footer class="statusbar">
         <span
           ><span class="status-indicator" />{{
-            definitionView
-              ? "Definition workspace"
+            view === "blueprint"
+              ? "Blueprint · implementation scope and next steps"
+              : definitionView
+              ? "Engineering definition workspace"
               : validation?.valid
                 ? "Model validated"
                 : dirty
@@ -2218,7 +2113,7 @@ onUnmounted(() => {
                   : "Workspace ready"
           }}</span
         ><span
-          >Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
+          >Roadmap {{roadmapProgress.total}}% <span class="footer-dot">·</span> Vue + Go <span class="footer-dot">·</span> Discrete-event simulation
           <span class="footer-dot">·</span> v0.8.1</span
         >
       </footer>
@@ -2354,6 +2249,8 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.simulation-context{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;margin-bottom:10px;padding:8px 12px;background:#fff8e5;border:1px solid #e9d8a5;border-radius:6px}
+
 .continuum-example-button {
   margin-top: 10px;
 }

@@ -19,6 +19,9 @@ type host struct {
 	bytes   int
 }
 type engine struct {
+	instanceIDs                                                       map[string]string
+	namespace                                                         string
+	commandFaults                                                     map[string]string
 	ctx                                                               context.Context
 	definition                                                        model.WorkflowDefinition
 	prepared                                                          model.WorkflowContext
@@ -291,12 +294,12 @@ func (e *engine) command(node model.WorkflowNode, step StepResult) error {
 		return fmt.Errorf("%w: at most 64 owned command calls", ErrLimit)
 	}
 	owner := e.owners[node.Command.Owner]
-	revision, err := owner.session.Revision(node.Command.Owner)
+	revision, err := owner.session.Revision(e.stateID(node.Command.Owner))
 	if err != nil {
 		return err
 	}
 	inputs := e.resolve(node.Command.Inputs, e.inputs, e.result.Variables)
-	command := model.StateStep{Kind: "command", InstanceID: node.Command.Owner, CommandID: fmt.Sprintf("wf_command%d", e.commandCount+1), Command: node.Command.Command, ExpectedRevision: &revision, Inputs: inputs}
+	command := model.StateStep{Kind: "command", InstanceID: e.stateID(node.Command.Owner), CommandID: fmt.Sprintf("%swf_command%d", e.namespace, e.commandCount+1), Fault: e.commandFaults[node.ID], Command: node.Command.Command, ExpectedRevision: &revision, Inputs: inputs}
 	var admitted projection
 	var stepBytes int
 	result, err := owner.session.Apply(e.ctx, e.commandCount, command, func(proposed state.Projection) error {

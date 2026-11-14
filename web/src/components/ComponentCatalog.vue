@@ -182,16 +182,16 @@ onMounted(load);
       class="modal catalog-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Component catalog"
+      aria-label="Timing profile library"
     >
       <div class="modal-heading">
         <div>
           <span class="section-eyebrow">REUSABLE COMPONENTS</span>
-          <h2>Component catalog</h2>
+          <h2>Timing profile library</h2>
         </div>
         <button
           class="icon-button"
-          aria-label="Close component catalog"
+          aria-label="Close timing profile library"
           :disabled="!!busy"
           @click="emit('close')"
         >
@@ -199,7 +199,7 @@ onMounted(load);
         </button>
       </div>
       <p class="catalog-intro">
-        Profiles configure a service, database or exclusive router. Add a
+        These profiles configure timing models for services, databases and exclusive routers. Reusable application components are in Design → System architecture. Add a
         profile to embed its exact version in your project; exported projects
         and saved runs keep that definition.
       </p>
@@ -207,7 +207,7 @@ onMounted(load);
         <div
           class="catalog-tabs"
           role="group"
-          aria-label="Component catalog source"
+          aria-label="Timing profile library source"
         >
           <button
             :class="{ active: tab === 'bundled' }"
@@ -250,7 +250,7 @@ onMounted(load);
           </button>
           <button
             class="icon-button"
-            aria-label="Refresh component catalog"
+            aria-label="Refresh timing profile library"
             :disabled="!!busy"
             @click="load"
           >
@@ -283,7 +283,7 @@ onMounted(load);
         <p>Loading reusable profiles…</p>
       </div>
       <div v-else class="catalog-layout">
-        <div class="catalog-list" aria-label="Available component profiles">
+        <div class="catalog-list" aria-label="Available timing profiles">
           <button
             v-for="entry in entries"
             :key="key(entry.package)"
@@ -323,7 +323,7 @@ onMounted(load);
         <article v-if="selected" class="catalog-detail">
           <div class="catalog-detail-heading">
             <span class="type-chip">{{ selected.package.kernel }} profile</span
-            ><span class="catalog-capabilities">Design · Simulate</span>
+            ><span class="catalog-capabilities">Timing simulation</span>
           </div>
           <h3>{{ selected.package.name }}</h3>
           <code class="catalog-identity"

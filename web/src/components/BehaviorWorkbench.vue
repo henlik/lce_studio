@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type {AspectContext} from "../definitionTypes";
+const contextEvents=defineEmits<{aspectOpened:[context:AspectContext]}>();
 import { watch as watchInspection } from "vue";
 const inspectionProps = defineProps<{ inspectionRequest?: {nonce: number; body: Record<string, any>} }>();
 import StudioRibbon from "./StudioRibbon.vue";
@@ -1168,11 +1170,14 @@ onMounted(async () => {
   window.addEventListener("beforeunload", beforeUnload);
 });
 onUnmounted(() => window.removeEventListener("beforeunload", beforeUnload));
-watchInspection(() => inspectionProps.inspectionRequest, async request => {
-  if (!request) return;
+let lastInspectionNonce: number | undefined;
+watchInspection([() => inspectionProps.inspectionRequest, () => busy.value], async ([request, running]) => {
+  if (!request || running || request.nonce === lastInspectionNonce) return;
   await autosave.ready;
-  if (busy.value || !canReplace()) return;
-  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.bundle); tab.value = 'interface'; notice.value = 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; }
+  if (busy.value || request.nonce === lastInspectionNonce) return;
+  lastInspectionNonce = request.nonce;
+  if (!canReplace()) return;
+  try { const e = JSON.parse(JSON.stringify(request.body)); adopt(e.bundle); tab.value = 'interface'; notice.value = e.aspectContext ? 'Pinned component aspect opened as an editor draft. Install a new version before replacing the component pin.' : 'Inspection exercise opened. The existing draft is retained in recovery checkpoints.'; if(e.aspectContext)contextEvents('aspectOpened',e.aspectContext); }
   catch (e) { error.value = (e as Error).message; }
 }, { immediate:true });
 </script>

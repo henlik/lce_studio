@@ -20,6 +20,8 @@ type host struct {
 }
 type intentRoute struct{ intent, route string }
 type engine struct {
+	instanceIDs   map[string]string
+	namespace     string
 	ctx           context.Context
 	model         model.DeliveryModel
 	contracts     []model.DataContractLock
@@ -235,12 +237,16 @@ func (e *engine) dispatch(result StepResult, step model.DeliveryStep) error {
 		}
 		commandID = e.messages[index].ID
 	}
-	intent, found := e.owners[route.SourceInstanceID].session.Effect(route.SourceInstanceID, commandID, route.Effect)
+	intent, found := e.owners[route.SourceInstanceID].session.Effect(e.stateInstance(route.SourceInstanceID), commandID, route.Effect)
 	if !found {
 		result.Status, result.Message = "missing_intent", "No committed source effect exists for this selector and route."
 		return e.retain(result, nil, -1)
 	}
-	encoded, err := json.Marshal([]string{intent.ID, route.ID})
+	identity := []string{intent.ID, route.ID}
+	if e.namespace != "" {
+		identity = append(identity, e.namespace)
+	}
+	encoded, err := json.Marshal(identity)
 	if err != nil {
 		return err
 	}
@@ -287,6 +293,7 @@ func sameEnvelope(left, right Message) bool {
 
 func (e *engine) kernel(outer StepResult, request model.StateStep, message *Message, messageIndex int, fault string) error {
 	h := e.owners[request.InstanceID]
+	request.InstanceID = e.stateInstance(request.InstanceID)
 	var projection state.Projection
 	var stepBytes, messageBytes int
 	stateResult, err := h.session.Apply(e.ctx, outer.Index, request, func(p state.Projection) error {

@@ -1,0 +1,26 @@
+<script setup lang="ts">
+import {computed,ref,watch} from 'vue';
+import {api} from '../api';
+import type {ComponentAspect} from '../definitionTypes';
+import type {DeliveryModelLock} from '../deliveryTypes';
+import type {ComponentInstance,SystemCatalogEntry} from '../systemTypes';
+import {useActionFeedback} from '../composables/useNotifications';
+const props=defineProps<{component:ComponentInstance;components:ComponentInstance[];catalog:SystemCatalogEntry[];providers:{id:string;kind:string;version:string}[]}>();
+const emit=defineEmits<{owners:[NonNullable<ComponentInstance['messageOwners']>];bindings:[ComponentInstance['bindings']]}>();
+const aspects=computed(()=>props.catalog.find(d=>d.kind==='definition'&&d.id===props.component.definition.id&&d.version===props.component.definition.version)?.aspects?.filter(a=>a.kind==='messages')||[]);
+const rows=ref<{slot:string;model:DeliveryModelLock}[]>([]),busy=ref(''),error=ref(''),notice=ref('');useActionFeedback('Message owner bindings',busy,notice,error);
+const stamp=computed(()=>JSON.stringify([props.component.id,props.component.definition,aspects.value]));watch(stamp,()=>{rows.value=[];error.value='';});
+async function load(){if(busy.value)return;const snapshot=stamp.value;busy.value='Loading message actors';error.value='';try{const result=await Promise.all(aspects.value.map(async a=>{const r=await api<{body:{model:DeliveryModelLock}}>('/systems/definitions/aspect','POST',a as ComponentAspect);return {slot:a.slot,model:r.body.model};}));if(snapshot===stamp.value)rows.value=result;}catch(e){if(snapshot===stamp.value)error.value=(e as Error).message;}finally{busy.value='';}}
+function choices(machine:{machineId:string;version:string;digest:string}){return props.components.flatMap(c=>{const d=props.catalog.find(d=>d.kind==='definition'&&d.id===c.definition.id&&d.version===c.definition.version);return (d?.aspects||[]).filter(a=>a.kind==='state'&&a.id===machine.machineId&&a.version===machine.version&&a.digest===machine.digest).map(a=>({value:JSON.stringify([c.id,a.slot]),label:c.name+' / '+a.slot}));});}
+function selected(slot:string,instanceId:string){const o=props.component.messageOwners?.find(o=>o.slot===slot&&o.instanceId===instanceId);return o?JSON.stringify([o.componentId,o.stateSlot]):'';}
+function choose(slot:string,instanceId:string,value:string){const owners=(props.component.messageOwners||[]).filter(o=>o.slot!==slot||o.instanceId!==instanceId);if(value){const [componentId,stateSlot]=JSON.parse(value);owners.push({slot,instanceId,componentId,stateSlot});}emit('owners',owners);}
+function bind(slot:string,resourceId:string){const requirement='messages/'+slot;const bindings=props.component.bindings.filter(b=>b.requirement!==requirement);if(resourceId)bindings.push({requirement,resourceId});emit('bindings',bindings);}
+</script>
+<template><section v-if="aspects.length"><h3>Message actors and broker</h3><p>Map each actor to an existing state owner. Only exact machine versions and digests are offered. Delivery shares that owner’s revisions, receipts and state.</p><button :disabled="!!busy" @click="load">Load message actors</button><p role="status">{{busy}}</p><p v-if="error" role="alert">{{error}}</p>
+ <fieldset v-for="row in rows" :key="row.slot"><legend>{{row.slot}} · {{row.model.model.name}}</legend><label>Offline broker *<select :value="component.bindings.find(b=>b.requirement==='messages/'+row.slot)?.resourceId||''" @change="bind(row.slot,($event.target as HTMLSelectElement).value)"><option value="">Choose a modeled broker…</option><option v-for="p in providers.filter(p=>p.kind==='modeled-broker'&&p.version==='1.0.0')" :key="p.id" :value="p.id">{{p.id}}</option></select></label>
+ <label v-for="actor in row.model.model.instances" :key="actor.id">{{actor.name}} · {{actor.id}} *<select :value="selected(row.slot,actor.id)" @change="choose(row.slot,actor.id,($event.target as HTMLSelectElement).value)"><option value="">Choose an existing owner…</option><option v-if="selected(row.slot,actor.id)&&!choices(actor.machine).some(c=>c.value===selected(row.slot,actor.id))" :value="selected(row.slot,actor.id)">Unresolved saved owner</option><option v-for="choice in choices(actor.machine)" :key="choice.value" :value="choice.value">{{choice.label}}</option></select><small v-if="!choices(actor.machine).length">Install and add a component owning {{actor.machine.machineId}}@{{actor.machine.version}}.</small></label>
+ <p v-for="route in row.model.model.routes" :key="route.id">{{route.sourceInstanceId}} / {{route.effect}} → {{route.targetInstanceId}} / {{route.command}}</p></fieldset>
+ <p>Broker rules: durable messages across modeled restarts; explicit dispatch and retries; acknowledgement requires a recipient receipt. Acknowledged rejection is distinct from business acceptance. No automatic retry or live broker.</p>
+ <p v-for="(o,i) in component.messageOwners||[]" :key="i">{{o.slot}} / {{o.instanceId}} → {{o.componentId}} / {{o.stateSlot}} <button @click="emit('owners',(component.messageOwners||[]).filter((_,j)=>i!==j))">Remove mapping</button></p>
+</section></template>
+<style scoped>section,fieldset{min-width:0}fieldset{margin:12px 0;padding:10px;border:1px solid #cbdce3}label{display:grid;gap:6px;margin:12px 0}select{min-width:0;width:100%;padding:8px}p,small{font-size:12px;line-height:1.5;overflow-wrap:anywhere}</style>
