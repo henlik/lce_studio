@@ -64,6 +64,7 @@ import {
 import StudioNode from "./components/StudioNode.vue";
 import StudioRibbon from "./components/StudioRibbon.vue";
 import InspectionWorkbench from "./components/InspectionWorkbench.vue";
+const SystemWorkbench = defineAsyncComponent(() => import("./components/SystemWorkbench.vue"));
 import type { InspectionCase } from "./inspection";
 import CanvasControls from "./components/CanvasControls.vue";
 import { useCanvasFocus } from "./composables/useCanvasFocus";
@@ -107,8 +108,10 @@ const view = ref<
   | "messages"
   | "workflows"
   | "inspection"
+  | "system"
 >("design");
 const inspectionOpened = ref(false);
+const systemOpened = ref(false);
 const inspectionRequests = ref<Record<string, {nonce: number; body: Record<string, any>}>>({});
 async function openInspection(item: InspectionCase) {
  if (item.body.project) {
@@ -128,9 +131,10 @@ const definitionView = computed(
     view.value === "data" ||
     view.value === "state" ||
     view.value === "messages" ||
-    view.value === "workflows" || view.value === "inspection",
+    view.value === "workflows" || view.value === "inspection" || view.value === "system",
 );
 watch(view, (next) => {
+  if (next === "system") systemOpened.value = true;
   if (next === "inspection") inspectionOpened.value = true;
   if (next === "components") workbenchOpened.value = true;
   if (next === "data") dataOpened.value = true;
@@ -1102,6 +1106,7 @@ onUnmounted(() => {
           <GitBranch :size="18" /><span>Workflows</span
           ><span class="nav-number">09</span>
         </button>
+        <button :class="{active:view === 'system'}" @click="view = 'system'" aria-label="System design" title="System design"><Layers3 :size="18" /><span>System design</span><span class="nav-number">11</span></button>
         <button :class="{active:view === 'inspection'}" @click="view = 'inspection'" aria-label="Inspection lab" title="Inspection lab"><FlaskConical :size="18" /><span>Inspection lab</span><span class="nav-number">10</span></button>
       </nav>
       <div class="rail-divider" />
@@ -1147,7 +1152,7 @@ onUnmounted(() => {
         <div class="project-heading">
           <span class="breadcrumb"
             >{{
-              view === "inspection" ? "Inspection" : view === "workflows"
+              view === "system" ? "System" : view === "inspection" ? "Inspection" : view === "workflows"
                 ? "Workflows"
                 : view === "messages"
                   ? "Messages"
@@ -1161,7 +1166,7 @@ onUnmounted(() => {
             }}
             <span>/</span>
             {{
-              view === "inspection" ? "Regional care ecosystem" : view === "workflows"
+              view === "system" ? "Design, contracts & conformance" : view === "inspection" ? "Regional care ecosystem" : view === "workflows"
                 ? "Tasks, decisions & handoffs"
                 : view === "messages"
                   ? "Typed delivery & acknowledgements"
@@ -1183,7 +1188,7 @@ onUnmounted(() => {
             />
             <h1 v-else>
               {{
-                view === "inspection" ? "Inspection lab" : view === "workflows"
+                view === "system" ? "System workbench" : view === "inspection" ? "Inspection lab" : view === "workflows"
                   ? "Workflow workbench"
                   : view === "messages"
                     ? "Messages workbench"
@@ -1290,6 +1295,7 @@ onUnmounted(() => {
         </ul>
       </div>
 
+      <SystemWorkbench v-if="systemOpened" v-show="view === 'system'" />
       <InspectionWorkbench v-if="inspectionOpened" v-show="view === 'inspection'" @open="openInspection" />
       <DeliveryWorkbench :inspection-request="inspectionRequests.messages" v-if="messagesOpened" v-show="view === 'messages'" />
       <WorkflowWorkbench :inspection-request="inspectionRequests.workflows" v-if="workflowsOpened" v-show="view === 'workflows'" />

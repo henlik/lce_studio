@@ -1,0 +1,47 @@
+export interface SystemDesign {
+ schemaVersion: number; id: string; name: string; revision: string;
+ components: ComponentInstance[]; connections: SystemConnection[]; deploymentPlans: DeploymentPlan[]; contract: SystemContract;
+}
+export interface ComponentInstance { id:string; name:string; definition:{id:string;version:string}; artifacts:{kind:string;id:string;version:string}[]; bindings:{requirement:string;resourceId:string}[] }
+export interface SystemConnection {id:string; source:string; target:string; kind:string}
+export interface DeploymentPlan {id:string; name:string; resources:{id:string;kind:string}[]; placements:{componentId:string;resourceId:string}[]}
+export interface SystemContract {id:string; revision:string; claims:{id:string;kind:string;description:string}[]; assumptions:{id:string;description:string}[]}
+export interface SystemVerdict {claimId:string;status:string;message:string;evidenceSequences:number[]}
+export interface SystemEvent {sequence:number;kind:string;requestId:string;encounterId?:string;detail?:string}
+export function emptySystem():SystemDesign {return {schemaVersion:1,id:crypto.randomUUID(),name:'Untitled system',revision:'1.0.0',components:[],connections:[],deploymentPlans:[],contract:{id:'system-contract',revision:'1.0.0',claims:[],assumptions:[]}};}
+export const claimKinds = [
+ {id:'exactly_one_record',label:'One record per accepted request'},
+ {id:'response_matches_record',label:'Successful response matches persisted record'},
+ {id:'no_false_success',label:'No success without persistence'},
+ {id:'required_evidence',label:'Required execution evidence is present'},
+];
+// Structural guard protects the editor before server-side semantic validation.
+export function parseSystemImport(source:string):SystemDesign {
+ const value:unknown=JSON.parse(source);
+ const object=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
+ const stringFields=(x:unknown,fields:string[])=>object(x)&&fields.every(key=>typeof x[key]==='string');
+ const arrayOf=(x:unknown,check:(v:unknown)=>boolean)=>Array.isArray(x)&&x.every(check);
+ if(!object(value)||value.schemaVersion!==1||!stringFields(value,['id','name','revision'])||
+ !arrayOf(value.components,c=>object(c)&&stringFields(c,['id','name'])&&stringFields(c.definition,['id','version'])&&arrayOf(c.artifacts,a=>stringFields(a,['kind','id','version']))&&arrayOf(c.bindings,b=>stringFields(b,['requirement','resourceId'])))||
+ !arrayOf(value.connections,c=>stringFields(c,['id','source','target','kind']))||
+ !arrayOf(value.deploymentPlans,p=>object(p)&&stringFields(p,['id','name'])&&arrayOf(p.resources,r=>stringFields(r,['id','kind']))&&arrayOf(p.placements,r=>stringFields(r,['componentId','resourceId'])))||
+ !object(value.contract)||!stringFields(value.contract,['id','revision'])||!arrayOf(value.contract.claims,c=>stringFields(c,['id','kind','description']))||!arrayOf(value.contract.assumptions,a=>stringFields(a,['id','description']))) {
+  throw new Error('Import requires a complete schema version 1 system design. The current draft was kept.');
+ }
+ return value as unknown as SystemDesign;
+}
+// Go encodes nil slices as null. Normalize only known collection fields; the
+// parser still rejects malformed objects and missing scalar identifiers.
+export function normalizeSystemResponse(value:unknown):SystemDesign {
+ const object=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
+ if(!object(value))return parseSystemImport(JSON.stringify(value));
+ const list=(x:unknown)=>x==null?[]:x;
+ const mapList=(x:unknown,fn:(item:unknown)=>unknown)=>Array.isArray(x)?x.map(fn):list(x);
+ const normalized={...value,
+  components:mapList(value.components,c=>object(c)?{...c,artifacts:list(c.artifacts),bindings:list(c.bindings)}:c),
+  connections:list(value.connections),
+  deploymentPlans:mapList(value.deploymentPlans,p=>object(p)?{...p,resources:list(p.resources),placements:list(p.placements)}:p),
+  contract:object(value.contract)?{...value.contract,claims:list(value.contract.claims),assumptions:list(value.contract.assumptions)}:value.contract,
+ };
+ return parseSystemImport(JSON.stringify(normalized));
+}

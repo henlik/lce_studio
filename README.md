@@ -2,6 +2,8 @@
 
 A local software engineering workspace built with **Vue 3, TypeScript, Vue Flow, Go, and PostgreSQL**. Define requirements, assemble processing workflows, place them on computing resources, simulate their behaviour, and inspect test verdicts and event traces together.
 
+The **System design** workspace adds a shared design/reference model, four executable contract checks, and a reception-intake conformance experiment against real Go/PostgreSQL code. Load the example explicitly, validate it, and compare model and implementation evidence across seven scenarios. See the [step-by-step conformance guide](docs/SYSTEM_CONFORMANCE.md). This first adapter supports the reference topology; it does not generate arbitrary applications or replace the existing engines.
+
 Version **0.8.1** adds a searchable left-side component palette, a right-side binding inspector, visual node/pin/feedback conventions, validation navigation, action notifications and automatic browser draft recovery with protection against conflicting edits from multiple tabs. See [visual authoring and recovery](docs/STUDIO_UX.md) for the workflow and its limits. Portable bundles and publishing to the local catalog are available; a public community marketplace is still planned.
 
 The studio also provides **Structure / Behavior / Execution** perspectives, nested workflow stage focus, token-following replay, and a **Regional care ecosystem inspection lab**. Open the lab to run reference exercises across all implemented engines and track manual UX checks. See the [step-by-step inspection guide](docs/STAGED_INSPECTION.md). Stages organize the workflow view; executable child-workflow calls and cross-engine orchestration are not implemented.

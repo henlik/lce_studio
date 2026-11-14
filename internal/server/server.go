@@ -59,6 +59,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	path := r.URL.Path
 	switch {
+	case path == "/api/systems" || strings.HasPrefix(path, "/api/systems/"):
+		s.systemsAPI(w, r)
 	case path == "/api/health":
 		if !method(w, r, http.MethodGet) {
 			return

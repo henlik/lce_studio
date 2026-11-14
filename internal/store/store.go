@@ -167,6 +167,9 @@ CREATE INDEX IF NOT EXISTS workflow_runs_created ON workflow_runs(created_at DES
 	if err != nil {
 		return err
 	}
+	if err := initializeSystems(ctx, tx); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 

@@ -1,5 +1,18 @@
 # Verification
 
+## Unified system and reception conformance increment — 14 November 2026
+
+Verified with PostgreSQL 17.11, Go 1.25.5 and Node.js 24.22.1.
+
+- Full `go test -race -count=1 ./...`, `go vet ./...`, and backend build passed.
+- Frontend production build and all 17 frontend tests passed, including empty designs and safe import/nullable API normalization.
+- Live `scripts/acceptance-system.mjs` passed: design persistence, seven scenario expectations, model/implementation verdicts, immutable evidence retrieval after design edits, and unsupported claim rejection.
+- CLI execution of `examples/system/reception-intake.system.json` passed all seven scenario expectations against PostgreSQL. Deliberately faulty deduplication violates its contract; missing evidence is inconclusive.
+- Browser smoke testing was attempted but Chromium startup was blocked by a socket permission restriction. No new visual/mobile-browser verification is claimed.
+- CI now runs the new API acceptance script in both native and Compose jobs; remote CI status is separate from these local results.
+
+This is the bounded reference adapter described in [SYSTEM_CONFORMANCE.md](SYSTEM_CONFORMANCE.md). Existing engine tests remain green; cross-engine execution, catalog resolution, signed implementation provenance, real process crashes and production orchestration are not supplied by this increment.
+
 ## v0.8 executable task workflows and reception reference — 12 November 2026
 
 Verified with PostgreSQL 17.11, Go 1.25.5, Node.js 24.22.1, npm 11.9.0 and the production Vue build.
