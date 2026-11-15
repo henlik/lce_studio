@@ -1,0 +1,109 @@
+language "1.0";
+module "export.behavior_lce_confirm_named_result" version "1.0.0";
+
+
+behavior behavior_lce_confirm_named_result {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      valid = {
+        node = "valid";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "confirmed";
+        type = "boolean";
+      },
+      {
+        name = "value";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "namedEmpty";
+        inputs = {
+          left = {
+            input = "value";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "named";
+        inputs = {
+          value = {
+            node = "namedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "valid";
+        inputs = {
+          left = {
+            input = "confirmed";
+          };
+          right = {
+            node = "named";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "valid";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Accepts a named value only when an explicit response confirms it.";
+  id = "lce.confirm-named-result";
+  kernel = "composite";
+  license = "MIT";
+  name = "Confirm named response";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

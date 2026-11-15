@@ -1,0 +1,303 @@
+language "1.0";
+module "export.behavior_lce_lookup_disposition" version "1.0.0";
+
+
+behavior behavior_lce_lookup_disposition {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      confirm = {
+        node = "canConfirm";
+        port = "result";
+      };
+      register = {
+        node = "canRegister";
+        port = "result";
+      };
+      route = {
+        node = "route";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "completed";
+        type = "boolean";
+      },
+      {
+        name = "matchCount";
+        type = "integer";
+      }
+    ];
+    nodes = [
+      {
+        id = "validCount";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            input = "matchCount";
+          };
+        };
+        op = "less_or_equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "zeroMatches";
+        inputs = {
+          left = {
+            input = "matchCount";
+          };
+          right = {
+            literal = integer(0);
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "oneMatch";
+        inputs = {
+          left = {
+            input = "matchCount";
+          };
+          right = {
+            literal = integer(1);
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "knownResult";
+        inputs = {
+          left = {
+            input = "completed";
+          };
+          right = {
+            node = "validCount";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "matchedRoute";
+        inputs = {
+          condition = {
+            node = "oneMatch";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("review");
+          };
+          trueValue = {
+            literal = string("confirm");
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "completedRoute";
+        inputs = {
+          condition = {
+            node = "zeroMatches";
+            port = "result";
+          };
+          falseValue = {
+            node = "matchedRoute";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("register");
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "route";
+        inputs = {
+          condition = {
+            node = "knownResult";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("review");
+          };
+          trueValue = {
+            node = "completedRoute";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "canRegister";
+        inputs = {
+          left = {
+            node = "knownResult";
+            port = "result";
+          };
+          right = {
+            node = "zeroMatches";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "canConfirm";
+        inputs = {
+          left = {
+            node = "knownResult";
+            port = "result";
+          };
+          right = {
+            node = "oneMatch";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "register";
+        type = "boolean";
+      },
+      {
+        name = "confirm";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Distinguishes confirmed zero/one/many matches from unavailable or invalid lookup results. No lookup or identity verification is performed.";
+  id = "lce.lookup-disposition";
+  kernel = "composite";
+  license = "MIT";
+  name = "Classify explicit lookup result";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        confirm = boolean(false);
+        register = boolean(true);
+        route = string("register");
+      };
+      inputs = {
+        completed = boolean(true);
+        matchCount = integer(0);
+      };
+      name = "Confirmed absence";
+    },
+    {
+      expected = {
+        confirm = boolean(true);
+        register = boolean(false);
+        route = string("confirm");
+      };
+      inputs = {
+        completed = boolean(true);
+        matchCount = integer(1);
+      };
+      name = "One candidate needs confirmation";
+    },
+    {
+      expected = {
+        confirm = boolean(false);
+        register = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        completed = boolean(true);
+        matchCount = integer(2);
+      };
+      name = "Ambiguous matches";
+    },
+    {
+      expected = {
+        confirm = boolean(false);
+        register = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        completed = boolean(false);
+        matchCount = integer(0);
+      };
+      name = "Unavailable is not absence";
+    },
+    {
+      expected = {
+        confirm = boolean(false);
+        register = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        completed = boolean(true);
+        matchCount = integer(-1);
+      };
+      name = "Invalid negative count";
+    }
+  ];
+  version = "1.0.0";
+}

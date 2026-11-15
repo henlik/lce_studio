@@ -1,0 +1,56 @@
+language "1.0";
+module "export.behavior_lce_forward_boolean" version "1.0.0";
+
+
+behavior behavior_lce_forward_boolean {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      result = {
+        input = "value";
+      };
+    };
+    inputs = [
+      {
+        name = "value";
+        type = "boolean";
+      }
+    ];
+    nodes = [];
+    outputs = [
+      {
+        name = "result";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Forwards an explicit boolean without deriving additional authority.";
+  id = "lce.forward-boolean";
+  kernel = "composite";
+  license = "MIT";
+  name = "Branch on explicit boolean";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

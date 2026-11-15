@@ -1,0 +1,97 @@
+language "1.0";
+module "export.timing_retry_lab" version "1.0.0";
+
+
+timing timing_retry_lab {
+  description = "A lost response triggers a retry. Compare database deduplication on and off to see why a retry can repeat an operation.";
+  edges = [
+    {
+      id = "client-service";
+      latencyMs = 10;
+      source = "client";
+      target = "service";
+    },
+    {
+      id = "service-database";
+      latencyMs = 10;
+      source = "service";
+      target = "database";
+    }
+  ];
+  id = "retry-lab";
+  name = "Reliable request pipeline";
+  nodes = [
+    {
+      config = {
+        capacity = 1;
+        deduplicate = false;
+        processingMs = 0;
+      };
+      id = "client";
+      name = "Client";
+      position = {
+        x = 60;
+        y = 160;
+      };
+      type = "client";
+    },
+    {
+      config = {
+        capacity = 2;
+        deduplicate = false;
+        processingMs = 15;
+      };
+      id = "service";
+      name = "Order service";
+      position = {
+        x = 360;
+        y = 160;
+      };
+      type = "service";
+    },
+    {
+      config = {
+        capacity = 1;
+        deduplicate = true;
+        processingMs = 5;
+      };
+      id = "database";
+      name = "Ledger";
+      position = {
+        x = 660;
+        y = 160;
+      };
+      type = "database";
+    }
+  ];
+  requirements = [
+    {
+      id = "REQ-001";
+      rule = "no_duplicates";
+      targetMs = 0;
+      text = "A retried request must not create a duplicate operation.";
+    },
+    {
+      id = "REQ-002";
+      rule = "all_complete";
+      targetMs = 0;
+      text = "Every request receives a successful response before retries are exhausted.";
+    },
+    {
+      id = "REQ-003";
+      rule = "latency_p95";
+      targetMs = 300;
+      text = "95% of requests complete within 300 ms, including retries.";
+    }
+  ];
+  scenario = {
+    dropFirstResponse = true;
+    intervalMs = 40;
+    jitterMs = 0;
+    maxRetries = 2;
+    requestCount = 12;
+    seed = 42;
+    timeoutMs = 100;
+  };
+  schemaVersion = 1;
+}

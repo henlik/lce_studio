@@ -1,0 +1,193 @@
+language "1.0";
+module "export.behavior_lce_confirm_current_handoff" version "1.0.0";
+
+
+behavior behavior_lce_confirm_current_handoff {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      valid = {
+        node = "valid";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "resourceId";
+        type = "string";
+      },
+      {
+        name = "expectedResource";
+        type = "string";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "expectedCase";
+        type = "string";
+      },
+      {
+        name = "reference";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "resource";
+        inputs = {
+          left = {
+            input = "resourceId";
+          };
+          right = {
+            input = "expectedResource";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "caseMatch";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            input = "expectedCase";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "matches";
+        inputs = {
+          left = {
+            node = "resource";
+            port = "result";
+          };
+          right = {
+            node = "caseMatch";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "referenceEmpty";
+        inputs = {
+          left = {
+            input = "reference";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "reference";
+        inputs = {
+          value = {
+            node = "referenceEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "evidence";
+        inputs = {
+          left = {
+            node = "matches";
+            port = "result";
+          };
+          right = {
+            node = "reference";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "valid";
+        inputs = {
+          left = {
+            node = "evidence";
+            port = "result";
+          };
+          right = {
+            input = "accepted";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "valid";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Requires explicit acceptance tied to the current case and selected resource, with a nonempty receiving reference.";
+  id = "lce.confirm-current-handoff";
+  kernel = "composite";
+  license = "MIT";
+  name = "Confirm receiving handoff";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

@@ -1,0 +1,132 @@
+language "1.0";
+module "export.data_lce_organization_registry" version "1.0.0";
+
+
+data data_lce_organization_registry {
+  author = "LCE Studio contributors";
+  description = "Required scalar organization, subject and resource records with explicit entity identity and tenant references. Synthetic fixtures demonstrate data integrity, not production authorization or tenancy enforcement.";
+  entities = [
+    {
+      name = "Organizations";
+      position = {
+        x = 370;
+        y = 140;
+      };
+      primaryKey = [
+        "id"
+      ];
+      record = "Organization";
+      uniqueKeys = [];
+    },
+    {
+      name = "Subjects";
+      position = {
+        x = 40;
+        y = 70;
+      };
+      primaryKey = [
+        "id"
+      ];
+      record = "Subject";
+      uniqueKeys = [];
+    },
+    {
+      name = "Resources";
+      position = {
+        x = 700;
+        y = 70;
+      };
+      primaryKey = [
+        "id"
+      ];
+      record = "Resource";
+      uniqueKeys = [];
+    }
+  ];
+  id = "lce.organization-registry";
+  license = "MIT";
+  name = "Organization registry";
+  records = [
+    {
+      fields = [
+        {
+          name = "id";
+          type = "string";
+        },
+        {
+          name = "name";
+          type = "string";
+        }
+      ];
+      name = "Organization";
+    },
+    {
+      fields = [
+        {
+          name = "id";
+          type = "string";
+        },
+        {
+          name = "tenantId";
+          type = "string";
+        },
+        {
+          name = "role";
+          type = "string";
+        },
+        {
+          name = "active";
+          type = "boolean";
+        }
+      ];
+      name = "Subject";
+    },
+    {
+      fields = [
+        {
+          name = "id";
+          type = "string";
+        },
+        {
+          name = "tenantId";
+          type = "string";
+        },
+        {
+          name = "scope";
+          type = "string";
+        }
+      ];
+      name = "Resource";
+    }
+  ];
+  relationships = [
+    {
+      fromEntity = "Subjects";
+      fromFields = [
+        "tenantId"
+      ];
+      maxSources = 0;
+      minSources = 0;
+      name = "SubjectOrganization";
+      toEntity = "Organizations";
+      toFields = [
+        "id"
+      ];
+    },
+    {
+      fromEntity = "Resources";
+      fromFields = [
+        "tenantId"
+      ];
+      maxSources = 0;
+      minSources = 0;
+      name = "ResourceOrganization";
+      toEntity = "Organizations";
+      toFields = [
+        "id"
+      ];
+    }
+  ];
+  schemaVersion = 1;
+  version = "1.0.0";
+}

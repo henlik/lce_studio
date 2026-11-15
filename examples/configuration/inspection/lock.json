@@ -1,0 +1,444 @@
+{
+  "compiler": "lce-configuration-1.0",
+  "sourceHash": "606c7754ebafca08522bb3cd675d6eea78c25dd1afaad3ea58a2630fcb82579b",
+  "files": {
+    "behavior_example_health_record_access.lce": "5b415b686390b6151b6f557cbb649ae1cfe22f3901bab37c22e64a6436a739aa",
+    "behavior_example_school_record_access.lce": "855068d1858faf5701564fe81dafba256aa6883c35c5c721173c52ee20371f8c",
+    "behavior_example_structured_health_access.lce": "80b9078d116f01e1a69fb8c8563038b47d56a152ea03ad753f64b597bf72a408",
+    "behavior_example_structured_school_access.lce": "e3f71106d95e22839ef2945211feab08a3d6cf6316ddd801dd8b2b2324ee92a4",
+    "behavior_health_reception_entry_route.lce": "d788b93bc07eaf5f262e2df119760d128031fbab08b6008a0b68e54b02d1e839",
+    "behavior_lce_accept_single_slot.lce": "1357b592551d96ac376917391668b7d0d364fbfce7ca5bb2a3b3892d10bb265b",
+    "behavior_lce_access_policy.lce": "9f7a1ac294685a45966734871d2c259ea120e614e2c1ec5978080f925f0a9768",
+    "behavior_lce_affiliation_disposition.lce": "42c98fddb0d090964a7b52264a6459bfb30b2e8321d2107fcca0876949f46812",
+    "behavior_lce_begin_interrupt.lce": "c985fcabbf2a4ea8fb8071b1bf9c3c08d576f99abe913773c1c5867f659ee907",
+    "behavior_lce_call_case_ticket.lce": "d75febb4eb4af60c77ef4f0dba6792d58573dacfa2b7bac3337da76cb9b364f8",
+    "behavior_lce_cancel_case_ticket.lce": "adb2332b6277adf60dc78a9b4a4631ed96a0f37c50887b0f55c8c80c1e6c88ee",
+    "behavior_lce_candidate_eligible.lce": "05af7d2a3d4f834c1c2214f29ba05c804dd3ded12fb899dd8c8b611d019a7bf7",
+    "behavior_lce_confirm_current_handoff.lce": "c85c9a943204ab3bff296c5ec0357c0fbe2f4f05249e6eadf276ff393d11d5a7",
+    "behavior_lce_confirm_dispatch_choice.lce": "2b95cf4ffbe66723d2ddcaa1c866e8d1967d39ace7be9003a299bb337386b7d5",
+    "behavior_lce_confirm_exception_handoff.lce": "c330a5f26c7f6e10bfd7bd4b09fb1be636eccdb7605990f0c033efd2428d1896",
+    "behavior_lce_confirm_named_result.lce": "bb3d6dd0bce77708e83a1c0e3bcd55d2818c43b63f7ed4d5a6d5ee2a6e830020",
+    "behavior_lce_durable_store.lce": "a845c8ea6878bfc00fba397c3f5672671769d00beae92fce227adc4f3ef54a9b",
+    "behavior_lce_forward_boolean.lce": "03c6f525d5308e8ab7c613ee609c1c44e1deaac5cee857ecc3b5f66d9324cae3",
+    "behavior_lce_issue_case_ticket.lce": "d2aade4fe83bd3ebc7d744e250202495b779414eaa305a1399eea5a2657e4708",
+    "behavior_lce_lookup_disposition.lce": "8acea9547e44aeb8074a2ea090985d0ff6b5e889be9e44eb6d00c9b586b98a11",
+    "behavior_lce_open_case_encounter.lce": "80c1a284014b0563c0d42df59a79f05b69ce73524b1bf6068d61cce2f3f57ac7",
+    "behavior_lce_payment_disposition.lce": "98734f2c418178fe127ca532eed4766b628ecf69afef3fa64e143457853ca661",
+    "behavior_lce_queued_worker.lce": "6c5f547332d89c28eabf3714a7a11b368d3ac191a230c77714e420f1bdc4ea70",
+    "behavior_lce_record_reservation.lce": "9c3750b7eba1d33401178c6e18e053802f9676eca4995442f0259e9726b66547",
+    "behavior_lce_release_single_slot.lce": "72d0132cd48018da3001bd20af9d06affd1400abbf28fb9f5aa0988f7ae2951c",
+    "behavior_lce_reserve_available.lce": "709a6e4916a03b2703d7fae87fbdfa829e09fcca04276ca451ece4bc4ccd3463",
+    "behavior_lce_reserve_single_slot.lce": "562e236aed72cee102041eb35b9b049852d5493b2fb4530f93c606bc5bca3270",
+    "behavior_lce_review_disposition.lce": "51c622f453aff775e2c010a40a2baced80ec5e7698dab8112f79458c5856b27a",
+    "behavior_lce_same_tenant.lce": "78c116dce334798622a9053726faaca0ae660d7b8003dde461aa94337ff165f7",
+    "behavior_lce_typed_candidate_eligible.lce": "f51210598323bcb9c02086a7d80bd0455138328bca9c6b2c306e4100c585bf5a",
+    "behavior_lce_weighted_router.lce": "9df97ae36d25845206a36f8a252a2f4b252e61f8558ef3626d0c37349d3756bc",
+    "behavior_studio_reservation_input.lce": "39df8ba7c4119c72b681d800afc9c47b8bbff85a68f49736ffae1061b4d212cf",
+    "data_health_reception_values.lce": "03b4c50064222b7d3542a35affce876a537b367b03787a66286e2dabfe12eca0",
+    "data_lce_organization_registry.lce": "081187a3f3fc1dba7ae7ac9e27e9763e5d4a851d9b7b09c4b03b87ec3e843d01",
+    "data_lce_reservation_data.lce": "de6fd162f49cb072ac51a0dec00857aa30786a133c736f664ddf2439f89634c5",
+    "definition_studio_message_ledger.lce": "1395e5412ba0420df10db41b2d57f08c90e32f5013d884137bddbdea13f1bcc3",
+    "definition_studio_message_stock.lce": "b675990901d28b65103f26e38cc64f7b86a9dbfa93bae66cb701d622888c705e",
+    "main.lce": "b397473150150eec5186f05c9585551bf93d3d9122385335baaa191198d11eb7",
+    "messages_lce_reservation_delivery.lce": "288d44dd241913a51181be6f57b71f439963a2d07cb1e938dfc7e611e1d56613",
+    "messages_studio_stock_ledger_delivery.lce": "413980417739507780374f936728ae4aa6774d7dd4373edb0feeb612105d1c0f",
+    "state_lce_case_encounter.lce": "4db07d9ad42bdb520ebc370130485ed8d5b5aba54cd1a849bdd81d0cf451ed27",
+    "state_lce_case_ticket.lce": "9a2252e07821286fd95ffdd13b7412e3f43d4b624fb6c77d18f5346f03986f72",
+    "state_lce_reservation_ledger.lce": "db7112b6c5f224a48c0851add6c651f7faa36fb8e60f9eb400573d79588e642e",
+    "state_lce_resource_reservation.lce": "c0d90c2646010e011cfe96da64fcb33c798ad5425167fa91cdf22f92369d38c2",
+    "state_lce_single_slot_assignment.lce": "8c1dfe76286c7a07b7d8cb92c64091be64736647bf9a2476344f7a878822b2e6",
+    "state_studio_message_stock_owner.lce": "0f34ea58d52ad709a5c3fb7959497b9a500c586ea6b640c0e420cbff487479f8",
+    "system_m1_unified_reservation.lce": "fdf00aeb4e3b756cd9beb2eb8be748cf84866b1f4bf9fe27eff05be28bda9ca3",
+    "test_case01.lce": "fc72655e440cbc9ca69260ef4758d3f145c0bd65f57ff0f34e624dab47fde6e9",
+    "test_case02.lce": "c94e7f79a54ed891cad8265b77b7f8f116498b48403af7c29c818524a6e5881c",
+    "test_case03.lce": "52086050df63e158a43f51dbce423824931ca7e35fcd1a6120ce03742bb1a2bc",
+    "test_case04.lce": "9390a28c3720d13b91f6f2c7f06ed9588c3c327002fd0a3404905ca20f5d5b22",
+    "test_case05.lce": "881734fccb963fa688688eb09faf611baa229d9ddd7910b1e8d4877aac982590",
+    "test_case06.lce": "89b44a4fc83a9b0d1236d794d0b59b036d8d9eb2ae91f9aacaa2b1500b8b3357",
+    "test_case07.lce": "4456781a3ca4fe9dc944ed7042449ec8131df1fcf4c38be830b7661fd4f63ecf",
+    "test_case08.lce": "e4cb53eea98f2fcf9c2d4af1b21953f88775798796457c78ad204720b42d6a19",
+    "test_case09.lce": "55b5d2ca0983f850ede38c0816bff082baea2a139f1b40cbc8b7d8f31404f996",
+    "test_case10.lce": "6bc3897c051fa02affb6e9476b63b111eb52a2d76d25ad85952e8d9b2d85284e",
+    "test_case11.lce": "3edeb8743738f25a147c2e9b9de28e6e818a7dd724ef09d417852ec3f19df999",
+    "test_case12.lce": "853bb824cc1b82196d4ffa297fe5d517d2fe4d201e7925ef40511249e2e30775",
+    "test_case13.lce": "61ae1b1648593a0a53c75ca95ca667eaae2195c1c3bef75f4e0cafdbf2d53e53",
+    "test_case14.lce": "5c1f0eb0df02e9108baa0795571fd8a268553c6ddd62794b39b53b2c1d3395ef",
+    "test_case15.lce": "0e7c7f541d1622ea654cd52ebbfd46a9b1d0eb01215b1bdd7fba715964ee9342",
+    "test_case16.lce": "d473a72036a6d05cf69b283c51e693ccdd90f9e0a4687521f6b8af7b22cd9fb2",
+    "test_case17.lce": "32637ab26edc3a648ee932670730cbe850387567607b07e1561b6f86747834df",
+    "test_case18.lce": "7f9dbe2432bfb0a5e66e230188172fc3c512b6c555eb42a06c3272715b565272",
+    "test_case19.lce": "e29c85e5743abbe07d3b4020da9bf086ad1c5cafdaf58208f9d85731768fc996",
+    "test_case20.lce": "b42c67d54cf8b7b99f8825575bb920a146acfad5edb663ae7dd5c4db489a1c09",
+    "test_case21.lce": "b666ed9ebd557ae102d46804bc52380aa262b668c2b0cdde74aff21506927ef7",
+    "test_case22.lce": "a88be27a05fb98bf424f024b41ea7de40bc617b494d60e7e7470a42af21492d9",
+    "test_case23.lce": "1209cb80c7f4715692a102d46df41b166d35481ec355dd0845ae5b062804e431",
+    "test_case24.lce": "47fc2570b0448ccb2182007f26e10ce497a4054a7d87985873de6c6e9a804f87",
+    "test_case25.lce": "74392f7baa6125c3536b4f31aaf3fb4a8cfb06afd13f69471a86aabe4f8b8cf4",
+    "test_case26.lce": "df59da029cec67b7a4a99787715d66311cd34fc4a64d3562b6103f50538d61d2",
+    "test_case27.lce": "d071ade0a6afd85082c205f3d739915322ec65e9aea7aace6c1bb1fbab3ea691",
+    "test_case28.lce": "9dcd8708cb25f93589f7d90186b0d0df7723e017103d79d1b275e9c0f9751c8f",
+    "test_case29.lce": "7480d8e69374b92e600725a6ddefa23cf2f4f7e62e3dededb7d75b2fd56039cc",
+    "test_case30.lce": "ad42d626247b8d1515effd56a6bc3c11b0fb1e0a9d5496161da038b58b822986",
+    "test_case31.lce": "4e710110256d3f006f063c744e03ab089d85ea39de0b4d5625a9cb4640ac85b8",
+    "test_case32.lce": "3d9bc1b4e1531a0ae1db385c306cddc31d09a057346c5da02e053f982bcdf810",
+    "test_case33.lce": "2d40b3e9c2957ffa1a8923bfa9694acb8861f38dd4fbcc855cc66dde74ed6ba2",
+    "test_case34.lce": "be00ffeba77cf17e7faba1765b790105c6d36264483d65c10eefe346631f1407",
+    "test_case35.lce": "72c8538b3b864aef4e651bfaf674053852ad4deb45fce4a767a564d4dce46b83",
+    "test_case36.lce": "61b74a8f981cc9aa5a8535d1ca92c8bfc69406c20263ca8c5fec930777c230ee",
+    "test_case37.lce": "0908440d041d6d92847b6a71113fc34d76390d50e662380c0eacb5932ef5078d",
+    "test_case38.lce": "29710c08da5bfa1e9d0149b394fc9a72e4fc304dbc4d99c636dd31ad55356f7e",
+    "test_case39.lce": "eae399e4b84dfb31576aa6de9bd9d802f2868b8b526b5c3c9b322b5704d8810a",
+    "test_case40.lce": "8a5a674e627782065d70c221a3ec9cdbe2559655c315a4f03ab417f083a72363",
+    "test_case41.lce": "c45ec438840cf325465e691876e55ff668cf4bccf388da541092eb48d7438335",
+    "test_case42.lce": "4eb81f17747b3e876628a617f6f901bfce9652ab2a600df7c700c6b9f31b7c7b",
+    "test_case43.lce": "517954d8fe539b2d54c52f608b4ea4e127cfe5116d9be83b9e5ceaf5a4ade8da",
+    "timing_continuum_placement.lce": "a3e5fb989713a581b9e2ed63c1ce068b8edcf05daf6329062afd0ea928574012",
+    "timing_exclusive_branching.lce": "cee80acd8a57f377862ea1a6e10c01eb619182eef859ad34c9ea6cb8a1475fc8",
+    "timing_inspection_cloud_placement.lce": "18061fe73b520e9e0d16b2856d25c84a92c2349a7a7af566965628639163cd8b",
+    "timing_inspection_link_loss.lce": "a3d4ad1b1c7e52a4e7d47a7908b42e084b9f79c4114e02f0095b92d394151f45",
+    "timing_inspection_one_core.lce": "aed73390434df69f7396c2c62d235bceb34089d9105e74fd1fcc407b457819b5",
+    "timing_inspection_power_loss.lce": "4f25c0a56d7c8dfdab61b7750a765669ecb1514d1aa0b5357c7ce0e8f251b7e9",
+    "timing_retry_lab.lce": "64981e8d133c57477dcc773650a2d20a0f9635d261dacd6fb5a315f78ee66a18",
+    "workflow_example_service_desk.lce": "e1aaf9675b4a61032ed1adf7616743660bbbf0b5ba49af1585187f563e727a26",
+    "workflow_health_reception_inspection.lce": "4ceda97f15f8a545d5276c4c119e815daff343f2bc72aa3e37058d8c899d8ccd",
+    "workflow_studio_reservation_orchestration.lce": "c9159af15dd5463eb3f152e87d103b95cdd0f52ed2967e6288d6a5cf5c493665"
+  },
+  "artifacts": [
+    {
+      "kind": "behavior",
+      "id": "example.health-record-access",
+      "version": "1.0.0",
+      "digest": "0e0ce2992270fefe6bb87abf994f3a3f02c9ff33386899212c83a0fed79545f9"
+    },
+    {
+      "kind": "behavior",
+      "id": "example.school-record-access",
+      "version": "1.0.0",
+      "digest": "93d9cd77db39c746cc627caa916b4ff819fa5f51ef9718ce9ef52f45528a0554"
+    },
+    {
+      "kind": "behavior",
+      "id": "example.structured-health-access",
+      "version": "1.0.0",
+      "digest": "f2fa72b1bad9cc1a20907eacf4661ac5cc65b5a54e25fb79416c509d6a29d8b4"
+    },
+    {
+      "kind": "behavior",
+      "id": "example.structured-school-access",
+      "version": "1.0.0",
+      "digest": "8ef6189212714f67efc436c5290ec61bcfa035c70f1f3db910d4c89479a63d2a"
+    },
+    {
+      "kind": "behavior",
+      "id": "health.reception.entry-route",
+      "version": "1.0.0",
+      "digest": "a3b1ba4f0fd5faa449a511c9d1f168c8f11d744705f78d23abc43205b22aa1c4"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.accept-single-slot",
+      "version": "1.0.0",
+      "digest": "83a6743e8336ed65b1ccdadaa62c53f5a02de427fa219327a94ddcf04ac284ea"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.access-policy",
+      "version": "1.0.0",
+      "digest": "c3ea0e265eda646913c821beb717b099c6cdc4fbc4bc018ef43e3f744fd72ee6"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.affiliation-disposition",
+      "version": "1.0.0",
+      "digest": "67e99b13064039879e2e761fbafc3e08de874c7bab1b1f0deeca238d388d4797"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.begin-interrupt",
+      "version": "1.0.0",
+      "digest": "88caf8c20ae3ddd7b23071b45d2122b9fcf907e9bfea74aa28e9f6902ea64253"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.call-case-ticket",
+      "version": "1.0.0",
+      "digest": "5f8372c64154a3eeb79fd67760c89f97236c48d49c692b2dcd0e78ae3e978e0d"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.cancel-case-ticket",
+      "version": "1.0.0",
+      "digest": "afe4765da37a19b1ea21fcdd5ec6f79bac652cd20afa9a26af1277659a40f4c4"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.candidate-eligible",
+      "version": "1.0.0",
+      "digest": "55f9ce6a6f2cc750abece6b4e20a1da28192d8e27998b9abce50e28426a4746a"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.confirm-current-handoff",
+      "version": "1.0.0",
+      "digest": "df5c3a0fdff3521a14cd316ced918896b805bb9c0863b25aa49644ab6ac35ceb"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.confirm-dispatch-choice",
+      "version": "1.0.0",
+      "digest": "e0ca0b100b5a0d447e28dc0329adeb5d75131e7a01b31a569b33b4ce27e36b5a"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.confirm-exception-handoff",
+      "version": "1.0.0",
+      "digest": "43da39059ed1f471ef719079c51008eb215dd656d9a4ec8d5ad24fa1edfe2363"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.confirm-named-result",
+      "version": "1.0.0",
+      "digest": "3d02bce2450c1bc45a720e0d4d867d931915ee60270acf747720c822c1093caf"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.durable-store",
+      "version": "1.0.0",
+      "digest": "684f3db4ca6399ebe427b800519c1f1b1ee06cfa22c9297126b90eb494aace59"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.forward-boolean",
+      "version": "1.0.0",
+      "digest": "866b8f44f61a0e1ecefb7c972d883f2c3fe1b664ce8f38ed302b796363755fcd"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.issue-case-ticket",
+      "version": "1.0.0",
+      "digest": "4818ba7cbbaed9c779b0f5d4075dcb0f32ff2795ab964031dc04b9edcd7c5d1a"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.lookup-disposition",
+      "version": "1.0.0",
+      "digest": "e31d5bc2b490a571432c52987d46e7ecea77ac1a609bce57a0daa0979ac24485"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.open-case-encounter",
+      "version": "1.0.0",
+      "digest": "1ec7b32f544695a9eaa37119808521d18d7c3cf8ccf2eebc8f1f38b8f0653ba7"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.payment-disposition",
+      "version": "1.0.0",
+      "digest": "0796a2680195766eef01dd3da1f49e68fa45a372c39b50cc918fab5fce488390"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.queued-worker",
+      "version": "1.0.0",
+      "digest": "feb920153cc02adf0cc4c242b5adc9f59dd7140389cf28cb04bdcf392efde8d4"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.record-reservation",
+      "version": "1.0.0",
+      "digest": "9145b305b276df20f105200d66a850ddc8770342c4aa3667acbcb18d3e127b8f"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.release-single-slot",
+      "version": "1.0.0",
+      "digest": "6e95931400283848daa691ef0210eb414ba7353c10beda3d80fe2e56a650e7d4"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.reserve-available",
+      "version": "1.0.0",
+      "digest": "fcc031fbeac056d50c05856c1720c35b228aafe59ab8849714c377d41be37a7b"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.reserve-single-slot",
+      "version": "1.0.0",
+      "digest": "d84b56796d238e864ffd26751cd093bc972695921b74a4c5274cd12b5f678bbb"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.review-disposition",
+      "version": "1.0.0",
+      "digest": "229d6cd6ca6a7c06ecefe37fdca7709bc046c99c94366de96c3ff9f3256144c0"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.same-tenant",
+      "version": "1.0.0",
+      "digest": "122757d94e9c45a2376d28d9d415312e18df91766376a2b9366ba9d23efb9888"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.typed-candidate-eligible",
+      "version": "1.0.0",
+      "digest": "f5b7eb5f64fe8d2a5ddecae751056ec2f4c42d7c7524209ff23817aa5513d133"
+    },
+    {
+      "kind": "behavior",
+      "id": "lce.weighted-router",
+      "version": "1.0.0",
+      "digest": "d5ec35ee9032e054294650d98b5782544fec2a986506c037a47bc5d1c714c962"
+    },
+    {
+      "kind": "behavior",
+      "id": "studio.reservation-input",
+      "version": "1.0.0",
+      "digest": "b757fb15246be425c79e23744a10f862030d8d6b830f983dcef5dd3b0d796e1d"
+    },
+    {
+      "kind": "data",
+      "id": "health.reception-values",
+      "version": "1.0.0",
+      "digest": "4d0598fa8805c4ed76b6e0252047b26d2d36b7c1da275df1a21b3517a1c5a28e"
+    },
+    {
+      "kind": "data",
+      "id": "lce.organization-registry",
+      "version": "1.0.0",
+      "digest": "1a46e290cf1fe661ef726c1bccc0eddd1728b90888621ab3ab67fe406f180dd9"
+    },
+    {
+      "kind": "data",
+      "id": "lce.reservation-data",
+      "version": "1.0.0",
+      "digest": "5b5fe8d605eeb0474f4109feca342f38e64e1f346c77afa339aec79853e28ffd"
+    },
+    {
+      "kind": "definition",
+      "id": "studio.message-ledger",
+      "version": "1.0.0",
+      "digest": "bdb9a5bf6f5e1bc5e24e5f5c00bffe05eeaae3f4b530b9a32a116be29a5d3469"
+    },
+    {
+      "kind": "definition",
+      "id": "studio.message-stock",
+      "version": "2.0.0",
+      "digest": "c1e5c8b0fa2a17c0723ec076e04c53ca49e4aa019304ca780975afdb44d7b7c5"
+    },
+    {
+      "kind": "messages",
+      "id": "lce.reservation-delivery",
+      "version": "1.0.0",
+      "digest": "1e4cb278737b7ab183d593b0143a7fc678158252af7241a6b929e11792bcfde1"
+    },
+    {
+      "kind": "messages",
+      "id": "studio.stock-ledger-delivery",
+      "version": "1.0.0",
+      "digest": "5a6860a738f20b92489a6a7029137e16a7054857da5c24d93c9efc5f4285a45b"
+    },
+    {
+      "kind": "state",
+      "id": "lce.case-encounter",
+      "version": "1.0.0",
+      "digest": "a3f7bd341c2f1632cbe882f5051b6917594ea10b3bbf19ceb95851acb495b191"
+    },
+    {
+      "kind": "state",
+      "id": "lce.case-ticket",
+      "version": "1.0.0",
+      "digest": "22ba9c4c227c9266f42b085ac52e58039d3a615c7e8f9cd7551d24c69c54c838"
+    },
+    {
+      "kind": "state",
+      "id": "lce.reservation-ledger",
+      "version": "1.0.0",
+      "digest": "255167c72b0f6acab5ce38d02d7dbb7703241544b1752eeed045c46331f98856"
+    },
+    {
+      "kind": "state",
+      "id": "lce.resource-reservation",
+      "version": "1.0.0",
+      "digest": "5f180141fc9d1f9040a8a548482f3c0ae67cafb1f482703854ae461bc3fabc6b"
+    },
+    {
+      "kind": "state",
+      "id": "lce.single-slot-assignment",
+      "version": "1.0.0",
+      "digest": "42b463197ee0cf7fba19735c43793f376d8eee3fd7750b065a456ffa904dcefe"
+    },
+    {
+      "kind": "state",
+      "id": "studio.message-stock-owner",
+      "version": "1.0.0",
+      "digest": "bea5e0f8c33acfd7b7c929d9d660f611017e603a9bb8a99f828cf191be66cad1"
+    },
+    {
+      "kind": "system",
+      "id": "m1-unified-reservation",
+      "version": "2.0.0",
+      "digest": "2f630494b5c354b9a520fea2e8cc07990d576728a3810930fdb6346aa921137c"
+    },
+    {
+      "kind": "timing",
+      "id": "continuum-placement",
+      "version": "1.0.0",
+      "digest": "0fcecd000998fbf176bee725f2eb3365f6efccb1dc65da458fe7c220b0372468"
+    },
+    {
+      "kind": "timing",
+      "id": "exclusive-branching",
+      "version": "1.0.0",
+      "digest": "6c00db15d3995313bb272e06eae5974fc09c828432acfdfd534f5eae7e7e45af"
+    },
+    {
+      "kind": "timing",
+      "id": "inspection-cloud-placement",
+      "version": "1.0.0",
+      "digest": "8f7b5c43f1b053669040f37e70df86b7cfc5c1a1b22f8f9d23e602097f4d590d"
+    },
+    {
+      "kind": "timing",
+      "id": "inspection-link-loss",
+      "version": "1.0.0",
+      "digest": "ed8674f33650d142eed6d2ef199e85e53389363f4bd537a423207f3db3bd29d6"
+    },
+    {
+      "kind": "timing",
+      "id": "inspection-one-core",
+      "version": "1.0.0",
+      "digest": "56511c27470c58710b5c9153c3873143a87b6815bb6e7b309973ade422e8acd0"
+    },
+    {
+      "kind": "timing",
+      "id": "inspection-power-loss",
+      "version": "1.0.0",
+      "digest": "845939a65915308cc835f6b6ea16038683fd89f1afadd59f01e226b21d6c6996"
+    },
+    {
+      "kind": "timing",
+      "id": "retry-lab",
+      "version": "1.0.0",
+      "digest": "380a8e519d6adec53ed4fdce1dbe68c4efce2c1fe68662c22cdba15f29fd6097"
+    },
+    {
+      "kind": "workflow",
+      "id": "example.service-desk",
+      "version": "1.0.0",
+      "digest": "a54529d7394b915bd0e6642f3b6514c9a1e692b930b76a04a4e19edd34bc5bae"
+    },
+    {
+      "kind": "workflow",
+      "id": "health.reception-inspection",
+      "version": "1.0.0",
+      "digest": "088c835ed9b9b7cdf42f6aa4590b5cbcab496fd4467f1fc9293e53023feeb0ce"
+    },
+    {
+      "kind": "workflow",
+      "id": "studio.reservation-orchestration",
+      "version": "1.0.0",
+      "digest": "b598b8b2ee57b91ae114cc0c7f44e883fd0cfa5b9fff882f2f71019d722cb3f9"
+    }
+  ]
+}

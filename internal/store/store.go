@@ -74,6 +74,9 @@ func initialize(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS configuration_packages (
+ id TEXT NOT NULL, version TEXT NOT NULL, digest TEXT NOT NULL, body JSON NOT NULL, installed_at TIMESTAMPTZ NOT NULL, PRIMARY KEY(id,version)
+);
 CREATE TABLE IF NOT EXISTS projects (
  id TEXT PRIMARY KEY,
  body JSON NOT NULL,

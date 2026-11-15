@@ -1,0 +1,46 @@
+language "1.0";
+module "export.data_health_reception_values" version "1.0.0";
+
+
+data data_health_reception_values {
+  author = "LCE Studio contributors";
+  description = "Explicit candidate eligibility evidence for bounded reception experiments. Fields are supplied by a synthetic workforce adapter, not inferred by the runner.";
+  entities = [];
+  id = "health.reception-values";
+  license = "MIT";
+  name = "Synthetic reception adapter facts";
+  records = [
+    {
+      fields = [
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "facilityMatches";
+          type = "boolean";
+        },
+        {
+          name = "serviceMatches";
+          type = "boolean";
+        },
+        {
+          name = "qualified";
+          type = "boolean";
+        },
+        {
+          name = "onDuty";
+          type = "boolean";
+        },
+        {
+          name = "available";
+          type = "integer";
+        }
+      ];
+      name = "CandidateFacts";
+    }
+  ];
+  relationships = [];
+  schemaVersion = 1;
+  version = "1.0.0";
+}

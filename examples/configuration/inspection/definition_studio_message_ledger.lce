@@ -1,0 +1,14 @@
+language "1.0";
+module "export.definition_studio_message_ledger" version "1.0.0";
+import "state_lce_reservation_ledger.lce" as m_state_lce_reservation_ledger;
+
+definition definition_studio_message_ledger {
+  aspects = [
+    aspect("ledger", m_state_lce_reservation_ledger.state_lce_reservation_ledger)
+  ];
+  description = "";
+  id = "studio.message-ledger";
+  name = "Reservation ledger";
+  schemaVersion = 1;
+  version = "1.0.0";
+}

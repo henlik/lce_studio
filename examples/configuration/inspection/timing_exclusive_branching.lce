@@ -1,0 +1,281 @@
+language "1.0";
+module "export.timing_exclusive_branching" version "1.0.0";
+import "behavior_lce_queued_worker.lce" as m_behavior_lce_queued_worker;
+import "behavior_lce_durable_store.lce" as m_behavior_lce_durable_store;
+import "behavior_lce_weighted_router.lce" as m_behavior_lce_weighted_router;
+
+timing timing_exclusive_branching {
+  description = "One router selects an edge or cloud processing path per request. Both branches reuse the same worker and store packages. Retries keep their original route; weights are reproducible choices, not business rules.";
+  edges = [
+    {
+      id = "client-router";
+      latencyMs = 2;
+      source = "client";
+      target = "router";
+    },
+    {
+      id = "router-edge";
+      latencyMs = 2;
+      routeWeight = 3;
+      source = "router";
+      target = "worker-edge";
+    },
+    {
+      id = "router-cloud";
+      latencyMs = 2;
+      routeWeight = 1;
+      source = "router";
+      target = "worker-cloud";
+    },
+    {
+      id = "edge-store";
+      latencyMs = 2;
+      source = "worker-edge";
+      target = "store-edge";
+    },
+    {
+      id = "cloud-store";
+      latencyMs = 2;
+      source = "worker-cloud";
+      target = "store-cloud";
+    }
+  ];
+  id = "exclusive-branching";
+  infrastructure = {
+    hosts = [
+      {
+        activeWatts = 8;
+        cpuCores = 1;
+        id = "device-host";
+        idleWatts = 3;
+        memoryMb = 512;
+        name = "Client device";
+        outages = [];
+        siteId = "field-site";
+        tier = "device";
+      },
+      {
+        activeWatts = 45;
+        cpuCores = 4;
+        id = "edge-host";
+        idleWatts = 12;
+        memoryMb = 4096;
+        name = "Edge server";
+        outages = [];
+        siteId = "field-site";
+        tier = "edge";
+      },
+      {
+        activeWatts = 160;
+        cpuCores = 8;
+        id = "cloud-host";
+        idleWatts = 40;
+        memoryMb = 16384;
+        name = "Remote server";
+        outages = [];
+        siteId = "remote-site";
+        tier = "cloud";
+      }
+    ];
+    links = [
+      {
+        bandwidthKbps = 10000;
+        id = "local-link";
+        latencyMs = 2;
+        outages = [];
+        sourceHostId = "device-host";
+        targetHostId = "edge-host";
+      },
+      {
+        bandwidthKbps = 256;
+        id = "device-wan";
+        latencyMs = 80;
+        outages = [];
+        sourceHostId = "device-host";
+        targetHostId = "cloud-host";
+      },
+      {
+        bandwidthKbps = 256;
+        id = "edge-wan";
+        latencyMs = 80;
+        outages = [];
+        sourceHostId = "edge-host";
+        targetHostId = "cloud-host";
+      }
+    ];
+    messageBytes = 1024;
+    placements = [
+      {
+        hostId = "device-host";
+        nodeId = "client";
+      },
+      {
+        hostId = "edge-host";
+        nodeId = "router";
+      },
+      {
+        hostId = "edge-host";
+        nodeId = "worker-edge";
+      },
+      {
+        hostId = "edge-host";
+        nodeId = "store-edge";
+      },
+      {
+        hostId = "cloud-host";
+        nodeId = "worker-cloud";
+      },
+      {
+        hostId = "cloud-host";
+        nodeId = "store-cloud";
+      }
+    ];
+    sites = [
+      {
+        id = "field-site";
+        latitude = 2;
+        longitude = 29;
+        name = "Field site";
+      },
+      {
+        id = "remote-site";
+        latitude = 50.85;
+        longitude = 4.35;
+        name = "Remote site";
+      }
+    ];
+  };
+  name = "Reusable components and exclusive routes";
+  nodes = [
+    {
+      config = {
+        capacity = 1;
+        deduplicate = false;
+        memoryMb = 64;
+        processingMs = 0;
+      };
+      id = "client";
+      name = "Request client";
+      position = {
+        x = 60;
+        y = 190;
+      };
+      type = "client";
+    },
+    {
+      component = ref(m_behavior_lce_weighted_router.behavior_lce_weighted_router);
+      config = {
+        capacity = 2;
+        deduplicate = false;
+        memoryMb = 64;
+        processingMs = 5;
+      };
+      id = "router";
+      name = "Exclusive route";
+      position = {
+        x = 300;
+        y = 190;
+      };
+      type = "router";
+    },
+    {
+      component = ref(m_behavior_lce_queued_worker.behavior_lce_queued_worker);
+      config = {
+        capacity = 2;
+        deduplicate = false;
+        memoryMb = 128;
+        processingMs = 20;
+      };
+      id = "worker-edge";
+      name = "Edge worker";
+      position = {
+        x = 540;
+        y = 60;
+      };
+      type = "service";
+    },
+    {
+      component = ref(m_behavior_lce_durable_store.behavior_lce_durable_store);
+      config = {
+        capacity = 1;
+        deduplicate = true;
+        memoryMb = 256;
+        processingMs = 10;
+      };
+      id = "store-edge";
+      name = "Edge store";
+      position = {
+        x = 780;
+        y = 60;
+      };
+      type = "database";
+    },
+    {
+      component = ref(m_behavior_lce_queued_worker.behavior_lce_queued_worker);
+      config = {
+        capacity = 2;
+        deduplicate = false;
+        memoryMb = 128;
+        processingMs = 20;
+      };
+      id = "worker-cloud";
+      name = "Cloud worker";
+      position = {
+        x = 540;
+        y = 320;
+      };
+      type = "service";
+    },
+    {
+      component = ref(m_behavior_lce_durable_store.behavior_lce_durable_store);
+      config = {
+        capacity = 1;
+        deduplicate = true;
+        memoryMb = 256;
+        processingMs = 10;
+      };
+      id = "store-cloud";
+      name = "Cloud store";
+      position = {
+        x = 780;
+        y = 320;
+      };
+      type = "database";
+    }
+  ];
+  packages = [
+    lock(m_behavior_lce_queued_worker.behavior_lce_queued_worker),
+    lock(m_behavior_lce_durable_store.behavior_lce_durable_store),
+    lock(m_behavior_lce_weighted_router.behavior_lce_weighted_router)
+  ];
+  requirements = [
+    {
+      id = "REQ-001";
+      rule = "no_duplicates";
+      targetMs = 0;
+      text = "A retried request must not create a duplicate operation.";
+    },
+    {
+      id = "REQ-002";
+      rule = "all_complete";
+      targetMs = 0;
+      text = "Every request receives a successful response before retries are exhausted.";
+    },
+    {
+      id = "REQ-003";
+      rule = "latency_p95";
+      targetMs = 600;
+      text = "95% of requests complete within 600 ms.";
+    }
+  ];
+  scenario = {
+    dropFirstResponse = false;
+    intervalMs = 250;
+    jitterMs = 0;
+    maxRetries = 2;
+    requestCount = 12;
+    seed = 42;
+    timeoutMs = 600;
+  };
+  schemaVersion = 3;
+}

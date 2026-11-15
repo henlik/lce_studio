@@ -1,0 +1,172 @@
+language "1.0";
+module "export.behavior_example_health_record_access" version "1.0.0";
+import "behavior_lce_access_policy.lce" as m_behavior_lce_access_policy;
+
+behavior behavior_example_health_record_access {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      permitted = {
+        node = "policy";
+        port = "permitted";
+      };
+    };
+    inputs = [
+      {
+        name = "subjectTenant";
+        type = "string";
+      },
+      {
+        name = "resourceTenant";
+        type = "string";
+      },
+      {
+        name = "role";
+        type = "string";
+      },
+      {
+        name = "requestedScope";
+        type = "string";
+      },
+      {
+        name = "active";
+        type = "boolean";
+      }
+    ];
+    nodes = [
+      {
+        component = ref(m_behavior_lce_access_policy.behavior_lce_access_policy);
+        id = "policy";
+        inputs = {
+          active = {
+            input = "active";
+          };
+          allowedScope = {
+            literal = string("record:read");
+          };
+          requestedScope = {
+            input = "requestedScope";
+          };
+          requiredRole = {
+            literal = string("clinician");
+          };
+          resourceTenant = {
+            input = "resourceTenant";
+          };
+          role = {
+            input = "role";
+          };
+          subjectTenant = {
+            input = "subjectTenant";
+          };
+        };
+        position = {
+          x = 320;
+          y = 160;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "permitted";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Reuses the exact shared access-policy component with explicit domain role and scope literals. Synthetic inputs demonstrate composition, not real authentication or security enforcement.";
+  id = "example.health-record-access";
+  kernel = "composite";
+  license = "MIT";
+  name = "Health record access";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        permitted = boolean(true);
+      };
+      inputs = {
+        active = boolean(true);
+        requestedScope = string("record:read");
+        resourceTenant = string("tenant-alpha");
+        role = string("clinician");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Permit";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        requestedScope = string("record:read");
+        resourceTenant = string("tenant-beta");
+        role = string("clinician");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong tenant";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        requestedScope = string("record:read");
+        resourceTenant = string("tenant-alpha");
+        role = string("visitor");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong role";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        requestedScope = string("other:write");
+        resourceTenant = string("tenant-alpha");
+        role = string("clinician");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong scope";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(false);
+        requestedScope = string("record:read");
+        resourceTenant = string("tenant-alpha");
+        role = string("clinician");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Inactive subject";
+    }
+  ];
+  version = "1.0.0";
+}

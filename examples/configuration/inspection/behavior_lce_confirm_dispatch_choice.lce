@@ -1,0 +1,346 @@
+language "1.0";
+module "export.behavior_lce_confirm_dispatch_choice" version "1.0.0";
+
+
+behavior behavior_lce_confirm_dispatch_choice {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      available = {
+        node = "available";
+        port = "result";
+      };
+      resourceId = {
+        node = "resourceId";
+        port = "result";
+      };
+      route = {
+        node = "route";
+        port = "result";
+      };
+      selectedA = {
+        node = "allowA";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "choice";
+        type = "string";
+      },
+      {
+        name = "candidateAEligible";
+        type = "boolean";
+      },
+      {
+        name = "candidateBEligible";
+        type = "boolean";
+      },
+      {
+        name = "resourceA";
+        type = "string";
+      },
+      {
+        name = "resourceB";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "choseA";
+        inputs = {
+          left = {
+            input = "choice";
+          };
+          right = {
+            literal = string("candidateA");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "allowA";
+        inputs = {
+          left = {
+            node = "choseA";
+            port = "result";
+          };
+          right = {
+            input = "candidateAEligible";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "choseB";
+        inputs = {
+          left = {
+            input = "choice";
+          };
+          right = {
+            literal = string("candidateB");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "allowB";
+        inputs = {
+          left = {
+            node = "choseB";
+            port = "result";
+          };
+          right = {
+            input = "candidateBEligible";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "bRoute";
+        inputs = {
+          condition = {
+            node = "allowB";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("wait");
+          };
+          trueValue = {
+            literal = string("candidateB");
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "route";
+        inputs = {
+          condition = {
+            node = "allowA";
+            port = "result";
+          };
+          falseValue = {
+            node = "bRoute";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("candidateA");
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "available";
+        inputs = {
+          left = {
+            node = "allowA";
+            port = "result";
+          };
+          right = {
+            node = "allowB";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "chosenResource";
+        inputs = {
+          condition = {
+            node = "allowA";
+            port = "result";
+          };
+          falseValue = {
+            input = "resourceB";
+          };
+          trueValue = {
+            input = "resourceA";
+          };
+        };
+        op = "select";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "resourceId";
+        inputs = {
+          condition = {
+            node = "available";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("");
+          };
+          trueValue = {
+            node = "chosenResource";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "available";
+        type = "boolean";
+      },
+      {
+        name = "selectedA";
+        type = "boolean";
+      },
+      {
+        name = "resourceId";
+        type = "string";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "A dispatcher explicitly selects candidateA or candidateB. Only an eligible selected candidate advances to atomic reservation. No candidate is silently chosen when neither is eligible.";
+  id = "lce.confirm-dispatch-choice";
+  kernel = "composite";
+  license = "MIT";
+  name = "Validate a human dispatcher choice";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        available = boolean(true);
+        resourceId = string("resourceA");
+        route = string("candidateA");
+        selectedA = boolean(true);
+      };
+      inputs = {
+        candidateAEligible = boolean(true);
+        candidateBEligible = boolean(true);
+        choice = string("candidateA");
+        resourceA = string("resourceA");
+        resourceB = string("resourceB");
+      };
+      name = "Select eligible A";
+    },
+    {
+      expected = {
+        available = boolean(true);
+        resourceId = string("resourceB");
+        route = string("candidateB");
+        selectedA = boolean(false);
+      };
+      inputs = {
+        candidateAEligible = boolean(true);
+        candidateBEligible = boolean(true);
+        choice = string("candidateB");
+        resourceA = string("resourceA");
+        resourceB = string("resourceB");
+      };
+      name = "Select eligible B";
+    },
+    {
+      expected = {
+        available = boolean(false);
+        resourceId = string("");
+        route = string("wait");
+        selectedA = boolean(false);
+      };
+      inputs = {
+        candidateAEligible = boolean(false);
+        candidateBEligible = boolean(true);
+        choice = string("candidateA");
+        resourceA = string("resourceA");
+        resourceB = string("resourceB");
+      };
+      name = "Selected A ineligible";
+    },
+    {
+      expected = {
+        available = boolean(false);
+        resourceId = string("");
+        route = string("wait");
+        selectedA = boolean(false);
+      };
+      inputs = {
+        candidateAEligible = boolean(false);
+        candidateBEligible = boolean(false);
+        choice = string("candidateB");
+        resourceA = string("resourceA");
+        resourceB = string("resourceB");
+      };
+      name = "No eligible candidate";
+    },
+    {
+      expected = {
+        available = boolean(false);
+        resourceId = string("");
+        route = string("wait");
+        selectedA = boolean(false);
+      };
+      inputs = {
+        candidateAEligible = boolean(true);
+        candidateBEligible = boolean(true);
+        choice = string("wait");
+        resourceA = string("resourceA");
+        resourceB = string("resourceB");
+      };
+      name = "Explicitly wait";
+    }
+  ];
+  version = "1.0.0";
+}

@@ -1,0 +1,501 @@
+language "1.0";
+module "export.workflow_example_service_desk" version "1.0.0";
+import "behavior_lce_confirm_current_handoff.lce" as m_behavior_lce_confirm_current_handoff;
+import "state_lce_case_ticket.lce" as m_state_lce_case_ticket;
+import "state_lce_single_slot_assignment.lce" as m_state_lce_single_slot_assignment;
+
+workflow workflow_example_service_desk {
+  author = "LCE Studio contributors";
+  dataContracts = [];
+  decisions = [
+    bundle(m_behavior_lce_confirm_current_handoff.behavior_lce_confirm_current_handoff)
+  ];
+  description = "A nonclinical service desk reuses the exact case-ticket and single-slot assignment owners from hospital reception. Explicit human call and receiving acceptance are synthetic response tasks.";
+  entry = "issueTicket";
+  id = "example.service-desk";
+  inputs = [
+    {
+      name = "caseId";
+      type = "string";
+    },
+    {
+      name = "queueStart";
+      type = "integer";
+    }
+  ];
+  license = "MIT";
+  machines = [
+    lock(m_state_lce_case_ticket.state_lce_case_ticket),
+    lock(m_state_lce_single_slot_assignment.state_lce_single_slot_assignment)
+  ];
+  name = "Service desk reusable ownership";
+  nodes = [
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "callCustomer";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          ticketId = "ticketId";
+          ticketNumber = "ticketNumber";
+        };
+        command = "issue";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        owner = "queue";
+      };
+      id = "issueTicket";
+      kind = "command";
+      name = "issueTicket";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    },
+    {
+      branch = {
+        else = "callCustomer";
+        then = "markCalled";
+        variable = "gate";
+      };
+      id = "callCustomer";
+      kind = "task";
+      name = "Call service ticket";
+      position = {
+        x = 400;
+        y = 0;
+      };
+      task = {
+        assign = {
+          gate = "ready";
+        };
+        instructions = "Confirm the called customer is present. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          caseId = {
+            input = "caseId";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+        response = [
+          {
+            name = "ready";
+            type = "boolean";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Call service ticket";
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "reserveDesk";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {};
+        command = "call";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        owner = "queue";
+      };
+      id = "markCalled";
+      kind = "command";
+      name = "markCalled";
+      position = {
+        x = 800;
+        y = 0;
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "deskAcceptance";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          held = "held";
+          received = "received";
+          token = "reservationToken";
+        };
+        command = "reserve";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          eligible = {
+            literal = boolean(true);
+          };
+          resourceId = {
+            literal = string("deskA");
+          };
+        };
+        owner = "desk";
+      };
+      id = "reserveDesk";
+      kind = "command";
+      name = "reserveDesk";
+      position = {
+        x = 1200;
+        y = 0;
+      };
+    },
+    {
+      id = "deskAcceptance";
+      kind = "task";
+      name = "Desk accepts customer";
+      next = "validateAcceptance";
+      position = {
+        x = 0;
+        y = 220;
+      };
+      task = {
+        assign = {
+          accepted = "accepted";
+          reference = "reference";
+          resource = "resourceId";
+          responseCase = "caseId";
+        };
+        instructions = "Explicitly accept this case at deskA with a receiving reference. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            literal = string("deskA");
+          };
+          token = {
+            variable = "token";
+          };
+        };
+        response = [
+          {
+            name = "accepted";
+            type = "boolean";
+          },
+          {
+            name = "resourceId";
+            type = "string";
+          },
+          {
+            name = "caseId";
+            type = "string";
+          },
+          {
+            name = "reference";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Desk accepts customer";
+      };
+    },
+    {
+      branch = {
+        else = "releaseDesk";
+        then = "acceptDesk";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "valid";
+        };
+        component = ref(m_behavior_lce_confirm_current_handoff.behavior_lce_confirm_current_handoff);
+        inputs = {
+          accepted = {
+            variable = "accepted";
+          };
+          caseId = {
+            variable = "responseCase";
+          };
+          expectedCase = {
+            input = "caseId";
+          };
+          expectedResource = {
+            literal = string("deskA");
+          };
+          reference = {
+            variable = "reference";
+          };
+          resourceId = {
+            variable = "resource";
+          };
+        };
+      };
+      id = "validateAcceptance";
+      kind = "decision";
+      name = "validateAcceptance";
+      position = {
+        x = 400;
+        y = 220;
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "complete";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          held = "held";
+          received = "received";
+          token = "reservationToken";
+        };
+        command = "accept";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            literal = string("deskA");
+          };
+        };
+        owner = "desk";
+      };
+      id = "acceptDesk";
+      kind = "command";
+      name = "acceptDesk";
+      position = {
+        x = 800;
+        y = 220;
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "reserveDesk";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          held = "held";
+          received = "received";
+          token = "reservationToken";
+        };
+        command = "release";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            literal = string("deskA");
+          };
+        };
+        owner = "desk";
+      };
+      id = "releaseDesk";
+      kind = "command";
+      name = "releaseDesk";
+      position = {
+        x = 1200;
+        y = 220;
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "reviewClosed";
+        variable = "gate";
+      };
+      id = "dependencyReview";
+      kind = "task";
+      name = "Review service dependency";
+      position = {
+        x = 0;
+        y = 440;
+      };
+      task = {
+        assign = {
+          gate = "reviewed";
+        };
+        instructions = "Keep the request pending until an operator handles the failed owned command. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        response = [
+          {
+            name = "reviewed";
+            type = "boolean";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review service dependency";
+      };
+    },
+    {
+      end = {
+        outcome = "serviceAccepted";
+        outputs = {
+          reference = {
+            variable = "reference";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+      };
+      id = "complete";
+      kind = "end";
+      name = "Service accepted";
+      position = {
+        x = 400;
+        y = 440;
+      };
+    },
+    {
+      end = {
+        outcome = "serviceReviewClosed";
+        outputs = {
+          reference = {
+            variable = "reference";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+      };
+      id = "reviewClosed";
+      kind = "end";
+      name = "Request closed after manual review";
+      position = {
+        x = 800;
+        y = 440;
+      };
+    }
+  ];
+  outputs = [
+    {
+      name = "ticketNumber";
+      type = "integer";
+    },
+    {
+      name = "reference";
+      type = "string";
+    }
+  ];
+  owners = [
+    {
+      id = "queue";
+      initial = {
+        nextNumber = {
+          input = "queueStart";
+        };
+      };
+      machine = ref(m_state_lce_case_ticket.state_lce_case_ticket);
+      name = "Service queue";
+    },
+    {
+      id = "desk";
+      initial = {
+        resourceId = {
+          literal = string("deskA");
+        };
+      };
+      machine = ref(m_state_lce_single_slot_assignment.state_lce_single_slot_assignment);
+      name = "Service desk slot";
+    }
+  ];
+  schemaVersion = 1;
+  signals = [];
+  variables = [
+    {
+      initial = boolean(false);
+      name = "gate";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "held";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "received";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "accepted";
+      type = "boolean";
+    },
+    {
+      initial = string("");
+      name = "ticketId";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "token";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "resource";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "responseCase";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "reference";
+      type = "string";
+    },
+    {
+      initial = integer(0);
+      name = "ticketNumber";
+      type = "integer";
+    }
+  ];
+  version = "1.0.0";
+}

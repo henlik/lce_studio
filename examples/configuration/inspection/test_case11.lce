@@ -1,0 +1,126 @@
+language "1.0";
+module "tests.case11" version "1.0.0";
+import "workflow_health_reception_inspection.lce" as m_workflow_health_reception_inspection;
+
+-- Ambiguous identity requires review
+experiment case11 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    events = [
+      {
+        id = "response1";
+        kind = "response";
+        taskId = "task1";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRecorded = boolean(true);
+          assessmentRef = string("screen-100");
+          emergencyIdentified = boolean(false);
+          evidenceRef = string("fixture-1");
+        };
+      },
+      {
+        id = "response2";
+        kind = "response";
+        taskId = "task2";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-2");
+          ready = boolean(true);
+        };
+      },
+      {
+        id = "response3";
+        kind = "response";
+        taskId = "task3";
+        values = {
+          actorRef = string("synthetic-actor");
+          completed = boolean(true);
+          evidenceRef = string("fixture-3");
+          matchCount = integer(2);
+          patientId = string("");
+        };
+      }
+    ];
+    expected = {
+      activeTaskNode = "identityReview";
+      cancelledTasks = 0;
+      completedTasks = 3;
+      eventReceipts = 3;
+      outcome = "";
+      owners = [
+        {
+          effects = 0;
+          instanceId = "queue";
+          receipts = 2;
+          revision = 2;
+          state = {
+            called = boolean(true);
+            cancelled = boolean(false);
+            caseId = string("case-100");
+            nextNumber = integer(101);
+            ticketId = string("ticket:case-100");
+            ticketNumber = integer(100);
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "encounter";
+          receipts = 0;
+          revision = 0;
+          state = {
+            caseId = string("");
+            encounterId = string("");
+            patientId = string("");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorA";
+          receipts = 0;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(1);
+            holder = string("");
+            resourceId = string("providerA");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorB";
+          receipts = 0;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(1);
+            holder = string("");
+            resourceId = string("providerB");
+          };
+        }
+      ];
+      status = "waiting";
+      tasks = 4;
+      variables = {
+        lookupConfirm = boolean(false);
+        lookupRegister = boolean(false);
+        ticketNumber = integer(100);
+      };
+    };
+    inputs = {
+      arrivalId = string("arrival-100");
+      capacityA = integer(1);
+      capacityB = integer(1);
+      caseId = string("case-100");
+      facilityId = string("hospital-alpha");
+      identifier = string("synthetic-id-100");
+      queueStart = integer(100);
+      serviceId = string("outpatient");
+    };
+    name = "Ambiguous identity requires review";
+    schemaVersion = 1;
+  };
+  target = target(m_workflow_health_reception_inspection.workflow_health_reception_inspection);
+}

@@ -1,0 +1,313 @@
+language "1.0";
+module "export.behavior_lce_open_case_encounter" version "1.0.0";
+
+
+behavior behavior_lce_open_case_encounter {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      caseId = {
+        input = "caseId";
+      };
+      encounterId = {
+        node = "encounter";
+        port = "result";
+      };
+      patientId = {
+        input = "patientId";
+      };
+    };
+    inputs = [
+      {
+        name = "currentCase";
+        type = "string";
+      },
+      {
+        name = "currentPatient";
+        type = "string";
+      },
+      {
+        name = "currentEncounter";
+        type = "string";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "patientId";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "unopened";
+        inputs = {
+          left = {
+            input = "currentCase";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "sameCase";
+        inputs = {
+          left = {
+            input = "currentCase";
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "samePatient";
+        inputs = {
+          left = {
+            input = "currentPatient";
+          };
+          right = {
+            input = "patientId";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "sameVisit";
+        inputs = {
+          left = {
+            node = "sameCase";
+            port = "result";
+          };
+          right = {
+            node = "samePatient";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "ownerAllowed";
+        inputs = {
+          left = {
+            node = "unopened";
+            port = "result";
+          };
+          right = {
+            node = "sameVisit";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "caseNamedEmpty";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "caseNamed";
+        inputs = {
+          value = {
+            node = "caseNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "patientNamedEmpty";
+        inputs = {
+          left = {
+            input = "patientId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "patientNamed";
+        inputs = {
+          value = {
+            node = "patientNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      },
+      {
+        id = "named";
+        inputs = {
+          left = {
+            node = "caseNamed";
+            port = "result";
+          };
+          right = {
+            node = "patientNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 400;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "ownerAllowed";
+            port = "result";
+          };
+          right = {
+            node = "named";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 400;
+        };
+      },
+      {
+        id = "newEncounter";
+        inputs = {
+          left = {
+            literal = string("encounter:");
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "concat";
+        position = {
+          x = 1080;
+          y = 400;
+        };
+      },
+      {
+        id = "encounter";
+        inputs = {
+          condition = {
+            node = "unopened";
+            port = "result";
+          };
+          falseValue = {
+            input = "currentEncounter";
+          };
+          trueValue = {
+            node = "newEncounter";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 600;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "patientId";
+        type = "string";
+      },
+      {
+        name = "encounterId";
+        type = "string";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Requires named case and patient, and prevents another case/patient pair from replacing an already owned encounter.";
+  id = "lce.open-case-encounter";
+  kernel = "composite";
+  license = "MIT";
+  name = "Open or reuse case encounter";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

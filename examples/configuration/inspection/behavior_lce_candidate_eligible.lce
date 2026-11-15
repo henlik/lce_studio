@@ -1,0 +1,251 @@
+language "1.0";
+module "export.behavior_lce_candidate_eligible" version "1.0.0";
+
+
+behavior behavior_lce_candidate_eligible {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      eligible = {
+        node = "eligible";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "facilityMatches";
+        type = "boolean";
+      },
+      {
+        name = "serviceMatches";
+        type = "boolean";
+      },
+      {
+        name = "qualified";
+        type = "boolean";
+      },
+      {
+        name = "onDuty";
+        type = "boolean";
+      },
+      {
+        name = "available";
+        type = "integer";
+      }
+    ];
+    nodes = [
+      {
+        id = "rightPlace";
+        inputs = {
+          left = {
+            input = "facilityMatches";
+          };
+          right = {
+            input = "serviceMatches";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "onQualifiedDuty";
+        inputs = {
+          left = {
+            input = "qualified";
+          };
+          right = {
+            input = "onDuty";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "eligibleAuthority";
+        inputs = {
+          left = {
+            node = "rightPlace";
+            port = "result";
+          };
+          right = {
+            node = "onQualifiedDuty";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "hasCapacity";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            input = "available";
+          };
+        };
+        op = "less_than";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "eligible";
+        inputs = {
+          left = {
+            node = "eligibleAuthority";
+            port = "result";
+          };
+          right = {
+            node = "hasCapacity";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "eligible";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Combines explicit authority-supplied facility/service/qualification/duty facts and positive capacity. The result is only a proposal; the capacity owner must reserve atomically.";
+  id = "lce.candidate-eligible";
+  kernel = "composite";
+  license = "MIT";
+  name = "Check explicit candidate eligibility";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        eligible = boolean(true);
+      };
+      inputs = {
+        available = integer(1);
+        facilityMatches = boolean(true);
+        onDuty = boolean(true);
+        qualified = boolean(true);
+        serviceMatches = boolean(true);
+      };
+      name = "Eligible";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(1);
+        facilityMatches = boolean(false);
+        onDuty = boolean(true);
+        qualified = boolean(true);
+        serviceMatches = boolean(true);
+      };
+      name = "Wrong facility";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(1);
+        facilityMatches = boolean(true);
+        onDuty = boolean(true);
+        qualified = boolean(true);
+        serviceMatches = boolean(false);
+      };
+      name = "Wrong service";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(1);
+        facilityMatches = boolean(true);
+        onDuty = boolean(true);
+        qualified = boolean(false);
+        serviceMatches = boolean(true);
+      };
+      name = "Not qualified";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(1);
+        facilityMatches = boolean(true);
+        onDuty = boolean(false);
+        qualified = boolean(true);
+        serviceMatches = boolean(true);
+      };
+      name = "Off duty";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(0);
+        facilityMatches = boolean(true);
+        onDuty = boolean(true);
+        qualified = boolean(true);
+        serviceMatches = boolean(true);
+      };
+      name = "Full";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        available = integer(-1);
+        facilityMatches = boolean(true);
+        onDuty = boolean(true);
+        qualified = boolean(true);
+        serviceMatches = boolean(true);
+      };
+      name = "Invalid capacity";
+    }
+  ];
+  version = "1.0.0";
+}

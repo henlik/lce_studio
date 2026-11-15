@@ -1,0 +1,281 @@
+language "1.0";
+module "export.behavior_lce_typed_candidate_eligible" version "1.0.0";
+import "data_health_reception_values.lce" as m_data_health_reception_values;
+import "behavior_lce_candidate_eligible.lce" as m_behavior_lce_candidate_eligible;
+
+behavior behavior_lce_typed_candidate_eligible {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      eligible = {
+        node = "allowed";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "candidate";
+        recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+        type = "record";
+      },
+      {
+        name = "expectedResource";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        field = "resourceId";
+        id = "resourceId";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        field = "facilityMatches";
+        id = "facilityMatches";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 280;
+          y = 0;
+        };
+      },
+      {
+        field = "serviceMatches";
+        id = "serviceMatches";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 560;
+          y = 0;
+        };
+      },
+      {
+        field = "qualified";
+        id = "qualified";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 840;
+          y = 0;
+        };
+      },
+      {
+        field = "onDuty";
+        id = "onDuty";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 1120;
+          y = 0;
+        };
+      },
+      {
+        field = "available";
+        id = "available";
+        inputs = {
+          value = {
+            input = "candidate";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 1400;
+          y = 0;
+        };
+      },
+      {
+        component = ref(m_behavior_lce_candidate_eligible.behavior_lce_candidate_eligible);
+        id = "eligibility";
+        inputs = {
+          available = {
+            node = "available";
+            port = "result";
+          };
+          facilityMatches = {
+            node = "facilityMatches";
+            port = "result";
+          };
+          onDuty = {
+            node = "onDuty";
+            port = "result";
+          };
+          qualified = {
+            node = "qualified";
+            port = "result";
+          };
+          serviceMatches = {
+            node = "serviceMatches";
+            port = "result";
+          };
+        };
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "sameResource";
+        inputs = {
+          left = {
+            node = "resourceId";
+            port = "result";
+          };
+          right = {
+            input = "expectedResource";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "allowed";
+        inputs = {
+          left = {
+            node = "sameResource";
+            port = "result";
+          };
+          right = {
+            node = "eligibility";
+            port = "eligible";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "eligible";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  dataContracts = [
+    lock(m_data_health_reception_values.data_health_reception_values)
+  ];
+  description = "Reads exact adapter facts and checks the configured resource identity before reusing the scalar eligibility decision.";
+  id = "lce.typed-candidate-eligible";
+  kernel = "composite";
+  license = "MIT";
+  name = "Read typed candidate eligibility";
+  schemaVersion = 3;
+  tests = [
+    {
+      expected = {
+        eligible = boolean(true);
+      };
+      inputs = {
+        candidate = {
+          record = {
+            available = integer(1);
+            facilityMatches = boolean(true);
+            onDuty = boolean(true);
+            qualified = boolean(true);
+            resourceId = string("providerA");
+            serviceMatches = boolean(true);
+          };
+          recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+          type = "record";
+        };
+        expectedResource = string("providerA");
+      };
+      name = "Eligible known resource";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        candidate = {
+          record = {
+            available = integer(1);
+            facilityMatches = boolean(true);
+            onDuty = boolean(true);
+            qualified = boolean(true);
+            resourceId = string("other");
+            serviceMatches = boolean(true);
+          };
+          recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+          type = "record";
+        };
+        expectedResource = string("providerA");
+      };
+      name = "Wrong resource";
+    },
+    {
+      expected = {
+        eligible = boolean(false);
+      };
+      inputs = {
+        candidate = {
+          record = {
+            available = integer(0);
+            facilityMatches = boolean(true);
+            onDuty = boolean(true);
+            qualified = boolean(true);
+            resourceId = string("providerA");
+            serviceMatches = boolean(true);
+          };
+          recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+          type = "record";
+        };
+        expectedResource = string("providerA");
+      };
+      name = "No capacity";
+    }
+  ];
+  version = "1.0.0";
+}

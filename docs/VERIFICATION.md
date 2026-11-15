@@ -1,5 +1,39 @@
 # Verification
 
+## Configuration Language 1.0 — 15 November 2026
+
+- Six authoring gates implemented: versioned parsing/AST and typed diagnostics;
+  local modules, parameters and fixtures; all eight current artifact kinds;
+  shared-engine experiments; source/canvas editing; and portable immutable packages.
+- The reference project compiles **56 artifacts in 100 source files** and passes
+  **43 independently expected experiments**. It includes 37 inspection exercises
+  plus six shared M1 scenarios. The two-module reuse example passes two separate
+  expectations. Legacy stock migration preserves all nine component test cases.
+- The installed catalog and portable compiler share `internal/assembly` resolution,
+  compatibility checking and execution planning. No independent runtime semantics
+  were introduced. Timed deployment experiments remain separate from logical
+  workflow/state/message execution.
+- **Passed:** full `go test -race -count=1 ./...` against isolated PostgreSQL schemas,
+  `go vet ./...`, backend and standalone CLI builds, **53 frontend tests** and Vue
+  production build. Three mounted Vue checks cover empty creation, visible navigation
+  despite ribbon collapse, source-backed graph edits/test execution, and stale
+  response protection. Compiler fuzzing completed 3,713 executions without failure.
+- All eleven live API acceptance scripts passed, including the new configuration
+  suite. CLI package generation and fresh replay succeeded without PostgreSQL.
+  Tests reject wrong expectations, missing observations, corrupt provenance, unknown
+  fields, stale edit hashes, escaping imports, cycles and excessive fixture expansion.
+- PostgreSQL tests cover transaction rollback on a later artifact conflict,
+  concurrent/idempotent installation, immutable release snapshots and reopening.
+  A package with evidence is re-executed before installation; structural verification
+  alone is not presented as proof that its supplied test report is authentic.
+- Manual browser/mobile visual review and local Docker execution remain pending;
+  the existing Vite chunk-size warning remains. Source hashes are integrity metadata,
+  not signing, authorization or implementation-build attestation.
+- **Configuration-language gates 6/6 (100% of the bounded authoring scope).
+  M1 remains 100%; overall roadmap remains 33%.**
+  Review with [CONFIGURATION_LANGUAGE.md](CONFIGURATION_LANGUAGE.md).
+
+
 ## Complete component source and testbench — 15 November 2026
 
 - LCE Source 0.2 compiles scalar component bodies into generated data schemas,

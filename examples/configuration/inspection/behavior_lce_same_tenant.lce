@@ -1,0 +1,100 @@
+language "1.0";
+module "export.behavior_lce_same_tenant" version "1.0.0";
+
+
+behavior behavior_lce_same_tenant {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      sameTenant = {
+        node = "compare";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "subjectTenant";
+        type = "string";
+      },
+      {
+        name = "resourceTenant";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "compare";
+        inputs = {
+          left = {
+            input = "subjectTenant";
+          };
+          right = {
+            input = "resourceTenant";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 240;
+          y = 120;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "sameTenant";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Compares two explicit tenant identifiers as exact strings; it does not authenticate either identity.";
+  id = "lce.same-tenant";
+  kernel = "composite";
+  license = "MIT";
+  name = "Same tenant";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        sameTenant = boolean(true);
+      };
+      inputs = {
+        resourceTenant = string("tenant-alpha");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Same tenant";
+    },
+    {
+      expected = {
+        sameTenant = boolean(false);
+      };
+      inputs = {
+        resourceTenant = string("tenant-beta");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Different tenant";
+    }
+  ];
+  version = "1.0.0";
+}

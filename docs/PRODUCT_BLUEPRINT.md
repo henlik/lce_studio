@@ -62,6 +62,10 @@ retains its existing simulation behavior; these models are not silently merged.
 
 **Weighted implementation: 33%**
 
+Configuration Language 1.0: **6/6 implementation gates complete**, with manual UX
+review pending. See [configuration acceptance](CONFIGURATION_V1_ACCEPTANCE.md).
+This authoring work adds no later-runtime checkpoint credit.
+
 Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.
 
 - 2026-11-14: **18%** — Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.

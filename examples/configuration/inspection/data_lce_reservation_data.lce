@@ -1,0 +1,55 @@
+language "1.0";
+module "export.data_lce_reservation_data" version "1.0.0";
+
+
+data data_lce_reservation_data {
+  author = "LCE Studio contributors";
+  description = "Required scalar command and notice records shared by resource-reservation examples. Command identity belongs to the state protocol envelope.";
+  entities = [];
+  id = "lce.reservation-data";
+  license = "MIT";
+  name = "Resource reservation values";
+  records = [
+    {
+      fields = [
+        {
+          name = "tenantId";
+          type = "string";
+        },
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "quantity";
+          type = "integer";
+        }
+      ];
+      name = "ReservationCommand";
+    },
+    {
+      fields = [
+        {
+          name = "tenantId";
+          type = "string";
+        },
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "quantity";
+          type = "integer";
+        },
+        {
+          name = "remaining";
+          type = "integer";
+        }
+      ];
+      name = "ReservationNotice";
+    }
+  ];
+  relationships = [];
+  schemaVersion = 1;
+  version = "1.0.0";
+}

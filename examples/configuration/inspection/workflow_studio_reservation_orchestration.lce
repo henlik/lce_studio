@@ -1,0 +1,311 @@
+language "1.0";
+module "export.workflow_studio_reservation_orchestration" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "behavior_studio_reservation_input.lce" as m_behavior_studio_reservation_input;
+import "state_studio_message_stock_owner.lce" as m_state_studio_message_stock_owner;
+
+workflow workflow_studio_reservation_orchestration {
+  author = "LCE Studio";
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  decisions = [
+    bundle(m_behavior_studio_reservation_input.behavior_studio_reservation_input)
+  ];
+  description = "Review, reserve, deliver and resume on a correlated ledger acknowledgement";
+  entry = "review";
+  id = "studio.reservation-orchestration";
+  inputs = [
+    {
+      name = "request";
+      recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+      type = "record";
+    }
+  ];
+  license = "MIT";
+  machines = [
+    lock(m_state_studio_message_stock_owner.state_studio_message_stock_owner)
+  ];
+  name = "Reservation orchestration";
+  nodes = [
+    {
+      branch = {
+        else = "review";
+        then = "validate";
+        variable = "proceed";
+      };
+      id = "review";
+      kind = "task";
+      name = "Review request";
+      position = {
+        x = 0;
+        y = 0;
+      };
+      stage = "Arrival";
+      task = {
+        assign = {
+          proceed = "proceed";
+        };
+        instructions = "Proceed to reserve, or return to review. Cancel is available while waiting.";
+        kind = "human";
+        request = {
+          request = {
+            input = "request";
+          };
+        };
+        response = [
+          {
+            name = "proceed";
+            type = "boolean";
+          }
+        ];
+        title = "Review reservation";
+      };
+    },
+    {
+      decision = {
+        assign = {
+          request = "request";
+        };
+        component = ref(m_behavior_studio_reservation_input.behavior_studio_reservation_input);
+        inputs = {
+          request = {
+            input = "request";
+          };
+        };
+      };
+      id = "validate";
+      kind = "decision";
+      name = "Typed input decision";
+      next = "reserve";
+      position = {
+        x = 0;
+        y = 0;
+      };
+      stage = "Reserve";
+    },
+    {
+      branch = {
+        else = "rejected";
+        then = "handoff";
+        variable = "accepted";
+      };
+      command = {
+        acceptedVariable = "accepted";
+        assign = {
+          remaining = "remaining";
+        };
+        command = "reserve";
+        errorNext = "failed";
+        inputs = {
+          request = {
+            variable = "request";
+          };
+        };
+        owner = "stock";
+      };
+      id = "reserve";
+      kind = "command";
+      name = "Reserve shared stock";
+      position = {
+        x = 0;
+        y = 0;
+      };
+      stage = "Reserve";
+    },
+    {
+      branch = {
+        else = "ledgerRejected";
+        then = "complete";
+        variable = "acknowledged";
+      };
+      id = "handoff";
+      kind = "task";
+      name = "Await ledger acknowledgement";
+      position = {
+        x = 0;
+        y = 0;
+      };
+      stage = "Ledger";
+      task = {
+        assign = {
+          acknowledged = "accepted";
+        };
+        instructions = "Only the correlated broker receipt can complete this task.";
+        kind = "adapter";
+        request = {};
+        response = [
+          {
+            name = "accepted";
+            type = "boolean";
+          }
+        ];
+        title = "Record reservation";
+      };
+    },
+    {
+      end = {
+        outcome = "reservationRecorded";
+        outputs = {
+          recorded = {
+            variable = "acknowledged";
+          };
+          remaining = {
+            variable = "remaining";
+          };
+        };
+      };
+      id = "complete";
+      kind = "end";
+      name = "reservationRecorded";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    },
+    {
+      end = {
+        outcome = "reservationRejected";
+        outputs = {
+          recorded = {
+            variable = "acknowledged";
+          };
+          remaining = {
+            variable = "remaining";
+          };
+        };
+      };
+      id = "rejected";
+      kind = "end";
+      name = "reservationRejected";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    },
+    {
+      end = {
+        outcome = "reservationFailed";
+        outputs = {
+          recorded = {
+            variable = "acknowledged";
+          };
+          remaining = {
+            variable = "remaining";
+          };
+        };
+      };
+      id = "failed";
+      kind = "end";
+      name = "reservationFailed";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    },
+    {
+      end = {
+        outcome = "reservationCancelled";
+        outputs = {
+          recorded = {
+            variable = "acknowledged";
+          };
+          remaining = {
+            variable = "remaining";
+          };
+        };
+      };
+      id = "cancelled";
+      kind = "end";
+      name = "reservationCancelled";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    },
+    {
+      end = {
+        outcome = "ledgerRejected";
+        outputs = {
+          recorded = {
+            variable = "acknowledged";
+          };
+          remaining = {
+            variable = "remaining";
+          };
+        };
+      };
+      id = "ledgerRejected";
+      kind = "end";
+      name = "ledgerRejected";
+      position = {
+        x = 0;
+        y = 0;
+      };
+    }
+  ];
+  outputs = [
+    {
+      name = "remaining";
+      type = "integer";
+    },
+    {
+      name = "recorded";
+      type = "boolean";
+    }
+  ];
+  owners = [
+    {
+      id = "stock";
+      initial = {};
+      machine = ref(m_state_studio_message_stock_owner.state_studio_message_stock_owner);
+      name = "Shared stock owner";
+    }
+  ];
+  schemaVersion = 1;
+  signals = [
+    {
+      inputs = [];
+      name = "cancel";
+      set = {};
+      target = "cancelled";
+    }
+  ];
+  variables = [
+    {
+      initial = boolean(false);
+      name = "proceed";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "accepted";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "acknowledged";
+      type = "boolean";
+    },
+    {
+      initial = integer(0);
+      name = "remaining";
+      type = "integer";
+    },
+    {
+      initial = {
+        record = {
+          quantity = integer(0);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+        };
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+        type = "record";
+      };
+      name = "request";
+      recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+      type = "record";
+    }
+  ];
+  version = "1.0.0";
+}

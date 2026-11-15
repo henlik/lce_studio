@@ -1,0 +1,84 @@
+language "1.0";
+module "export.state_lce_case_encounter" version "1.0.0";
+import "behavior_lce_open_case_encounter.lce" as m_behavior_lce_open_case_encounter;
+
+state state_lce_case_encounter {
+  author = "LCE Studio contributors";
+  commands = [
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        caseId = {
+          input = "caseId";
+        };
+        currentCase = {
+          state = "caseId";
+        };
+        currentEncounter = {
+          state = "encounterId";
+        };
+        currentPatient = {
+          state = "patientId";
+        };
+        patientId = {
+          input = "patientId";
+        };
+      };
+      decision = bundle(m_behavior_lce_open_case_encounter.behavior_lce_open_case_encounter);
+      effects = [];
+      inputs = [
+        {
+          name = "caseId";
+          type = "string";
+        },
+        {
+          name = "patientId";
+          type = "string";
+        }
+      ];
+      name = "open";
+      outputs = [
+        {
+          name = "encounterId";
+          type = "string";
+        }
+      ];
+      results = {
+        encounterId = "encounterId";
+      };
+      writes = {
+        caseId = "caseId";
+        encounterId = "encounterId";
+        patientId = "patientId";
+      };
+    }
+  ];
+  dataContracts = [];
+  description = "Owns one explicit case/patient association and stable encounter reference. Distinct case IDs produce distinct encounter IDs even when the patient is the same. This is modeled ownership, not a patient registry or live clinical database.";
+  effects = [];
+  id = "lce.case-encounter";
+  license = "MIT";
+  name = "Case-scoped encounter identity";
+  schemaVersion = 1;
+  state = [
+    {
+      durability = "durable";
+      initial = string("");
+      name = "caseId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = string("");
+      name = "patientId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = string("");
+      name = "encounterId";
+      type = "string";
+    }
+  ];
+  version = "1.0.0";
+}

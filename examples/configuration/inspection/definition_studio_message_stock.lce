@@ -1,0 +1,22 @@
+language "1.0";
+module "export.definition_studio_message_stock" version "2.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "behavior_studio_reservation_input.lce" as m_behavior_studio_reservation_input;
+import "state_studio_message_stock_owner.lce" as m_state_studio_message_stock_owner;
+import "workflow_studio_reservation_orchestration.lce" as m_workflow_studio_reservation_orchestration;
+import "messages_studio_stock_ledger_delivery.lce" as m_messages_studio_stock_ledger_delivery;
+
+definition definition_studio_message_stock {
+  aspects = [
+    aspect("stock", m_state_studio_message_stock_owner.state_studio_message_stock_owner),
+    aspect("notices", m_messages_studio_stock_ledger_delivery.messages_studio_stock_ledger_delivery),
+    aspect("flow", m_workflow_studio_reservation_orchestration.workflow_studio_reservation_orchestration),
+    aspect("input", m_behavior_studio_reservation_input.behavior_studio_reservation_input),
+    aspect("data", m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "";
+  id = "studio.message-stock";
+  name = "Stock with reservation messages";
+  schemaVersion = 1;
+  version = "2.0.0";
+}

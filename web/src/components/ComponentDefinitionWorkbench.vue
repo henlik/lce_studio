@@ -10,6 +10,7 @@ import StudioRibbon from './StudioRibbon.vue';
 import DraftStatus from './DraftStatus.vue';
 import CanvasInspector from './CanvasInspector.vue';
 import SystemSourceEditor from './SystemSourceEditor.vue';
+import ConfigurationProjectEditor from './ConfigurationProjectEditor.vue';
 const emit=defineEmits<{openAspect:[request:AspectEditorRequest]}>();
 const draft=ref<ComponentDefinition>(emptyDefinition());
 const recovery=useWorkspaceDraft('component-definition',{draft});
@@ -50,16 +51,17 @@ onMounted(()=>{void action('Loading component library',refresh);});
 
 <template>
 <section class="definition-workbench" :inert="recovery.status.value==='loading'" :aria-busy="!!busy">
- <StudioRibbon workspace="component-definition" :title="draft.name+' · '+draft.version" :active="tab" :structure="['Aspects','Connections','Source & testbench']" :execution="['Versions']" @select="tab=$event;selected=-1;settings=false">
+ <StudioRibbon workspace="component-definition" :title="draft.name+' · '+draft.version" :active="tab" :structure="['Aspects','Connections','Configuration language','Source & testbench']" :execution="['Versions']" @select="tab=$event;selected=-1;settings=false">
   <template #status><span>{{installed?'Installed exact version':'Definition draft'}}</span><DraftStatus :draft="recovery"/></template>
   <template #file><div class="commands"><button :disabled="!!busy" @click="reset">New component definition</button><button @click="exportDefinition">Export definition</button><button :disabled="!!busy" @click="importInput?.click()">Import definition</button><input ref="importInput" type="file" accept=".json,application/json" hidden @change="importDefinition"/></div></template>
   <template #help><p>A component definition owns named links to exact installed behavior, data, state, message and workflow versions. Its aspects remain reusable. Installing makes this definition version immutable.</p><p>Opening an aspect creates an editor draft. Install a new artifact version, return here, refresh the library, replace its pin and install a new component version. Edits never silently update installed systems. This manifest does not execute its aspects together.</p></template>
-  <div v-if="tab!=='Source & testbench'" class="commands"><button @click="settings=true;selected=-1;tab='Aspects'">Component identity</button><button :disabled="!!busy" @click="validate">Check compatibility</button><button :disabled="!!busy" @click="install">Install version</button><button :disabled="!!busy" @click="action('Refreshing library',refresh)">Refresh library</button><button :aria-pressed="tab==='Versions'" @click="tab=tab==='Versions'?'Aspects':'Versions'">{{tab==='Versions'?'Aspects':'Installed versions'}}</button><span role="status">{{busy}}</span></div>
+  <div v-if="tab!=='Source & testbench'&&tab!=='Configuration language'" class="commands"><button @click="settings=true;selected=-1;tab='Aspects'">Component identity</button><button :disabled="!!busy" @click="validate">Check compatibility</button><button :disabled="!!busy" @click="install">Install version</button><button :disabled="!!busy" @click="action('Refreshing library',refresh)">Refresh library</button><button :aria-pressed="tab==='Versions'" @click="tab=tab==='Versions'?'Aspects':'Versions'">{{tab==='Versions'?'Aspects':'Installed versions'}}</button><span role="status">{{busy}}</span></div>
  </StudioRibbon>
- <nav class="definition-views" aria-label="Component definition views"><button v-for="view in ['Aspects','Connections','Source & testbench','Versions']" :key="view" type="button" :aria-current="tab===view?'page':undefined" @click="tab=view;selected=-1;settings=false">{{view}}</button></nav>
+ <nav class="definition-views" aria-label="Component definition views"><button v-for="view in ['Aspects','Connections','Configuration language','Source & testbench','Versions']" :key="view" type="button" :aria-current="tab===view?'page':undefined" @click="tab=view;selected=-1;settings=false">{{view}}</button></nav>
  <p v-if="error" class="error" role="alert">{{error}}</p>
  <div v-if="validation&&!validation.valid" class="error"><button v-for="issue in validation.issues" :key="issue.path+issue.message" @click="locate(issue.path)">{{issue.path}}: {{issue.message}}</button></div>
  <div v-if="tab==='Versions'" class="version-list"><h2>Installed component definitions</h2><p>Versions are immutable. Open one to inspect it or create a new version.</p><p v-if="!records.length">No definitions installed yet.</p><button v-for="record in records" :key="record.definition.id+record.definition.version" @click="load(record)"><strong>{{record.definition.name}} · {{record.definition.version}}</strong><small>{{record.definition.id}} · {{record.definition.aspects.length}} aspects</small></button></div>
+ <ConfigurationProjectEditor v-else-if="tab==='Configuration language'" @catalog="action('Refreshing installed catalog',refresh)"/>
  <SystemSourceEditor v-else-if="tab==='Source & testbench'" mode="component" @installed="acceptSourceDefinition"/>
  <div v-else-if="tab==='Connections'" class="definition-canvas">
   <h2>Aspect connections</h2><p>Check compatibility to inspect typed ports and dependencies. Links declare exact output-to-input types; they do not yet execute, schedule tasks or deliver messages. Unconnected inputs remain outside this check.</p>

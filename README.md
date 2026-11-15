@@ -322,3 +322,27 @@ This is **LCE Source 0.2**, a small VHDL-inspired language, not standard VHDL.
 It reuses the existing engines. See [the step-by-step component guide](docs/COMPONENT_SOURCE_GUIDE.md)
 and [the syntax and scope](docs/SOURCE_AUTHORING_EXPERIMENT.md).
 M1 remains **100%**, overall **33%**; this UX experiment earns no new milestone credit.
+
+
+### Configuration Language 1.0
+
+Open **Components → Component definitions → Configuration language** (also under
+**Design → System architecture**). The new workspace supports local modules,
+parameters, reusable fixtures, typed artifacts, source/graph property editing,
+experiments and portable packages. Start empty or explicitly load **Inspection
+example**: 56 artifacts and 43 experiments, including reception, service-desk reuse,
+the shared M1 system and separate resource/fault simulations.
+
+Follow [the review walkthrough and language reference](docs/CONFIGURATION_LANGUAGE.md).
+The older **Source & testbench** editor remains available; importing its complete
+component migrates its definitions and independent testbench assertions.
+
+```sh
+go run ./cmd/configcheck -file examples/configuration/reuse/main.lce
+go run ./cmd/configcheck -file examples/configuration/inspection/main.lce
+```
+
+Configuration packages bind source, exact dependencies and replayable evidence.
+Installation is atomic across the artifact catalogs and package snapshot. These are
+bounded offline models, not signed live releases. Language gates: **6/6 implemented**;
+manual UX review follows. **M1 100%; overall roadmap 33%, unchanged.**

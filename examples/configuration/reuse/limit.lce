@@ -1,0 +1,22 @@
+language "1.0";
+module "reusable.limit" version "1.0.0";
+
+-- One reusable decision; specialized IDs prevent parameter variants colliding.
+parameter capacity : integer = 5;
+behavior Limit {
+  name = "Capacity decision";
+  license = "MIT";
+  behavior = {
+    inputs = [{ name = "quantity"; type = "integer"; }];
+    outputs = [{ name = "allowed"; type = "boolean"; }];
+    nodes = [{
+      id = "withinCapacity";
+      op = "less_or_equal";
+      inputs = {
+        left = { input = "quantity"; };
+        right = { literal = integer(capacity); };
+      };
+    }];
+    bindings = { allowed = { node = "withinCapacity"; port = "result"; }; };
+  };
+}

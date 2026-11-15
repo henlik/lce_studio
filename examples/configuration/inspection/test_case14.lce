@@ -1,0 +1,180 @@
+language "1.0";
+module "tests.case14" version "1.0.0";
+import "workflow_health_reception_inspection.lce" as m_workflow_health_reception_inspection;
+
+-- Payment policy failure requires review
+experiment case14 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    events = [
+      {
+        id = "response1";
+        kind = "response";
+        taskId = "task1";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRecorded = boolean(true);
+          assessmentRef = string("screen-100");
+          emergencyIdentified = boolean(false);
+          evidenceRef = string("fixture-1");
+        };
+      },
+      {
+        id = "response2";
+        kind = "response";
+        taskId = "task2";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-2");
+          ready = boolean(true);
+        };
+      },
+      {
+        id = "response3";
+        kind = "response";
+        taskId = "task3";
+        values = {
+          actorRef = string("synthetic-actor");
+          completed = boolean(true);
+          evidenceRef = string("fixture-3");
+          matchCount = integer(1);
+          patientId = string("patient-42");
+        };
+      },
+      {
+        id = "response4";
+        kind = "response";
+        taskId = "task4";
+        values = {
+          actorRef = string("synthetic-actor");
+          confirmed = boolean(true);
+          evidenceRef = string("fixture-4");
+          patientId = string("patient-42");
+        };
+      },
+      {
+        id = "response5";
+        kind = "response";
+        taskId = "task5";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-5");
+          status = string("verified");
+        };
+      },
+      {
+        id = "response6";
+        kind = "response";
+        taskId = "task6";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRef = string("assessment-100");
+          evidenceRef = string("fixture-6");
+          feverAlert = boolean(false);
+          observationRef = string("observations-100");
+          observationsAccepted = boolean(true);
+        };
+      },
+      {
+        id = "response7";
+        kind = "response";
+        taskId = "task7";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRef = string("assessment-100");
+          authorized = boolean(true);
+          disposition = string("released");
+          evidenceRef = string("fixture-7");
+        };
+      },
+      {
+        id = "response8";
+        kind = "response";
+        taskId = "task8";
+        values = {
+          actorRef = string("synthetic-actor");
+          disposition = string("policyError");
+          evidenceRef = string("fixture-8");
+        };
+      }
+    ];
+    expected = {
+      activeTaskNode = "paymentReview";
+      cancelledTasks = 0;
+      completedTasks = 8;
+      eventReceipts = 8;
+      outcome = "";
+      owners = [
+        {
+          effects = 0;
+          instanceId = "queue";
+          receipts = 2;
+          revision = 2;
+          state = {
+            called = boolean(true);
+            cancelled = boolean(false);
+            caseId = string("case-100");
+            nextNumber = integer(101);
+            ticketId = string("ticket:case-100");
+            ticketNumber = integer(100);
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "encounter";
+          receipts = 1;
+          revision = 1;
+          state = {
+            caseId = string("case-100");
+            encounterId = string("encounter:case-100");
+            patientId = string("patient-42");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorA";
+          receipts = 0;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(1);
+            holder = string("");
+            resourceId = string("providerA");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorB";
+          receipts = 0;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(1);
+            holder = string("");
+            resourceId = string("providerB");
+          };
+        }
+      ];
+      status = "waiting";
+      tasks = 9;
+      variables = {
+        reservationHeld = boolean(false);
+      };
+    };
+    inputs = {
+      arrivalId = string("arrival-100");
+      capacityA = integer(1);
+      capacityB = integer(1);
+      caseId = string("case-100");
+      facilityId = string("hospital-alpha");
+      identifier = string("synthetic-id-100");
+      queueStart = integer(100);
+      serviceId = string("outpatient");
+    };
+    name = "Payment policy failure requires review";
+    schemaVersion = 1;
+  };
+  target = target(m_workflow_health_reception_inspection.workflow_health_reception_inspection);
+}

@@ -1,0 +1,46 @@
+# Configuration Language v1 acceptance
+
+Scope: complete configuration authoring for the existing bounded offline engines.
+Live adapters, nested workflow execution, coupled logical/resource scheduling,
+replication and autonomous runtime retain their existing separate roadmap gates.
+
+The release is reviewed against six gates, not an arbitrary line-count score:
+
+| Gate | Required evidence | State |
+| --- | --- | --- |
+| 1. Foundation | Versioned syntax, AST, separate resolution/validation, typed diagnostics and deterministic compilation | Automated checks passed |
+| 2. Reuse | Local modules/imports, typed parameters/defaults, fixtures, pinned source/artifact closure; cycle and ambiguity rejection | Automated checks passed |
+| 3. Components | Data, behavior, state, messages, workflows and definitions authored through typed configuration; reception and contrasting examples | Automated checks passed |
+| 4. Systems/experiments | Systems, deployment/timing models and shared tests use existing engines with independent assertions | Automated checks passed |
+| 5. Editors | Completion, symbol navigation, formatting, safe rename and conflict-checked graphical edits preserve semantics/comments | Automated checks passed |
+| 6. Packages | Portable provenance, compatibility review, migration and all-or-nothing immutable installation; clean-environment reproduction | Automated checks passed |
+
+M1 remains **100%** and overall roadmap progress remains **33%**. Language gates
+are tracked separately. A gate is complete only after its executable acceptance
+checks pass. Manual product review follows the implementation.
+
+## Evidence
+
+1. `internal/configuration/parser.go`, `artifacts.go`, `compile.go` and tests cover
+   syntax, source-mapped type errors, deterministic output, unknown fields, cycles,
+   resource bounds and negative controls. Fuzzing exercised 3,713 inputs.
+2. `TestModuleReuseAndTypedDiagnostics`, `examples/configuration/reuse`, and CLI
+   confinement tests check explicit/default specialization equivalence, distinct
+   parameter variants, local imports and exact locks.
+3. `TestInspectionProject` compiles 56 artifacts covering all eight kinds and runs
+   43 independently expected experiments. Reception and service-desk behavior
+   reuse existing engine primitives. The exporter emits human-readable modules.
+4. `internal/assembly` shares the installed-catalog resolver and planner with the
+   source compiler. Six M1 scenarios join the reference suite; timed resource
+   experiments remain explicitly separate from logical execution.
+5. `TestEditorSemanticGuards`, Unicode source-location tests and mounted Vue
+   interaction checks cover source/graph property edits, comment-preserving format,
+   safe artifact renames, navigation, conflict rejection and visible navigation
+   with the ribbon collapsed. Manual browser/mobile visual acceptance is pending.
+6. Package replay, tamper controls, legacy migration with nine retained test cases,
+   PostgreSQL rollback/concurrency/reopen tests, and `acceptance-configuration.mjs`
+   cover portable evidence and atomic installation. Packages are unsigned; runtime
+   authorization and implementation provenance remain later milestones.
+
+**Configuration-language implementation: 6/6 automated gates (100% of this scope).**
+This percentage does not represent production readiness or replace manual UX review.

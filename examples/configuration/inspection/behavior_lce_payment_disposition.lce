@@ -1,0 +1,232 @@
+language "1.0";
+module "export.behavior_lce_payment_disposition" version "1.0.0";
+
+
+behavior behavior_lce_payment_disposition {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      proceed = {
+        node = "proceed";
+        port = "result";
+      };
+      route = {
+        node = "route";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "disposition";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "allow";
+        inputs = {
+          left = {
+            input = "disposition";
+          };
+          right = {
+            literal = string("allow");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "defer";
+        inputs = {
+          left = {
+            input = "disposition";
+          };
+          right = {
+            literal = string("defer");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "waive";
+        inputs = {
+          left = {
+            input = "disposition";
+          };
+          right = {
+            literal = string("waive");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "alternatives";
+        inputs = {
+          left = {
+            node = "defer";
+            port = "result";
+          };
+          right = {
+            node = "waive";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "proceed";
+        inputs = {
+          left = {
+            node = "allow";
+            port = "result";
+          };
+          right = {
+            node = "alternatives";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "route";
+        inputs = {
+          condition = {
+            node = "proceed";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("review");
+          };
+          trueValue = {
+            literal = string("proceed");
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "proceed";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Consumes an explicit policy disposition. Allow, defer and waive permit routine continuation; review, error and unknown values require review. It does not charge money, infer coverage or block emergency routing.";
+  id = "lce.payment-disposition";
+  kernel = "composite";
+  license = "MIT";
+  name = "Interpret explicit payment policy";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        proceed = boolean(true);
+        route = string("proceed");
+      };
+      inputs = {
+        disposition = string("allow");
+      };
+      name = "allow";
+    },
+    {
+      expected = {
+        proceed = boolean(true);
+        route = string("proceed");
+      };
+      inputs = {
+        disposition = string("defer");
+      };
+      name = "defer";
+    },
+    {
+      expected = {
+        proceed = boolean(true);
+        route = string("proceed");
+      };
+      inputs = {
+        disposition = string("waive");
+      };
+      name = "waive";
+    },
+    {
+      expected = {
+        proceed = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        disposition = string("review");
+      };
+      name = "review";
+    },
+    {
+      expected = {
+        proceed = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        disposition = string("policyError");
+      };
+      name = "policyError";
+    },
+    {
+      expected = {
+        proceed = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        disposition = string("unknown");
+      };
+      name = "unknown";
+    }
+  ];
+  version = "1.0.0";
+}

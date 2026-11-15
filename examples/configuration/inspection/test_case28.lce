@@ -1,0 +1,355 @@
+language "1.0";
+module "tests.case28" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "state_lce_resource_reservation.lce" as m_state_lce_resource_reservation;
+
+-- School library reservation
+experiment case28 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    expected = [
+      {
+        effects = 3;
+        instanceId = "primary";
+        receipts = 5;
+        revision = 3;
+        state = {
+          acceptedSinceRestart = integer(1);
+          available = integer(0);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+        };
+      },
+      {
+        effects = 2;
+        instanceId = "partner";
+        receipts = 3;
+        revision = 2;
+        state = {
+          acceptedSinceRestart = integer(11);
+          available = integer(0);
+          resourceId = string("titleB");
+          tenantId = string("libraryBeta");
+        };
+      }
+    ];
+    instances = [
+      {
+        id = "primary";
+        initial = {
+          acceptedSinceRestart = integer(0);
+          available = integer(4);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+        };
+        name = "Primary resource";
+      },
+      {
+        id = "partner";
+        initial = {
+          acceptedSinceRestart = integer(10);
+          available = integer(2);
+          resourceId = string("titleB");
+          tenantId = string("libraryBeta");
+        };
+        name = "Independent partner resource";
+      }
+    ];
+    name = "School library reservation";
+    schemaVersion = 1;
+    steps = [
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleB");
+              tenantId = string("libraryBeta");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "partner";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        fault = "before_commit";
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveB";
+        expectedRevision = 1;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(4);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveC";
+        expectedRevision = 1;
+        fault = "before_commit";
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        inputs = null;
+        instanceId = "primary";
+        kind = "restart";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveC";
+        expectedRevision = 1;
+        fault = "after_commit_before_reply";
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        inputs = null;
+        instanceId = "primary";
+        kind = "restart";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveC";
+        expectedRevision = 1;
+        fault = "after_commit_before_reply";
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveD";
+        expectedRevision = 2;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(2);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveE";
+        expectedRevision = 3;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveB";
+        expectedRevision = 1;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(4);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(2);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveF";
+        expectedRevision = 2;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "primary";
+        kind = "command";
+      },
+      {
+        inputs = null;
+        instanceId = "partner";
+        kind = "restart";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleB");
+              tenantId = string("libraryBeta");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "partner";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveB";
+        expectedRevision = 1;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleB");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "partner";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveC";
+        expectedRevision = 1;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleB");
+              tenantId = string("libraryBeta");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "partner";
+        kind = "command";
+      }
+    ];
+  };
+  target = target(m_state_lce_resource_reservation.state_lce_resource_reservation);
+}

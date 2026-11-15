@@ -1,0 +1,111 @@
+language "1.0";
+module "export.system_m1_unified_reservation" version "2.0.0";
+import "definition_studio_message_stock.lce" as m_definition_studio_message_stock;
+import "definition_studio_message_ledger.lce" as m_definition_studio_message_ledger;
+
+system system_m1_unified_reservation {
+  components = [
+    {
+      artifacts = [];
+      bindings = [
+        {
+          requirement = "state/stock";
+          resourceId = "owned-state";
+        },
+        {
+          requirement = "messages/notices";
+          resourceId = "reservation-broker";
+        },
+        {
+          requirement = "workflow/flow";
+          resourceId = "workflow-model";
+        }
+      ];
+      definition = use(m_definition_studio_message_stock.definition_studio_message_stock);
+      id = "stock";
+      messageOwners = [
+        {
+          componentId = "stock";
+          instanceId = "stock";
+          slot = "notices";
+          stateSlot = "stock";
+        },
+        {
+          componentId = "ledger";
+          instanceId = "ledger";
+          slot = "notices";
+          stateSlot = "ledger";
+        }
+      ];
+      name = "Stock owner";
+      workflowMessages = [
+        {
+          channelComponentId = "stock";
+          channelSlot = "notices";
+          nodeId = "handoff";
+          response = {
+            accepted = "accepted";
+          };
+          routeId = "reservationToLedger";
+          slot = "flow";
+          sourceNodeId = "reserve";
+        }
+      ];
+      workflowOwners = [
+        {
+          componentId = "stock";
+          ownerId = "stock";
+          slot = "flow";
+          stateSlot = "stock";
+        }
+      ];
+    },
+    {
+      artifacts = [];
+      bindings = [
+        {
+          requirement = "state/ledger";
+          resourceId = "owned-state";
+        }
+      ];
+      definition = use(m_definition_studio_message_ledger.definition_studio_message_ledger);
+      id = "ledger";
+      name = "Reservation ledger";
+    }
+  ];
+  connections = [];
+  contract = {
+    assumptions = [];
+    claims = [
+      {
+        description = "Declared only; this model experiment checks scenario expectations, not contract claims";
+        id = "evidence";
+        kind = "required_evidence";
+      }
+    ];
+    id = "stock-ledger";
+    revision = "1";
+  };
+  deploymentPlans = [];
+  executionProviders = [
+    {
+      id = "owned-state";
+      kind = "modeled-state";
+      version = "1.0.0";
+    },
+    {
+      id = "reservation-broker";
+      kind = "modeled-broker";
+      version = "1.0.0";
+    },
+    {
+      id = "workflow-model";
+      kind = "modeled-workflow";
+      version = "1.0.0";
+    }
+  ];
+  id = "m1-unified-reservation";
+  name = "M1 acceptance · unified reservation";
+  revision = "2.0.0";
+  schemaVersion = 1;
+}

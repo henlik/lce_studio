@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case35" version "1.0.0";
+import "timing_inspection_link_loss.lce" as m_timing_inspection_link_loss;
+
+-- Reception local network interrupted
+experiment case35 {
+  expect = {
+    "metrics.completed" = 0;
+  };
+  scenario = {};
+  target = target(m_timing_inspection_link_loss.timing_inspection_link_loss);
+}

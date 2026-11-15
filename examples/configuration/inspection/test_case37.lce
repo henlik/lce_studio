@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case37" version "1.0.0";
+import "timing_inspection_one_core.lce" as m_timing_inspection_one_core;
+
+-- Reception burst on one edge CPU
+experiment case37 {
+  expect = {
+    "metrics.completed" = 12;
+  };
+  scenario = {};
+  target = target(m_timing_inspection_one_core.timing_inspection_one_core);
+}

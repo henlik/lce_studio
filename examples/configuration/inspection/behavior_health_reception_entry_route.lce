@@ -1,0 +1,185 @@
+language "1.0";
+module "export.behavior_health_reception_entry_route" version "1.0.0";
+
+
+behavior behavior_health_reception_entry_route {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      route = {
+        node = "finalRoute";
+        port = "result";
+      };
+      routineAllowed = {
+        node = "allowRoutine";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "assessmentRecorded";
+        type = "boolean";
+      },
+      {
+        name = "emergencyIdentified";
+        type = "boolean";
+      }
+    ];
+    nodes = [
+      {
+        id = "knownRoute";
+        inputs = {
+          condition = {
+            input = "assessmentRecorded";
+          };
+          falseValue = {
+            literal = string("awaitAssessment");
+          };
+          trueValue = {
+            literal = string("routine");
+          };
+        };
+        op = "select";
+        position = {
+          x = 250;
+          y = 80;
+        };
+      },
+      {
+        id = "finalRoute";
+        inputs = {
+          condition = {
+            input = "emergencyIdentified";
+          };
+          falseValue = {
+            node = "knownRoute";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("emergency");
+          };
+        };
+        op = "select";
+        position = {
+          x = 550;
+          y = 80;
+        };
+      },
+      {
+        id = "noEmergency";
+        inputs = {
+          value = {
+            input = "emergencyIdentified";
+          };
+        };
+        op = "not";
+        position = {
+          x = 250;
+          y = 300;
+        };
+      },
+      {
+        id = "allowRoutine";
+        inputs = {
+          left = {
+            input = "assessmentRecorded";
+          };
+          right = {
+            node = "noEmergency";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 550;
+          y = 300;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "routineAllowed";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Routes explicit assessment facts to awaitAssessment, routine or emergency. This synthetic decision does not diagnose, authenticate actors or implement a human workflow.";
+  id = "health.reception.entry-route";
+  kernel = "composite";
+  license = "MIT";
+  name = "Entry route";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        route = string("awaitAssessment");
+        routineAllowed = boolean(false);
+      };
+      inputs = {
+        assessmentRecorded = boolean(false);
+        emergencyIdentified = boolean(false);
+      };
+      name = "Unassessed";
+    },
+    {
+      expected = {
+        route = string("routine");
+        routineAllowed = boolean(true);
+      };
+      inputs = {
+        assessmentRecorded = boolean(true);
+        emergencyIdentified = boolean(false);
+      };
+      name = "Routine";
+    },
+    {
+      expected = {
+        route = string("emergency");
+        routineAllowed = boolean(false);
+      };
+      inputs = {
+        assessmentRecorded = boolean(false);
+        emergencyIdentified = boolean(true);
+      };
+      name = "Emergency before documentation";
+    },
+    {
+      expected = {
+        route = string("emergency");
+        routineAllowed = boolean(false);
+      };
+      inputs = {
+        assessmentRecorded = boolean(true);
+        emergencyIdentified = boolean(true);
+      };
+      name = "Emergency after documentation";
+    }
+  ];
+  version = "1.0.0";
+}

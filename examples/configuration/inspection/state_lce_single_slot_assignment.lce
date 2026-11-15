@@ -1,0 +1,232 @@
+language "1.0";
+module "export.state_lce_single_slot_assignment" version "1.0.0";
+import "behavior_lce_reserve_single_slot.lce" as m_behavior_lce_reserve_single_slot;
+import "behavior_lce_accept_single_slot.lce" as m_behavior_lce_accept_single_slot;
+import "behavior_lce_release_single_slot.lce" as m_behavior_lce_release_single_slot;
+
+state state_lce_single_slot_assignment {
+  author = "LCE Studio contributors";
+  commands = [
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        alreadyAccepted = {
+          state = "accepted";
+        };
+        available = {
+          state = "available";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentResource = {
+          state = "resourceId";
+        };
+        eligible = {
+          input = "eligible";
+        };
+        holder = {
+          state = "holder";
+        };
+        resourceId = {
+          input = "resourceId";
+        };
+      };
+      decision = bundle(m_behavior_lce_reserve_single_slot.behavior_lce_reserve_single_slot);
+      effects = [];
+      inputs = [
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "caseId";
+          type = "string";
+        },
+        {
+          name = "eligible";
+          type = "boolean";
+        }
+      ];
+      name = "reserve";
+      outputs = [
+        {
+          name = "reservationToken";
+          type = "string";
+        },
+        {
+          name = "held";
+          type = "boolean";
+        },
+        {
+          name = "received";
+          type = "boolean";
+        }
+      ];
+      results = {
+        held = "held";
+        received = "received";
+        reservationToken = "reservationToken";
+      };
+      writes = {
+        accepted = "received";
+        available = "available";
+        holder = "holder";
+      };
+    },
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        alreadyAccepted = {
+          state = "accepted";
+        };
+        available = {
+          state = "available";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentResource = {
+          state = "resourceId";
+        };
+        holder = {
+          state = "holder";
+        };
+        resourceId = {
+          input = "resourceId";
+        };
+      };
+      decision = bundle(m_behavior_lce_accept_single_slot.behavior_lce_accept_single_slot);
+      effects = [];
+      inputs = [
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "caseId";
+          type = "string";
+        }
+      ];
+      name = "accept";
+      outputs = [
+        {
+          name = "reservationToken";
+          type = "string";
+        },
+        {
+          name = "held";
+          type = "boolean";
+        },
+        {
+          name = "received";
+          type = "boolean";
+        }
+      ];
+      results = {
+        held = "held";
+        received = "received";
+        reservationToken = "reservationToken";
+      };
+      writes = {
+        accepted = "received";
+        available = "available";
+        holder = "holder";
+      };
+    },
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        alreadyAccepted = {
+          state = "accepted";
+        };
+        available = {
+          state = "available";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentResource = {
+          state = "resourceId";
+        };
+        holder = {
+          state = "holder";
+        };
+        resourceId = {
+          input = "resourceId";
+        };
+      };
+      decision = bundle(m_behavior_lce_release_single_slot.behavior_lce_release_single_slot);
+      effects = [];
+      inputs = [
+        {
+          name = "resourceId";
+          type = "string";
+        },
+        {
+          name = "caseId";
+          type = "string";
+        }
+      ];
+      name = "release";
+      outputs = [
+        {
+          name = "reservationToken";
+          type = "string";
+        },
+        {
+          name = "held";
+          type = "boolean";
+        },
+        {
+          name = "received";
+          type = "boolean";
+        }
+      ];
+      results = {
+        held = "held";
+        received = "received";
+        reservationToken = "reservationToken";
+      };
+      writes = {
+        accepted = "received";
+        available = "available";
+        holder = "holder";
+      };
+    }
+  ];
+  dataContracts = [];
+  description = "Atomic durable reservation, receiving acceptance and release for one resource slot. Separate owners can model separate clinicians, desks or devices. Capacity starts at zero or one; serialized commands and exact receipts model races without claiming distributed production transactions.";
+  effects = [];
+  id = "lce.single-slot-assignment";
+  license = "MIT";
+  name = "Single-slot assignment owner";
+  schemaVersion = 1;
+  state = [
+    {
+      durability = "durable";
+      initial = string("resource");
+      name = "resourceId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = integer(1);
+      name = "available";
+      type = "integer";
+    },
+    {
+      durability = "durable";
+      initial = string("");
+      name = "holder";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = boolean(false);
+      name = "accepted";
+      type = "boolean";
+    }
+  ];
+  version = "1.0.0";
+}

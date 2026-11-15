@@ -1,0 +1,145 @@
+language "1.0";
+module "tests.case42" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "system_m1_unified_reservation.lce" as m_system_m1_unified_reservation;
+
+-- Review loop and duplicate event
+experiment case42 {
+  expect = {
+    "scenario.passed" = true;
+  };
+  scenario = {
+    expected = [
+      {
+        effects = 1;
+        receipts = 1;
+        revision = 1;
+        state = {
+          acceptedSinceRestart = integer(1);
+          available = integer(3);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+        };
+        taskId = "[\"stock\",\"stock\"]";
+      },
+      {
+        effects = 0;
+        receipts = 1;
+        revision = 1;
+        state = {
+          acceptedSinceRestart = integer(1);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+          totalReserved = integer(2);
+        };
+        taskId = "[\"ledger\",\"ledger\"]";
+      }
+    ];
+    expectedMessages = [
+      {
+        accepted = true;
+        attempts = 1;
+        channelId = "[\"stock\",\"notices\"]";
+        name = "wfs_1ccc2a8cb0bc14c908fc0522c5c3714b9task3";
+        status = "acknowledged";
+      }
+    ];
+    expectedWorkflows = [
+      {
+        activeTaskNode = "";
+        instanceId = "reservation";
+        outcome = "reservationRecorded";
+        outputs = {
+          recorded = boolean(true);
+          remaining = integer(3);
+        };
+        status = "completed";
+        variables = {
+          accepted = boolean(true);
+          acknowledged = boolean(true);
+          remaining = integer(3);
+        };
+      }
+    ];
+    name = "M1 bounded review loop";
+    steps = [
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_start";
+        workflow = {
+          inputs = {
+            request = {
+              record = {
+                quantity = integer(2);
+                resourceId = string("resourceDefault");
+                tenantId = string("tenantDefault");
+              };
+              recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+              type = "record";
+            };
+          };
+          instanceId = "reservation";
+          workflowId = "[\"stock\",\"flow\"]";
+        };
+      },
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_event";
+        workflow = {
+          event = {
+            id = "reviewAgain";
+            kind = "response";
+            taskId = "task1";
+            values = {
+              proceed = boolean(false);
+            };
+          };
+          inputs = null;
+          instanceId = "reservation";
+        };
+      },
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_event";
+        workflow = {
+          event = {
+            id = "reviewAgain";
+            kind = "response";
+            taskId = "task1";
+            values = {
+              proceed = boolean(false);
+            };
+          };
+          inputs = null;
+          instanceId = "reservation";
+        };
+      },
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_event";
+        workflow = {
+          event = {
+            id = "approve";
+            kind = "response";
+            taskId = "task2";
+            values = {
+              proceed = boolean(true);
+            };
+          };
+          inputs = null;
+          instanceId = "reservation";
+        };
+      },
+      {
+        expectedWorkflowStatus = "completed";
+        kind = "workflow_deliver";
+        workflow = {
+          inputs = null;
+          instanceId = "reservation";
+          taskId = "task3";
+        };
+      }
+    ];
+  };
+  target = target(m_system_m1_unified_reservation.system_m1_unified_reservation);
+}

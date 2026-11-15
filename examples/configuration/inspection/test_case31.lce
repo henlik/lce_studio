@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case31" version "1.0.0";
+import "timing_retry_lab.lce" as m_timing_retry_lab;
+
+-- Reliable request pipeline
+experiment case31 {
+  expect = {
+    "metrics.completed" = 12;
+  };
+  scenario = {};
+  target = target(m_timing_retry_lab.timing_retry_lab);
+}

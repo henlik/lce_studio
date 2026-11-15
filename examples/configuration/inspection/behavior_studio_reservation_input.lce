@@ -1,0 +1,61 @@
+language "1.0";
+module "export.behavior_studio_reservation_input" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+
+behavior behavior_studio_reservation_input {
+  author = "LCE Studio";
+  behavior = {
+    bindings = {
+      request = {
+        input = "request";
+      };
+    };
+    inputs = [
+      {
+        name = "request";
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+        type = "record";
+      }
+    ];
+    nodes = [];
+    outputs = [
+      {
+        name = "request";
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+        type = "record";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "Reusable record pass-through for unified engineering acceptance";
+  id = "studio.reservation-input";
+  kernel = "composite";
+  license = "MIT";
+  name = "Typed reservation input";
+  schemaVersion = 3;
+  version = "1.0.0";
+}

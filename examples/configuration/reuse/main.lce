@@ -1,0 +1,16 @@
+language "1.0";
+module "examples.reuse" version "1.0.0";
+import "limit.lce" as pharmacy with { capacity = 5; };
+import "limit.lce" as library with { capacity = 2; };
+
+fixture request = { inputs = { quantity = integer(3); }; };
+experiment PharmacyAccepts {
+  target = target(pharmacy.Limit);
+  scenario = request;
+  expect = { "outputs.allowed.boolean" = true; };
+}
+experiment LibraryDeclines {
+  target = target(library.Limit);
+  scenario = request;
+  expect = { "outputs.allowed.boolean" = false; };
+}

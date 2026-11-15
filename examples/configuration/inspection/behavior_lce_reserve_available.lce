@@ -1,0 +1,732 @@
+language "1.0";
+module "export.behavior_lce_reserve_available" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+
+behavior behavior_lce_reserve_available {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      acceptedSinceRestart = {
+        node = "nextCounter";
+        port = "result";
+      };
+      notice = {
+        node = "notice";
+        port = "result";
+      };
+      reason = {
+        node = "reason";
+        port = "result";
+      };
+      remaining = {
+        node = "remaining";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "tenantId";
+        type = "string";
+      },
+      {
+        name = "resourceId";
+        type = "string";
+      },
+      {
+        name = "available";
+        type = "integer";
+      },
+      {
+        name = "acceptedSinceRestart";
+        type = "integer";
+      },
+      {
+        name = "request";
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+        type = "record";
+      }
+    ];
+    nodes = [
+      {
+        field = "tenantId";
+        id = "requesttenantId";
+        inputs = {
+          value = {
+            input = "request";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        field = "resourceId";
+        id = "requestresourceId";
+        inputs = {
+          value = {
+            input = "request";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 320;
+          y = 0;
+        };
+      },
+      {
+        field = "quantity";
+        id = "requestquantity";
+        inputs = {
+          value = {
+            input = "request";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 640;
+          y = 0;
+        };
+      },
+      {
+        id = "sameTenant";
+        inputs = {
+          left = {
+            input = "tenantId";
+          };
+          right = {
+            node = "requesttenantId";
+            port = "result";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 960;
+          y = 0;
+        };
+      },
+      {
+        id = "sameResource";
+        inputs = {
+          left = {
+            input = "resourceId";
+          };
+          right = {
+            node = "requestresourceId";
+            port = "result";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 160;
+        };
+      },
+      {
+        id = "sameTarget";
+        inputs = {
+          left = {
+            node = "sameTenant";
+            port = "result";
+          };
+          right = {
+            node = "sameResource";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 320;
+          y = 160;
+        };
+      },
+      {
+        id = "positive";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            node = "requestquantity";
+            port = "result";
+          };
+        };
+        op = "less_than";
+        position = {
+          x = 640;
+          y = 160;
+        };
+      },
+      {
+        id = "validAvailable";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            input = "available";
+          };
+        };
+        op = "less_or_equal";
+        position = {
+          x = 960;
+          y = 160;
+        };
+      },
+      {
+        id = "enough";
+        inputs = {
+          left = {
+            node = "requestquantity";
+            port = "result";
+          };
+          right = {
+            input = "available";
+          };
+        };
+        op = "less_or_equal";
+        position = {
+          x = 0;
+          y = 320;
+        };
+      },
+      {
+        id = "validQuantity";
+        inputs = {
+          left = {
+            node = "positive";
+            port = "result";
+          };
+          right = {
+            node = "enough";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 320;
+          y = 320;
+        };
+      },
+      {
+        id = "validStock";
+        inputs = {
+          left = {
+            node = "validAvailable";
+            port = "result";
+          };
+          right = {
+            node = "validQuantity";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 640;
+          y = 320;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "sameTarget";
+            port = "result";
+          };
+          right = {
+            node = "validStock";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 960;
+          y = 320;
+        };
+      },
+      {
+        id = "delta";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            node = "requestquantity";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 480;
+        };
+      },
+      {
+        id = "remaining";
+        inputs = {
+          left = {
+            input = "available";
+          };
+          right = {
+            node = "delta";
+            port = "result";
+          };
+        };
+        op = "subtract";
+        position = {
+          x = 320;
+          y = 480;
+        };
+      },
+      {
+        id = "counterDelta";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            literal = integer(1);
+          };
+        };
+        op = "select";
+        position = {
+          x = 640;
+          y = 480;
+        };
+      },
+      {
+        id = "nextCounter";
+        inputs = {
+          left = {
+            input = "acceptedSinceRestart";
+          };
+          right = {
+            node = "counterDelta";
+            port = "result";
+          };
+        };
+        op = "add";
+        position = {
+          x = 960;
+          y = 480;
+        };
+      },
+      {
+        id = "quantityReason";
+        inputs = {
+          condition = {
+            node = "positive";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("invalid_quantity");
+          };
+          trueValue = {
+            literal = string("insufficient");
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 640;
+        };
+      },
+      {
+        id = "stockReason";
+        inputs = {
+          condition = {
+            node = "validAvailable";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("invalid_state");
+          };
+          trueValue = {
+            node = "quantityReason";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 320;
+          y = 640;
+        };
+      },
+      {
+        id = "acceptedReason";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            node = "stockReason";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("reserved");
+          };
+        };
+        op = "select";
+        position = {
+          x = 640;
+          y = 640;
+        };
+      },
+      {
+        id = "reason";
+        inputs = {
+          condition = {
+            node = "sameTarget";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("wrong_target");
+          };
+          trueValue = {
+            node = "acceptedReason";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 960;
+          y = 640;
+        };
+      },
+      {
+        id = "notice";
+        inputs = {
+          quantity = {
+            node = "delta";
+            port = "result";
+          };
+          remaining = {
+            node = "remaining";
+            port = "result";
+          };
+          resourceId = {
+            input = "resourceId";
+          };
+          tenantId = {
+            input = "tenantId";
+          };
+        };
+        op = "record_make";
+        position = {
+          x = 0;
+          y = 800;
+        };
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "remaining";
+        type = "integer";
+      },
+      {
+        name = "acceptedSinceRestart";
+        type = "integer";
+      },
+      {
+        name = "reason";
+        type = "string";
+      },
+      {
+        name = "notice";
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+        type = "record";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "Pure bounded decision for one owned resource. Matching target, positive quantity and sufficient nonnegative availability permit a reservation. Returns proposed values and a notice; the state host controls commits and effect intents.";
+  id = "lce.reserve-available";
+  kernel = "composite";
+  license = "MIT";
+  name = "Reserve available resource";
+  schemaVersion = 3;
+  tests = [
+    {
+      expected = {
+        accepted = boolean(true);
+        acceptedSinceRestart = integer(1);
+        notice = {
+          record = {
+            quantity = integer(2);
+            remaining = integer(3);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("reserved");
+        remaining = integer(3);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(5);
+        request = {
+          record = {
+            quantity = integer(2);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Reserve two units";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(3);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("insufficient");
+        remaining = integer(3);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(3);
+        request = {
+          record = {
+            quantity = integer(4);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Insufficient quantity";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(5);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("wrong_target");
+        remaining = integer(5);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(5);
+        request = {
+          record = {
+            quantity = integer(1);
+            resourceId = string("resourceA");
+            tenantId = string("tenantB");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Wrong tenant";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(5);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("wrong_target");
+        remaining = integer(5);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(5);
+        request = {
+          record = {
+            quantity = integer(1);
+            resourceId = string("resourceB");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Wrong resource";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(5);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("invalid_quantity");
+        remaining = integer(5);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(5);
+        request = {
+          record = {
+            quantity = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Zero quantity";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(9007199254740991);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("invalid_quantity");
+        remaining = integer(9007199254740991);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(9007199254740991);
+        request = {
+          record = {
+            quantity = integer(-9007199254740991);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Negative quantity at integer boundary";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(0);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(-1);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        reason = string("invalid_state");
+        remaining = integer(-1);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(0);
+        available = integer(-1);
+        request = {
+          record = {
+            quantity = integer(1);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+      };
+      name = "Invalid initial stock";
+    }
+  ];
+  version = "1.0.0";
+}

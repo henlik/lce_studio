@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case33" version "1.0.0";
+import "timing_continuum_placement.lce" as m_timing_continuum_placement;
+
+-- Edge and cloud placement
+experiment case33 {
+  expect = {
+    "metrics.completed" = 12;
+  };
+  scenario = {};
+  target = target(m_timing_continuum_placement.timing_continuum_placement);
+}
