@@ -254,3 +254,21 @@ assert.equal((await request('/execution/run','POST',{design:m1.design,scenario:w
 await request('/m1-scenarios','POST',{design:m1.design,unknown:true},400);
 await request('/execution/run','POST',{design:m1.design,inputs:[]},422);
 console.log('PASS M1 provider checks, shared ownership, correlated acknowledgements, negative assertions and immutable replay');
+
+const sourceExample=await request('/source/example');
+assert.equal(sourceExample.language,'lce-assembly-0.1');
+const compiledSource=await request('/source/compile','POST',{source:sourceExample.source});
+assert.equal(compiledSource.valid,true);assert.equal(compiledSource.design.id,'learning.m1-reservation');
+const sourcePlan=await request('/execution/prepare','POST',{design:compiledSource.design});
+assert.deepEqual(sourcePlan.plan,m1Plan.plan);
+for(const c of m1Cases){
+ const run=await request('/execution/run','POST',{design:compiledSource.design,scenario:c.scenario});
+ assert.equal(run.report.scenario.passed,true,c.name);
+ const replay=await request('/executions/'+run.id+'/replays','POST',{});assert.equal(replay.status,'matched');
+}
+const malformedSource=await request('/source/compile','POST',{source:sourceExample.source.replace('port map','generic map')});
+assert.equal(malformedSource.valid,false);assert.ok(malformedSource.diagnostics[0].line>1);assert.equal(malformedSource.design,undefined);
+const missingSource=await request('/source/compile','POST',{source:sourceExample.source.replace('"state/stock" => "owned-state"','"state/stock" => "absent"')});
+assert.equal(missingSource.valid,false);assert.ok(missingSource.diagnostics.some(d=>d.path.includes('bindings')));
+await request('/source/compile','POST',{source:sourceExample.source,execute:true},400);
+console.log('PASS experimental source compilation, source locations, exact M1 plan equivalence, six scenarios and replay');

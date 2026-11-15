@@ -1,5 +1,29 @@
 # Verification
 
+## VHDL-style authoring experiment — 15 November 2026
+
+- Separate branch `codex/vhdl-style-authoring` adds bounded LCE Assembly 0.1,
+  a VHDL-inspired component-assembly frontend into the existing system model.
+  Standard VHDL, component behavior bodies, generics and new runtime semantics
+  are not implemented. The existing graphical and execution paths are retained.
+- Source has line/column diagnostics, a CLI, pure compile/example APIs, an
+  independently autosaved UI draft, file import/export, compiled JSON preview
+  and explicit apply after catalog/provider preparation. Stale source or canvas
+  changes block applying the prior result. Canvas edits do not rewrite source.
+- The 31-line M1 source produces the exact same prepared plan and reports as the
+  reference example. All six scenarios and immutable saved replays pass. Missing
+  dependencies, wrong owner mappings, malformed syntax, duplicate declarations,
+  unsupported generics, request shapes and source limits are checked.
+- Full Go race suite against PostgreSQL, go vet, backend/static builds, Vue
+  production build, all 46 frontend tests and live system API acceptance passed.
+  Parser fuzzing completed 98,093 executions without failure. Existing Vite
+  chunk-size warning remains. Dockerfile now includes the embedded source sample;
+  local Docker/container verification is unavailable because Docker is absent.
+- Browser/manual authoring acceptance remains pending. Source text is exported
+  separately and is not yet attached to saved execution provenance. No milestone
+  credit is added: **M1 100%; overall 33%**. See
+  [SOURCE_AUTHORING_EXPERIMENT.md](SOURCE_AUTHORING_EXPERIMENT.md).
+
 ## M1 connected offline engineering model — 14 November 2026
 
 - Workflows now use the existing system state sessions and budget. Pure decisions,
