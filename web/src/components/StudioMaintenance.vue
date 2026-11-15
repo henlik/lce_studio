@@ -106,10 +106,10 @@ async function apply(recover = false) {
         throw e;
       }
       const status = await api<Status>('/studio/status').catch(() => undefined);
-      if (status && status.backupId === operation.backupId && status.action === operation.action) state = status;
+      if (status && status.backupId === operation.backupId && status.action === operation.action && (!operation.target || status.restoreId === operation.target.id)) state = status;
       else throw e;
     }
-    if (state.backupId !== operation.backupId) throw new Error('Server operation does not match this recovery. Keep the backup and reload.');
+    if (state.backupId !== operation.backupId || state.action !== operation.action || (operation.target && state.restoreId !== operation.target.id)) throw new Error('Server operation does not match this recovery. Keep the backup and reload.');
     committed.value = true;
     await finishBrowser(operation,operation.target?.browser);
     window.location.reload();

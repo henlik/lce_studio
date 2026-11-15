@@ -30,14 +30,21 @@ try {
  await studio.getByRole('button',{name:'Create component',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.active-path')?.textContent==='components/BackupCounter/component.lce');
  await page.evaluate(()=>localStorage.setItem('studio.ribbon.backup-test','collapsed'));
- const old=await context.newPage();await old.goto(base);await old.locator('.monaco-editor').waitFor();
+ const old=await context.newPage();await old.goto(base);await old.getByRole('button',{name:'Configuration language',exact:true}).click();await old.locator('.monaco-editor').waitFor();
+ console.log('Maintenance: both editor tabs opened.');
  const epoch=(await call('/studio/status')).epoch;
+ await open();
+ await page.route('**/api/studio/backup',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Injected backup failure'})}),{times:1});
+ await page.getByRole('button',{name:'Create backup',exact:true}).click();await page.getByRole('alert').filter({hasText:'Injected backup failure'}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Reset studio',exact:true}).isDisabled(),true);assert.ok((await call('/projects')).some(x=>x.id===p.id));
+ await page.getByRole('button',{name:'Done',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
  await open();let b=await prepare();assert.ok(b.browser.drafts.some(d=>d.data.includes('BackupCounter')));assert.ok(b.database.includes('maintenance-browser-project'));
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.screenshot({path:'test-results/maintenance-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
  // A server-side edit after backup must block reset, preserving the new edit.
  p.name='Changed after backup';await call('/projects','POST',p);
  await page.getByRole('textbox',{name:'Type RESET to confirm'}).fill('RESET');await page.getByRole('button',{name:'Reset studio',exact:true}).click();
  await page.getByRole('alert').filter({hasText:'studio changed'}).waitFor();assert.ok((await call('/projects')).some(x=>x.name===p.name));
+ console.log('Maintenance: backup and stale snapshot check passed.');
  b=await prepare('Create fresh backup');
  await page.screenshot({path:'test-results/maintenance-backup-ready.png',fullPage:true});
  // Inject a browser storage failure AFTER the server commit. Recovery must
@@ -56,7 +63,7 @@ try {
  await old.locator('.monaco-editor').click();await old.keyboard.press('Control+End');await old.keyboard.insertText('\n// old tab must not save\n');
  await old.getByText('Studio was reset, restored, or paused in another tab.',{exact:false}).first().waitFor();
  assert.equal((await drafts()).some(d=>d.data.includes('old tab must not save')),false);
- await old.close();
+ await old.close();console.log('Maintenance: interrupted reset and stale tab checks passed.');
  await open();await page.getByRole('button',{name:'Restore',exact:true}).click();
  const tampered={...b,digest:'bad'};
  await page.getByLabel('Upload backup JSON').setInputFiles({name:'damaged.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(tampered))});
@@ -66,7 +73,7 @@ try {
  await prepare();await page.getByRole('textbox',{name:'Type RESTORE to confirm'}).fill('RESTORE');
  await page.screenshot({path:'test-results/maintenance-restore-ready.png',fullPage:true});
  await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Restore studio',exact:true}).click()]);
- await page.locator('.monaco-editor').waitFor();
+ await page.getByRole('button',{name:'Configuration language',exact:true}).click();await page.locator('.monaco-editor').waitFor();
  assert.ok((await call('/projects')).some(x=>x.id===p.id&&x.name===p.name));
  assert.ok((await drafts()).some(d=>d.data.includes('BackupCounter')));
  assert.equal(await page.evaluate(()=>localStorage.getItem('studio.ribbon.backup-test')),'collapsed');
