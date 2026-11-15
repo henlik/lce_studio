@@ -55,7 +55,9 @@ labelled and cannot be substituted for the whole-project report in a package.
 Folder reorganization checks semantic identity before accepting a move.
 
 Review with the nested-workspace steps in `CONFIGURATION_LANGUAGE.md`. The
-browser acceptance script tests production CSS, real Monaco, nested navigation,
-undo, find and desktop/mobile width in CI. Local Chromium launch is blocked by
-this execution environment's socket policy; local visual review is not claimed.
+browser acceptance script passed on code commit `2ecfa23`: production CSS, real
+Monaco, typed-space retention, nested navigation, undo, find, scoped/full execution,
+desktop/mobile width, and mobile navigation containment. CI desktop/mobile
+screenshots were inspected; local Chromium cannot start under this workspace's
+socket policy. Manual usability review with the engineer remains separate.
 M1 stays 100% and the weighted roadmap stays 33%.

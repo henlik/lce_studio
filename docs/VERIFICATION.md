@@ -18,11 +18,19 @@
   API acceptance (56 artifacts/43 experiments plus four nested example tests),
   and the hierarchy example through the standalone CLI. Additional Go tests cover
   folder idempotence, stale hashes, scoped evidence and entry-file test scaffolds.
-- A real-browser acceptance script is wired into CI for Monaco, undo/find, nested
-  navigation, scoped execution, CSS and desktop/mobile overflow; screenshots are
-  retained as CI artifacts. **Local visual acceptance remains unverified:** Chromium
-  exits because the environment rejects its required Unix socket. The lazy Monaco
-  bundle adds roughly 1 MiB compressed and Vite reports a chunk-size warning.
+- **Passed in Chromium CI:** Monaco and its production CSS/worker/font under the
+  Go server CSP; raw source retains typed spaces across file changes; per-file undo,
+  find, three-level navigation, component/full test execution, no horizontal overflow
+  at 1440×1000 and 390×844, and mobile plane icons contained within the header.
+  Desktop and mobile screenshots were inspected from workflow run `43745393916`
+  (code commit `2ecfa23`). Docker Compose build and all container API checks also
+  passed. Manual usability review with the engineer remains separate.
+- Browser testing uses Ubuntu 24.04, supported by the pinned Playwright version.
+  Monaco uses its established input mode after a real-browser test reproduced
+  dropped spaces with experimental EditContext. Internal compilation no longer
+  emits duplicate run notifications; mobile toast height is bounded. Local Chromium
+  cannot start under this workspace's Unix-socket policy, so browser evidence comes
+  from CI. The lazy Monaco bundle is roughly 1 MiB compressed (Vite size warning).
 - **M1 100%; weighted roadmap 33%**, unchanged by this authoring UX work.
 
 ## Configuration Language 1.0 — 15 November 2026
