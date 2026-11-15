@@ -350,3 +350,12 @@ Configuration packages bind source, exact dependencies and replayable evidence.
 Installation is atomic across the artifact catalogs and package snapshot. These are
 bounded offline models, not signed live releases. Language gates: **6/6 implemented**;
 manual UX review follows. **M1 100%; overall roadmap 33%, unchanged.**
+
+### Backup and reset
+
+The global **Backup & reset** button creates a downloadable, server-retained backup
+before clearing the studio. It includes PostgreSQL application records and this
+browser's workspace drafts, source/testbench files and recovery checkpoints.
+Restore from a downloaded file or retained copy; the current state is backed up
+before replacement. See [backup, reset and recovery](docs/BACKUP_AND_RESET.md) for
+scope, confirmation steps, other-tab handling and limits.

@@ -1,5 +1,22 @@
 # Verification
 
+## Studio backup, reset and restore — 15 November 2026
+
+- Global backup/reset/restore dialog; downloadable and retained archives include
+  the 18 application tables, current-browser drafts/checkpoints and ribbon settings.
+  Restore creates a safety backup before replacing data. Built-ins remain.
+- Snapshot comparison, PostgreSQL request leases, API epochs and IndexedDB
+  generations protect against stale writes. Durable browser intent and idempotent
+  server retries recover an interrupted reset/restore.
+- Local targeted PostgreSQL tests passed for all-table round trips, 64-bit values,
+  unrelated-table preservation, retained history, concurrent edits, FK rollback,
+  cross-instance leases, confirmation and cross-origin/stale-session rejection.
+- All Go packages passed with race detection (the server package was rerun after
+  preserving HTTP 408 for cancelled request leases); `go vet ./...`, 56 frontend
+  tests, TypeScript checks and the production build passed locally. Chromium and
+  container checks run in CI. No user workspace was reset during development.
+- Guide: `docs/BACKUP_AND_RESET.md`. **M1 100%; weighted roadmap 33%, unchanged.**
+
 ## Language tutorial and source examples — 15 November 2026
 
 - Added a task-oriented tutorial, an example index, primitive/binding reference,

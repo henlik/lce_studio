@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { maintenanceReloading } from "../draftStorage";
 import type {AspectContext} from "../definitionTypes";
 const contextEvents=defineEmits<{aspectOpened:[context:AspectContext]}>();
 import { watch as watchInspection } from "vue";
@@ -1156,6 +1157,7 @@ const autosave = useWorkspaceDraft("components", {
 });
 useActionFeedback("Components", busy, notice, error);
 function beforeUnload(event: BeforeUnloadEvent) {
+  if (maintenanceReloading) return;
   if (autosave.unsaved()) {
     event.preventDefault();
     event.returnValue = "";

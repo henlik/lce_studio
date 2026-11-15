@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { maintenanceReloading } from "./draftStorage";
 import { focusField } from "./validationFocus";
 import { useWorkspaceDraft } from "./composables/useWorkspaceDraft";
 import { useActionFeedback } from "./composables/useNotifications";
 import DraftStatus from "./components/DraftStatus.vue";
+import StudioMaintenance from "./components/StudioMaintenance.vue";
 import StudioNotifications from "./components/StudioNotifications.vue";
 import type {AspectContext,AspectEditorRequest} from "./definitionTypes";
 import {roadmapProgress} from "./implementationProgress";
+const maintenanceOpen = ref(false);
 const ComponentDefinitionWorkbench = defineAsyncComponent(() => import("./components/ComponentDefinitionWorkbench.vue"));
 import StudioNavigation from "./components/StudioNavigation.vue";
 import {capabilityLocation, workspaceLocation, canOpenCapability, type StudioView} from "./studioBlueprint";
@@ -960,6 +963,7 @@ function seek(e: Event) {
   replayIndex.value = Number((e.target as HTMLInputElement).value);
 }
 function beforeUnload(e: BeforeUnloadEvent) {
+  if (maintenanceReloading) return;
   if (autosave.unsaved()) {
     e.preventDefault();
     e.returnValue = "";
@@ -1013,9 +1017,10 @@ onUnmounted(() => {
 
 <template>
   <StudioNotifications />
+  <StudioMaintenance v-model:open="maintenanceOpen" />
   <div
     class="studio-shell"
-    :inert="autosave.status.value === 'loading'"
+    :inert="maintenanceOpen || autosave.status.value === 'loading'"
     :class="{
       'rail-collapsed': railCollapsed,
       'rail-expanded': !railCollapsed,
@@ -1094,6 +1099,7 @@ onUnmounted(() => {
             }}</span>
           </div>
         </div>
+        <button class="button quiet studio-storage-button" @click="maintenanceOpen = true">Backup &amp; reset</button>
         <input
           ref="importInput"
           class="hidden"

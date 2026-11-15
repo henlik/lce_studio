@@ -1,89 +1,23 @@
 import { ref, watch, onBeforeUnmount, type Ref } from "vue";
 
-export interface DraftRecord {
-  key: string;
-  revision: number;
-  updated: string;
-  data: string;
-  label?: string;
+import { commitDraft, readDraft, readDraftState, draftBackups, pauseDrafts, resumeDrafts, drainDraftWrites, draftsPaused, maintenanceReloading, type DraftRecord } from "../draftStorage";
+export { commitDraft, readDraft, draftBackups } from "../draftStorage";
+export type { DraftRecord } from "../draftStorage";
+const workspaces = new Set<{key: string; ready: Promise<void>; snapshot: () => string; flush: () => Promise<void>}>();
+export async function captureWorkspaceDrafts() {
+  pauseDrafts();
+  const waited = new Set<unknown>();
+  do {
+    const current = [...workspaces];
+    await Promise.all(current.map(w => w.ready));
+    current.forEach(w => waited.add(w));
+    await drainDraftWrites();
+  } while ([...workspaces].some(w => !waited.has(w)));
+  return [...workspaces].map(w => ({key: w.key, data: w.snapshot()}));
 }
-let database: Promise<IDBDatabase> | undefined;
-function db() {
-  return (database ||= new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open("lce-studio-drafts", 1);
-    request.onupgradeneeded = () =>
-      request.result.createObjectStore("drafts", { keyPath: "key" });
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => {
-      database = undefined;
-      reject(request.error);
-    };
-  }));
-}
-export async function readDraft(key: string): Promise<DraftRecord | undefined> {
-  const connection = await db();
-  return new Promise((resolve, reject) => {
-    const tx = connection.transaction("drafts", "readonly");
-    const req = tx.objectStore("drafts").get(key);
-    tx.oncomplete = () => resolve(req.result);
-    tx.onabort = tx.onerror = () => reject(tx.error);
-  });
-}
-// Read and compare the revision in the SAME read/write transaction. Two tabs
-// cannot both overwrite the same revision, even when storage events arrive late.
-export async function commitDraft(
-  key: string,
-  revision: number,
-  data: string,
-  archive = false,
-): Promise<DraftRecord> {
-  const connection = await db();
-  return new Promise((resolve, reject) => {
-    const tx = connection.transaction("drafts", "readwrite");
-    const store = tx.objectStore("drafts");
-    let conflict = false;
-    const result: DraftRecord = {
-      key,
-      revision: revision + 1,
-      data,
-      updated: new Date().toISOString(),
-    };
-    const req = store.get(key);
-    req.onsuccess = () => {
-      const previous = req.result as DraftRecord | undefined;
-      if ((previous?.revision || 0) !== revision) {
-        conflict = true;
-        tx.abort();
-        return;
-      }
-      if (archive && previous)
-        store.put({ ...previous, key: `${key}:backup:${crypto.randomUUID()}` });
-      store.put(result);
-    };
-    tx.oncomplete = () => resolve(result);
-    tx.onabort = tx.onerror = () =>
-      reject(
-        new Error(
-          conflict
-            ? "draft-conflict"
-            : tx.error?.message || "Draft storage is unavailable.",
-        ),
-      );
-  });
-}
-export async function draftBackups(key: string): Promise<DraftRecord[]> {
-  const connection = await db();
-  return new Promise((resolve, reject) => {
-    const tx = connection.transaction("drafts", "readonly");
-    const req = tx.objectStore("drafts").getAll();
-    tx.oncomplete = () =>
-      resolve(
-        (req.result as DraftRecord[])
-          .filter((r) => r.key.startsWith(`${key}:backup:`))
-          .sort((a, b) => b.updated.localeCompare(a.updated)),
-      );
-    tx.onerror = () => reject(tx.error);
-  });
+export function resumeWorkspaceDrafts() {
+  resumeDrafts();
+  for (const w of workspaces) void w.flush();
 }
 export function useWorkspaceDraft(
   key: string,
@@ -108,6 +42,7 @@ export function useWorkspaceDraft(
       });
     } catch {}
   };
+  let generation = "initial";
   let revision = 0,
     persisted = "",
     disposed = false,
@@ -144,7 +79,9 @@ export function useWorkspaceDraft(
   }
   const ready = (async () => {
     try {
-      const record = await readDraft(key);
+      const state = await readDraftState(key);
+      generation = state.generation;
+      const record = state.record;
       if (record) restore(record);
       else persisted = snapshot();
       void refreshBackups();
@@ -157,10 +94,12 @@ export function useWorkspaceDraft(
       message.value = `Draft recovery failed: ${String(e)}. Your saved draft has not been replaced.`;
     }
   })();
+  const workspace = {key, ready, snapshot, flush};
+  workspaces.add(workspace);
   async function flush() {
     await ready;
     if (
-      disposed ||
+      disposed || draftsPaused ||
       ["loading", "saving", "conflict", "error"].includes(status.value)
     )
       return;
@@ -171,7 +110,7 @@ export function useWorkspaceDraft(
     const archive = archiveNext;
     archiveNext = false;
     try {
-      const record = await commitDraft(key, revision, data, archive);
+      const record = await commitDraft(key, revision, data, archive, generation);
       if (archive) void refreshBackups();
       revision = record.revision;
       persisted = data;
@@ -188,7 +127,7 @@ export function useWorkspaceDraft(
       message.value =
         status.value === "conflict"
           ? "Another tab saved this workspace. Your edits are still here; export them before loading the saved draft."
-          : "Autosave failed. Export your work; the last saved draft is preserved.";
+          : `Autosave paused: ${e instanceof Error ? e.message : "Storage is unavailable"} Export your work before reloading.`;
     }
   }
   watch(
@@ -251,7 +190,7 @@ export function useWorkspaceDraft(
     URL.revokeObjectURL(url);
   }
   function unload(e: BeforeUnloadEvent) {
-    if (snapshot() !== persisted || status.value === "loading") {
+    if (!maintenanceReloading && (snapshot() !== persisted || status.value === "loading")) {
       e.preventDefault();
       e.returnValue = "";
     }
@@ -263,6 +202,7 @@ export function useWorkspaceDraft(
   document.addEventListener("visibilitychange", visibility);
   onBeforeUnmount(() => {
     disposed = true;
+    workspaces.delete(workspace);
     window.removeEventListener("beforeunload", unload);
     document.removeEventListener("visibilitychange", visibility);
   });
