@@ -73,6 +73,7 @@ try {
  await page.screenshot({path:'test-results/configuration-mobile.png',fullPage:true});
  await studio.getByRole('button',{name:'+ New component',exact:true}).click();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile creation form overflow');
+ await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:'test-results/configuration-mobile-create.png',fullPage:true});
  await studio.getByRole('button',{name:'Close component creation',exact:true}).click();
  assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: component creation, extraction, independent TODO-to-passing testbench, Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');

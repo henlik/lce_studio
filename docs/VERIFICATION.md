@@ -19,10 +19,12 @@
   The live exercise starts empty, creates/extracts a hierarchy, verifies unfinished
   testbenches fail, then supplies independent parent/child expectations and passes
   both. The existing 56-artifact/43-experiment and hierarchy acceptance still pass.
-- Chromium acceptance now also exercises the creation/extraction controls, edits a
-  generated TODO testbench into a passing independent test, and checks the mobile
-  creation form for overflow. CI retains desktop hierarchy and mobile form captures;
-  local browser launch remains unavailable under the workspace socket policy.
+- Chromium acceptance passed on code commit `7ac06fe` in workflow `43758382483`,
+  including creation/extraction, editing a generated TODO testbench into a passing
+  independent test, and mobile creation-form overflow checks. Desktop hierarchy
+  and mobile form captures were inspected. The Docker Compose build and all
+  container API checks also passed. Local browser launch remains unavailable under
+  the workspace socket policy.
 - Instructions: **Create your own component hierarchy** in
   `docs/CONFIGURATION_LANGUAGE.md`. **M1 100%; weighted roadmap 33%**, unchanged.
 
