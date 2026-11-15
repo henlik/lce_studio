@@ -1,5 +1,22 @@
 # Verification
 
+## Language tutorial and source examples — 15 November 2026
+
+- Added a task-oriented tutorial, an example index, primitive/binding reference,
+  exact model-source links and the component/extraction API request fields.
+- Added complete `basics`, `counter` and `expected-failure` projects. Each component
+  has its own source and testbench. Existing hierarchy, reuse and inspection
+  projects are included in the documented learning sequence.
+- `go test ./cmd/configcheck -count=1` and `go vet ./cmd/configcheck` pass. The new
+  acceptance test reads all six actual projects: 56 positive experiments pass;
+  the negative control compiles, runs, reports expected 24 versus observed 23,
+  and passes after the documented expectation repair.
+- Also ran the built CLI on all six projects, checked their case counts and exit
+  codes, and packed, verified and replayed Counter's four experiments. Relative
+  documentation links were checked against the repository files.
+- Engine and UI implementations are unchanged by this documentation increment.
+  **M1 100%; weighted roadmap 33%**, unchanged.
+
 ## Component creation and extraction — 15 November 2026
 
 - Explicit **New component** creates a scalar identity starter, its own source and

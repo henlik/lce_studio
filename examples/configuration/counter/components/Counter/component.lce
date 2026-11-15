@@ -1,0 +1,18 @@
+language "1.0";
+module "learning.counter.parent" version "1.0.0";
+import "components/Identity/component.lce" as identity;
+
+-- Counter is the starter's name: it forwards a value, it does not increment it.
+-- This file owns the composition; Identity owns the primitive operation.
+behavior Counter {
+  behavior = {
+    inputs = [{ name = "value"; type = "integer"; }];
+    outputs = [{ name = "result"; type = "integer"; }];
+    nodes = [{
+      id = "evaluate";
+      component = ref(identity.Identity);
+      inputs = { value = { input = "value"; }; };
+    }];
+    bindings = { result = { node = "evaluate"; port = "result"; }; };
+  };
+}

@@ -1,0 +1,16 @@
+language "1.0";
+module "learning.counter.identityTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are authored independently of execution.
+experiment IdentityTest {
+  target = target(subject.Identity);
+  scenario = { inputs = { value = integer(7); }; };
+  expect = { "outputs.result.integer" = 7; };
+}
+
+experiment IdentityNegative {
+  target = target(subject.Identity);
+  scenario = { inputs = { value = integer(-7); }; };
+  expect = { "outputs.result.integer" = -7; };
+}

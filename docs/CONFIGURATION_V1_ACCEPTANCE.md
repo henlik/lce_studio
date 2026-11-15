@@ -76,3 +76,16 @@ unchanged parent expectations, stale hashes, invalid names and folder collisions
 The live API acceptance covers empty-to-nested authoring with independently supplied
 parent and child expectations. The Chromium exercise covers the same controls and
 editing the generated TODO testbench into a passing independent test.
+
+## Documentation and runnable examples
+
+The [tutorial](CONFIGURATION_TUTORIAL.md) and
+[example index](../examples/configuration/README.md) cover a single component,
+nested components with owned testbenches, three-level reception composition,
+parameterized reuse, the complete inspection project and a deliberate failure.
+`TestDocumentedConfigurationExamples` reads those actual source files in CI. The
+five positive projects pass 56 top-level experiments in total; the negative control
+must compile and report expected 24 versus observed 23. The same check verifies
+that changing its expectation to 23 repairs it. The Counter package also verifies
+and replays four experiments through the CLI. Documentation adds no runtime gate
+credit: **M1 100%; overall 33%**.

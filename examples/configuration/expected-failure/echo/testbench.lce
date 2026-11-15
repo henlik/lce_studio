@@ -1,0 +1,11 @@
+language "1.0";
+module "learning.failure.echoTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Deliberately wrong: the specification says Echo(23) returns 23, not 24.
+-- Repair the expectation to 23 after inspecting the failure.
+experiment WrongExpectation {
+  target = target(subject.Echo);
+  scenario = { inputs = { value = integer(23); }; };
+  expect = { "outputs.result.integer" = 24; };
+}

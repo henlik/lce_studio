@@ -1,0 +1,16 @@
+language "1.0";
+module "learning.counter.identity" version "1.0.0";
+
+-- This component passes one integer through unchanged; it has no stored state.
+behavior Identity {
+  behavior = {
+    inputs = [{ name = "value"; type = "integer"; }];
+    outputs = [{ name = "result"; type = "integer"; }];
+    nodes = [{
+      id = "evaluate";
+      op = "identity";
+      inputs = { value = { input = "value"; }; };
+    }];
+    bindings = { result = { node = "evaluate"; port = "result"; }; };
+  };
+}

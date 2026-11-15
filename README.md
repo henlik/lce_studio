@@ -333,7 +333,11 @@ experiments and portable packages. Start empty or explicitly load **Inspection
 example**: 56 artifacts and 43 experiments, including reception, service-desk reuse,
 the shared M1 system and separate resource/fault simulations.
 
-Follow [the review walkthrough and language reference](docs/CONFIGURATION_LANGUAGE.md).
+Start with the [hands-on configuration tutorial](docs/CONFIGURATION_TUTORIAL.md)
+and [runnable example index](examples/configuration/README.md): one component,
+intentional test failure, nested composition, parameterized reuse and the full
+inspection project. Use [the language reference](docs/CONFIGURATION_LANGUAGE.md)
+for syntax, constructors and API operations.
 The older **Source & testbench** editor remains available; importing its complete
 component migrates its definitions and independent testbench assertions.
 

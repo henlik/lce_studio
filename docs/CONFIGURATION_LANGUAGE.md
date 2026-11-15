@@ -6,6 +6,18 @@ packages the configuration. PostgreSQL stores installed releases and artifacts.
 It is not IEEE VHDL. The older scalar component syntax remains available under
 **Source & testbench**, and its component/testbench files can be migrated.
 
+## Documentation map
+
+- [Hands-on tutorial](CONFIGURATION_TUTORIAL.md): read ports and bindings, run and
+  repair testbenches, compose levels, specialize modules and package evidence.
+- [Runnable example index](../examples/configuration/README.md): learning order,
+  exact files, expected test counts and a map of the inspection scenarios.
+- [Syntax and meaning](#syntax-and-meaning): declarations, constructors and semantics.
+- [Behavior primitives and wiring](#behavior-primitives-and-wiring): port names,
+  operators, structured values and execution bounds.
+- [CLI and HTTP](#cli-and-http): commands, editing requests and limits.
+- [Acceptance evidence](CONFIGURATION_V1_ACCEPTANCE.md): implemented scope and checks.
+
 ## Nested component workspace
 
 The Source view now uses Monaco, with locally bundled CSS, icons and worker code.
@@ -205,8 +217,8 @@ file        = "language" string ";" "module" string "version" string ";"
 import      = "import" string "as" identifier ["with" object] ";" ;
 parameter   = "parameter" identifier ":" scalarType "=" expression ";" ;
 fixture     = "fixture" identifier "=" expression ";" ;
-artifact    = artifactKind identifier (object | call) [";"] ;
-experiment  = "experiment" identifier (object | call) [";"] ;
+artifact    = artifactKind identifier expression [";"] ;
+experiment  = "experiment" identifier expression [";"] ;
 expression  = literal | object | array | reference | call ;
 object      = "{" { (identifier | string) "=" expression ";" } "}" ;
 array       = "[" [expression {"," expression} [","]] "]" ;
@@ -223,7 +235,7 @@ wrong types and duplicate fields are rejected. Null is not a scalar default.
 
 Parameters support integer, number, Boolean and string. Runtime typed values support
 integer, Boolean, string, nominal record and ordered collection. Integer values are
-restricted to the existing safe range. Parameter defaults may use earlier parameters.
+restricted to −9,007,199,254,740,991 through 9,007,199,254,740,991. Parameter defaults may use earlier parameters.
 Declarations and imported symbols may be referenced before their textual declaration;
 cycles are rejected. Imports are local to the closed project. File paths cannot leave
 it. Module namespaces are unique. No network fetches, environment variables, arbitrary
@@ -270,6 +282,81 @@ A failure produces no runnable artifact list.
 
 These constructors produce configuration values. Runtime operators remain the
 existing engine primitives: e.g. a behavior node with `op = "less_or_equal"`.
+
+## Behavior primitives and wiring
+
+A behavior node selects either `op = "operation"` for a built-in primitive or
+`component = ref(module.Component)` for a reusable component. It must provide
+exactly the selected operation/component's inputs. Pure graphs are acyclic and run
+in dependency order; visual placement and source-array order do not define time.
+
+Each input binding selects one source:
+
+| Binding | Meaning |
+| --- | --- |
+| `{ input = "quantity"; }` | Read the owning component's public input |
+| `{ node = "check"; port = "result"; }` | Read a preceding local node's output |
+| `{ literal = integer(5); }` | Supply a typed constant |
+
+The component's `behavior.bindings` uses the same forms to provide its public
+outputs. Primitive outputs are named `result`; component outputs use their
+declared names. The following are runtime operations, distinct from configuration
+constructors such as `concat("namespace.", "name")`.
+
+| `op` | Exact input names and types | `result` |
+| --- | --- | --- |
+| `identity` | `value: T` | The same value and type |
+| `equal` | `left: T`, `right: T` | Boolean equality with exact matching types |
+| `less_than` | `left: integer`, `right: integer` | Boolean: left < right |
+| `less_or_equal` | `left: integer`, `right: integer` | Boolean: left ≤ right |
+| `and` | `left: boolean`, `right: boolean` | Boolean conjunction |
+| `or` | `left: boolean`, `right: boolean` | Boolean disjunction |
+| `not` | `value: boolean` | Boolean inverse |
+| `select` | `condition: boolean`, `trueValue: T`, `falseValue: T` | Chosen value of type T; both inputs are evaluated |
+| `add` | `left: integer`, `right: integer` | Integer sum; out-of-range results fail |
+| `subtract` | `left: integer`, `right: integer` | Left minus right; out-of-range results fail |
+| `concat` | `left: string`, `right: string` | Joined string; over 4096 UTF-8 bytes fails |
+
+`T` must be the same exact type at every generic port of that invocation. Schema 2
+supports scalar types. Schema 3, the language's default for behavior artifacts,
+also allows nominal records and collections for `identity`, `equal` and `select`.
+A matching record shape alone does not make two different nominal types equal.
+No implicit string/integer/Boolean coercion occurs.
+
+Schema 3 also supports these structured operations:
+
+| `op` | Inputs and metadata | `result` |
+| --- | --- | --- |
+| `record_make` | One input per declared scalar field; node `recordRef = record(Data, "Record")` | The exact typed record |
+| `record_get` | `value: record`; node `field = "fieldName"` | The selected declared scalar field |
+| `collection_count` | `values: collection` | Integer length |
+| `collection_at` | `values: collection`, `index: integer` | Record at a zero-based index; invalid index fails |
+| `collection_append` | `values: collection`, `value: record` of its exact nominal type | A new bounded collection |
+
+Structured behavior artifacts pin their data dependencies in `dataContracts`,
+using `lock(Data)`; their record/collection ports include the matching `recordRef`.
+The [structured access example](../examples/configuration/inspection/behavior_example_structured_health_access.lce)
+shows these fields together. Automatic primitive extraction currently supports
+only scalar interfaces, even when the owning behavior uses schema 3.
+
+Current pure-engine limits include 16 input ports, 1–16 output ports and 32 nodes
+per component; a call runs at most 256 primitive operations and 256 component
+invocations, with nesting depth at most 8 including the root. Source validity
+and a successful small scenario do not guarantee a larger call fits those limits.
+
+For the exact accepted body fields, the Go model definitions and editor suggestions
+are authoritative. Example files show complete populated instances:
+
+| Declaration | Body definition |
+| --- | --- |
+| `data` | [DataContract](../internal/model/data.go) |
+| `behavior` | [ComponentPackage](../internal/model/components.go), [Behavior](../internal/model/behavior.go) |
+| `state` | [StateMachine](../internal/model/state.go) |
+| `messages` | [DeliveryModel](../internal/model/delivery.go) |
+| `workflow` | [WorkflowDefinition](../internal/model/workflow.go) |
+| `definition` | [ComponentDefinition](../internal/system/definition.go) |
+| `system` | [SystemDesign](../internal/system/types.go) |
+| `timing` | [Project](../internal/model/model.go) |
 
 ## Experiments and evidence
 
@@ -323,11 +410,29 @@ confinement. An adjacent `lock.json`, when present, is checked. JSON project bun
 work too. Exit codes: 0 successful, 1 failed expectations/compilation verdict,
 2 invalid input or execution failure. `-mode example` exports the reference project.
 
-The `/api/configuration` routes expose `compile`, `run`, `organize`, `testbench`, `patch`, `format`, `rename`,
+The `/api/configuration` routes expose `compile`, `run`, `component`, `extract`,
+`organize`, `testbench`, `patch`, `format`, `rename`,
 `definition`, `complete`, `pack`, `verify`, `replay`, `compare`, `migrate`, and `install`
 as POST actions. Editing takes `{project, expectedHash, file, declaration, ...}`;
 stale hashes return 409. GET `example`, `packages`, and `package?id=...&version=...`
 provide the example and persisted releases. Mutations retain same-origin checks.
+
+Creation and extraction requests include the current `project` and its compiled
+`expectedHash`, plus these fields:
+
+| POST action | Additional fields | Result |
+| --- | --- | --- |
+| `component` | `name`, `valueType` (`boolean`, `integer`, `string`) | Root starter, TODO testbench and imports |
+| `extract` | `file`, `declaration`, `path` such as `behavior.nodes[0]`, new `name` | Scalar primitive becomes a child with its own TODO testbench |
+| `testbench` | `name`: exact compiled artifact symbol, such as `folder/component.lce#Echo` | A TODO testbench for the selected executable artifact |
+| `organize` | No additional selection required | Reorganized files with imports and semantic identity preserved |
+
+Successful structural edits return `{project, compilation, paths}`. Creation and
+extraction use `paths.component` and `paths.testbench`; organization maps old file
+paths to their new paths. The UI rejects a returned edit if the draft changed while
+it was being prepared. Scaffolds do not provide passing evidence automatically.
+`run` accepts an optional `scope` with an exact `target` (kind, ID, version, digest)
+and a `descendants` Boolean. Omit scope to run the entire project.
 
 Limits include 128 files, 512 KiB per file, 4 MiB total source, 256 module
 specializations, 512 artifacts, 128 experiments and 64 assertions per experiment.
