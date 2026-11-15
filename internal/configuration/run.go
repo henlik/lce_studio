@@ -31,7 +31,12 @@ type CaseResult struct {
 	Assertions   []Assertion     `json:"assertions"`
 	Result       json.RawMessage `json:"result,omitempty"`
 }
+type TestScope struct {
+	Target      Target `json:"target"`
+	Descendants bool   `json:"descendants"`
+}
 type Report struct {
+	Scope      *TestScope   `json:"scope,omitempty"`
 	Compiler   string       `json:"compiler"`
 	SourceHash string       `json:"sourceHash"`
 	Lock       Lockfile     `json:"lock"`
@@ -40,10 +45,27 @@ type Report struct {
 }
 
 func Run(ctx context.Context, p Project) (Report, error) {
+	return RunScoped(ctx, p, nil)
+}
+func RunScoped(ctx context.Context, p Project, scope *TestScope) (Report, error) {
 	c := Compile(p)
 	r := Report{Compiler: CompilerVersion, SourceHash: c.SourceHash, Lock: c.Lock, Cases: []CaseResult{}}
 	if !c.Valid {
 		return r, fmt.Errorf("configuration has %d diagnostic(s): %s", len(c.Diagnostics), c.Diagnostics[0].Message)
+	}
+	targets, err := selectedTargets(c, scope)
+	if err != nil {
+		return r, err
+	}
+	r.Scope = scope
+	if scope != nil {
+		tests := []Experiment{}
+		for _, e := range c.Experiments {
+			if targets[e.Target] {
+				tests = append(tests, e)
+			}
+		}
+		c.Experiments = tests
 	}
 	if len(c.Experiments) == 0 {
 		return r, fmt.Errorf("at least one experiment with independent expectations is required")

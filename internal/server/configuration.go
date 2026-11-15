@@ -22,7 +22,13 @@ func (s *Server) configurationAPI(w http.ResponseWriter, r *http.Request) {
 			}
 			defer done()
 			_ = ctx
-			p, e := configuration.InspectionProject()
+			var p configuration.Project
+			var e error
+			if r.URL.Query().Get("template") == "hierarchy" {
+				p = configuration.HierarchyProject()
+			} else {
+				p, e = configuration.InspectionProject()
+			}
 			if e != nil {
 				fail(w, 500, e.Error(), nil)
 				return
@@ -62,12 +68,13 @@ func (s *Server) configurationAPI(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var body struct {
 		configuration.EditRequest
-		ID       string                `json:"id"`
-		Version  string                `json:"version"`
-		Test     bool                  `json:"test"`
-		Source   string                `json:"source"`
-		Package  configuration.Package `json:"package"`
-		Previous configuration.Package `json:"previous"`
+		ID       string                   `json:"id"`
+		Version  string                   `json:"version"`
+		Scope    *configuration.TestScope `json:"scope"`
+		Test     bool                     `json:"test"`
+		Source   string                   `json:"source"`
+		Package  configuration.Package    `json:"package"`
+		Previous configuration.Package    `json:"previous"`
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
 	d := json.NewDecoder(r.Body)
@@ -92,7 +99,11 @@ func (s *Server) configurationAPI(w http.ResponseWriter, r *http.Request) {
 	case "/compile":
 		result = configuration.Compile(body.Project)
 	case "/run":
-		result, e = configuration.Run(ctx, body.Project)
+		result, e = configuration.RunScoped(ctx, body.Project, body.Scope)
+	case "/testbench":
+		result, e = configuration.NewTestbench(body.EditRequest)
+	case "/organize":
+		result, e = configuration.Organize(body.EditRequest)
 	case "/format":
 		result, e = configuration.Format(body.EditRequest)
 	case "/rename":
@@ -100,7 +111,7 @@ func (s *Server) configurationAPI(w http.ResponseWriter, r *http.Request) {
 	case "/patch":
 		result, e = configuration.Patch(body.EditRequest)
 	case "/complete":
-		result = configuration.Complete(body.Project, body.File, body.Declaration, body.Path)
+		result = configuration.Complete(body.Project, body.File, body.Declaration, body.Path, body.Kind)
 	case "/definition":
 		result, e = configuration.Definition(body.Project, body.File, body.Offset)
 	case "/pack":

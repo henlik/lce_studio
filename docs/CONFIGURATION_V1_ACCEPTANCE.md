@@ -44,3 +44,18 @@ checks pass. Manual product review follows the implementation.
 
 **Configuration-language implementation: 6/6 automated gates (100% of this scope).**
 This percentage does not represent production readiness or replace manual UX review.
+
+
+## Authoring UX follow-up — 15 November 2026
+
+Monaco replaces the textarea. Components now expose source, testbench, child
+components and aspects by composition; Files exposes their actual folders.
+The three-level example has four independent testbenches. Scoped evidence is
+labelled and cannot be substituted for the whole-project report in a package.
+Folder reorganization checks semantic identity before accepting a move.
+
+Review with the nested-workspace steps in `CONFIGURATION_LANGUAGE.md`. The
+browser acceptance script tests production CSS, real Monaco, nested navigation,
+undo, find and desktop/mobile width in CI. Local Chromium launch is blocked by
+this execution environment's socket policy; local visual review is not claimed.
+M1 stays 100% and the weighted roadmap stays 33%.

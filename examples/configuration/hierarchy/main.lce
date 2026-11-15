@@ -1,0 +1,8 @@
+language "1.0";
+module "example.hierarchy.project" version "1.0.0";
+-- Composition exercise: ticket and identity propagation only.
+import "reception/component.lce" as reception;
+import "reception/testbench.lce" as receptionTests;
+import "reception/components/queue/testbench.lce" as queueTests;
+import "reception/components/queue/components/ticket/testbench.lce" as ticketTests;
+import "reception/components/identification/testbench.lce" as identificationTests;

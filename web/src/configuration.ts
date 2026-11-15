@@ -6,10 +6,13 @@ export interface Span {file:string;start:number;end:number;line:number;column:nu
 export interface ConfigDiagnostic extends Span {code:string;path?:string;message:string}
 export interface Artifact {symbol:string;kind:string;id:string;version:string;digest:string;body:Record<string,any>;origin:Span}
 export interface ConfigDeclaration extends Span {kind:string;name:string;nameSpan:Span;value:{start:number;end:number}}
-export interface Compilation {valid:boolean;sourceHash:string;diagnostics:ConfigDiagnostic[];artifacts:Artifact[];experiments:unknown[];lock:unknown;documents:{file:string;declarations:ConfigDeclaration[]}[]}
-export interface ConfigReport {passed:boolean;sourceHash:string;cases:{name:string;passed:boolean;error?:string;assertions:{path:string;observed:boolean;passed:boolean;actual:unknown;expected:unknown}[];result?:unknown}[]}
+export interface ConfigTarget {kind:string;id:string;version:string;digest:string}
+export interface ConfigExperiment {name:string;target:ConfigTarget;origin:Span}
+export interface ConfigWorkspace {roots:string[];nodes:{symbol:string;children:{symbol:string;relation:string}[]}[]}
+export interface Compilation {workspace?:ConfigWorkspace;valid:boolean;sourceHash:string;diagnostics:ConfigDiagnostic[];artifacts:Artifact[];experiments:ConfigExperiment[];lock:unknown;documents:{file:string;declarations:ConfigDeclaration[]}[]}
+export interface ConfigReport {scope?:{target:ConfigTarget;descendants:boolean};passed:boolean;sourceHash:string;cases:{name:string;passed:boolean;error?:string;assertions:{path:string;observed:boolean;passed:boolean;actual:unknown;expected:unknown}[];result?:unknown}[]}
 export interface ConfigPackage {schemaVersion:number;id:string;version:string;digest:string;project:ConfigProject;artifacts:Artifact[];report?:ConfigReport}
-export interface Completion {label:string;kind:string;type?:string;required?:boolean}
+export interface Completion {label:string;kind:string;type?:string;required?:boolean;detail?:string}
 export function emptyConfiguration():ConfigProject{return {language:'1.0',entry:'main.lce',files:{'main.lce':'language "1.0";\nmodule "local.project" version "1.0.0";\n\n-- Add declarations or load the inspection project.\n'}}}
 // UTF-8 offsets from Go are translated at the editor boundary. Emoji/non-Latin
 // comments must not shift diagnostic, rename or navigation selections.

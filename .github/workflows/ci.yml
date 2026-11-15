@@ -40,6 +40,7 @@ jobs:
       - run: npm --prefix web ci
       - run: npm --prefix web test
       - run: npm --prefix web run build
+      - run: cd web && npx playwright install --with-deps chromium
       - run: go build -trimpath -o bin/studio ./cmd/studio
       - name: Check complete API workflow
         shell: bash
@@ -63,6 +64,13 @@ jobs:
           node scripts/acceptance-inspection.mjs
           node scripts/acceptance-system.mjs
           node scripts/acceptance-configuration.mjs
+          node web/tests/browser-configuration.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: configuration-browser-screenshots
+          path: test-results/*.png
+          if-no-files-found: ignore
 
   compose:
     runs-on: ubuntu-latest

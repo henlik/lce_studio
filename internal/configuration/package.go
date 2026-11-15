@@ -52,7 +52,7 @@ func VerifyPackage(p Package) (Compilation, error) {
 	if !c.Valid || Hash(c.Artifacts) != Hash(p.Artifacts) {
 		return c, fmt.Errorf("package source, lock and compiled artifacts do not agree")
 	}
-	if p.Report != nil && (p.Report.SourceHash != c.SourceHash || Hash(p.Report.Lock) != Hash(c.Lock) || p.Report.Compiler != CompilerVersion) {
+	if p.Report != nil && (p.Report.Scope != nil || p.Report.SourceHash != c.SourceHash || Hash(p.Report.Lock) != Hash(c.Lock) || p.Report.Compiler != CompilerVersion) {
 		return c, fmt.Errorf("evidence provenance differs from package source")
 	}
 	return c, nil

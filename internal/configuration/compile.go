@@ -105,6 +105,10 @@ func Compile(project Project) (result Compilation) {
 		c.result.Artifacts = []Artifact{}
 		c.result.Experiments = []Experiment{}
 	}
+	if c.result.Valid {
+		w := Composition(c.result)
+		c.result.Workspace = &w
+	}
 	return c.result
 }
 func sortedKeys[T any](m map[string]T) []string {

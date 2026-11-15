@@ -100,6 +100,7 @@ type Lockfile struct {
 	Artifacts  []Target          `json:"artifacts"`
 }
 type Compilation struct {
+	Workspace   *Workspace   `json:"workspace,omitempty"`
 	Language    string       `json:"language"`
 	Valid       bool         `json:"valid"`
 	SourceHash  string       `json:"sourceHash"`

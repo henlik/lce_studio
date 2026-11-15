@@ -1,0 +1,11 @@
+language "1.0";
+module "example.hierarchy.ticket" version "1.0.0";
+behavior Ticket {
+ name="Ticket selection";
+ behavior={
+  inputs=[{name="ticket";type="integer";}];
+  outputs=[{name="ticket";type="integer";}];
+  nodes=[{id="selection";op="identity";inputs={value={input="ticket";};};}];
+  bindings={ticket={node="selection";port="result";};};
+ };
+}

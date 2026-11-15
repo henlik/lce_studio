@@ -18,3 +18,12 @@ assert.equal((await request('/compare',{previous:pkg,package:stored})).compatibl
 const tampered=structuredClone(pkg);tampered.artifacts[0].body.name='Forged';await request('/verify',{package:tampered},422);
 const missing=structuredClone(project);delete missing.lock;delete missing.files[Object.keys(missing.files).find(f=>f!==missing.entry)];assert.equal((await request('/compile',{project:missing})).valid,false);
 console.log('Configuration acceptance passed: 56 artifacts, 43 experiments, all eight kinds, exact replay, atomic installation and negative controls.');
+const nested=await request('/example?template=hierarchy');
+const nc=await request('/compile',{project:nested});assert.equal(nc.valid,true);assert.equal(nc.workspace.roots.length,1);assert.equal(nc.artifacts.length,4);
+const queue=nc.artifacts.find(a=>a.body.name==='Queue management');
+const target={kind:queue.kind,id:queue.id,version:queue.version,digest:queue.digest};
+const scoped=await request('/run',{project:nested,scope:{target,descendants:true}});assert.equal(scoped.passed,true);assert.equal(scoped.cases.length,2);assert.deepEqual(scoped.scope.target,target);
+const organized=await request('/organize',{project:nested,expectedHash:nc.sourceHash});assert.equal(organized.compilation.valid,true);assert.equal(Object.keys(organized.project.files).length,9);
+assert.equal((await request('/run',{project:organized.project})).cases.length,4);
+await request('/organize',{project:nested,expectedHash:'stale'},409);
+console.log('Hierarchy acceptance passed: three levels, four independent testbenches, exact scoped runs and semantics-preserving folders.');

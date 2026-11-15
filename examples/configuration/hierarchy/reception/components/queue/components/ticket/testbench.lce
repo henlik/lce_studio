@@ -1,0 +1,10 @@
+language "1.0";
+module "example.hierarchy.ticketTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are specified independently of execution.
+experiment TicketExample {
+ target=target(subject.Ticket);
+ scenario={inputs={ticket=integer(7);};};
+ expect={"outputs.ticket.integer"=7;};
+}

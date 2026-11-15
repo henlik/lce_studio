@@ -5,11 +5,13 @@ import (
 	"path"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 type EditRequest struct {
 	Project      Project `json:"project"`
+	Kind         string  `json:"kind,omitempty"`
 	ExpectedHash string  `json:"expectedHash"`
 	File         string  `json:"file"`
 	Declaration  string  `json:"declaration"`
@@ -360,7 +362,7 @@ type Completion struct {
 	Detail   string `json:"detail,omitempty"`
 }
 
-func Complete(p Project, file, decl, fieldPath string) []Completion {
+func Complete(p Project, file, decl, fieldPath string, fallbackKind ...string) []Completion {
 	out := []Completion{}
 	doc, _ := Parse(file, p.Files[file])
 	for _, d := range doc.Declarations {
@@ -378,7 +380,17 @@ func Complete(p Project, file, decl, fieldPath string) []Completion {
 	for _, n := range []string{"lock", "ref", "bundle", "aspect", "use", "target", "record", "value", "body", "integer", "string", "boolean", "merge", "concat", "get"} {
 		out = append(out, Completion{Label: n + "()", Kind: "constructor"})
 	}
-	for _, d := range doc.Declarations {
+	declarations := doc.Declarations
+	foundDeclaration := false
+	for _, d := range declarations {
+		if d.Name == decl {
+			foundDeclaration = true
+		}
+	}
+	if !foundDeclaration && len(fallbackKind) > 0 && artifactKinds[fallbackKind[0]] {
+		declarations = append(declarations, Declaration{Name: decl, Kind: fallbackKind[0]})
+	}
+	for _, d := range declarations {
 		if d.Name != decl {
 			continue
 		}
@@ -388,6 +400,15 @@ func Complete(p Project, file, decl, fieldPath string) []Completion {
 		}
 		t := reflect.TypeOf(v).Elem()
 		for _, key := range pathParts(fieldPath) {
+			if _, e := strconv.Atoi(key); e == nil {
+				for t.Kind() == reflect.Pointer {
+					t = t.Elem()
+				}
+				if t.Kind() == reflect.Slice {
+					t = t.Elem()
+					continue
+				}
+			}
 			for t.Kind() == reflect.Pointer || t.Kind() == reflect.Slice || t.Kind() == reflect.Map {
 				t = t.Elem()
 			}

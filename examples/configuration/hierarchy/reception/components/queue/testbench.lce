@@ -1,0 +1,10 @@
+language "1.0";
+module "example.hierarchy.queueTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are specified independently of execution.
+experiment QueueExample {
+ target=target(subject.Queue);
+ scenario={inputs={ticket=integer(42);};};
+ expect={"outputs.ticket.integer"=42;};
+}

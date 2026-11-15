@@ -6,6 +6,61 @@ packages the configuration. PostgreSQL stores installed releases and artifacts.
 It is not IEEE VHDL. The older scalar component syntax remains available under
 **Source & testbench**, and its component/testbench files can be migrated.
 
+## Nested component workspace
+
+The Source view now uses Monaco, with locally bundled CSS, icons and worker code.
+It provides syntax colours, line numbers, folding, bracket matching, undo/redo,
+find/replace, multiple cursors, contextual suggestions and an outline. It is an
+embedded editor, not a VS Code extension host, terminal or runtime debugger.
+
+Start with **Nested component example** for this short authoring exercise:
+
+| Level | Component | Source and independent testbench |
+|---|---|---|
+| 1 | Reception composition | `reception/component.lce`, `reception/testbench.lce` |
+| 2 | Queue management | `reception/components/queue/component.lce`, adjacent `testbench.lce` |
+| 3 | Ticket selection | `reception/components/queue/components/ticket/component.lce`, adjacent `testbench.lce` |
+| 2 | Patient identification | `reception/components/identification/component.lce`, adjacent `testbench.lce` |
+
+1. Expand **Reception composition** in the Components explorer. Its two direct
+   subcomponents are Queue management and Patient identification.
+2. Click **Queue management**, then **Ticket selection**. The breadcrumbs show
+   the complete path. Click a parent breadcrumb or use Back/Forward to move between
+   levels. Each source file keeps its own cursor, scroll position and undo history
+   while the workspace remains open. Closing a tab does not delete its file.
+3. Open **Testbench** under Ticket selection in the explorer to edit its independent
+   expectation: input ticket `7` must produce output ticket `7`.
+4. Use the **Testbench** view and **Run component tests**. Ticket has one experiment.
+   Queue has one direct experiment, or two when **Include subcomponents and aspects**
+   is checked. **Run all tests** runs all four. Results name their exact scope.
+5. Change Ticket's expected output from `7` to `8`. Its test must fail; restore `7`.
+   No assertion is inferred from the implementation's observed result.
+6. Use **Files** to inspect actual nested folders. **Organize folders** can reorganize
+   older flat projects: it rewrites local imports and checks that artifact digests
+   and independent expectations are unchanged. Comments and multi-declaration files
+   remain intact. Shared modules have one location under `shared/`, with references
+   from their parents. Project entry modules keep their entry path. Multiple tests
+   can live under a component's `testbench/` folder; unrelated modules remain under
+   `modules/`. Deep paths are bounded, with shared locations used when necessary.
+7. An untested component shows **No tests yet · Add testbench**. This creates a
+   linked file with explicit TODOs and a deliberately failing missing-observation
+   assertion. Supply the scenario and expected results yourself. Definitions are
+   manifests: test their executable aspects. Parameterized specializations require
+   an explicit test module with the same import parameters. If the component is in
+   the entry file, a separate `test-suite.lce` entry avoids a circular import.
+8. Export the JSON project to retain all paths, or use the native example at
+   `examples/configuration/hierarchy/main.lce` with `configcheck`.
+
+This example demonstrates composition and ticket/identity propagation only; it is
+not the complete clinical reception process. Each engine primitive remains an
+operation with implemented semantics, configured and tested through its owning
+component. Data/state/messages are shown as aspects, not new abstraction levels.
+
+Draft edits automatically refresh diagnostics after a short pause. Red markers
+and the Problems list navigate to the exact source. The explorer retains the last
+valid structure during an incomplete edit. Source, selected file, tabs and component
+context autosave; editor undo history is intentionally scoped to the current session.
+
 ## Start the review
 
 1. Start the branch's Go server and Vue app using the README instructions. Open
@@ -15,24 +70,23 @@ It is not IEEE VHDL. The older scalar component syntax remains available under
 2. A new workspace contains an empty module. Click **Inspection example** to
    explicitly load the reference project. It contains 56 artifacts, 43 independent
    experiments, and all eight supported artifact kinds across 100 source files.
-3. Click **Compile**. The left library lists files and artifacts by kind. Select
+3. Click **Compile**. The left explorer has **Components** and **Files** views. In Files, select
    `workflow_health_reception_inspection.lce`, then **Canvas**. Reception starts
    with its stage overview. Select a stage to inspect its sequential flow; choose
    **All steps** to see the entire workflow. **Manual positions** permits dragging
-   nodes whose model includes a position. Hide the library or inspector for space.
+   nodes whose model includes a position. Hide the explorer or inspector for space.
 4. Select a node, change its name in the inspector, then open **Source**. The
    corresponding property has changed in that file. Comments and unrelated
    properties remain. A value obtained from another fixture/constructor must be
    changed at its definition; the editor reports this instead of silently copying it.
 5. In Source, put the cursor on an imported symbol and use **Go to definition**
-   or F12. **Suggestions** / Ctrl+Space lists symbols, constructors, and the selected
-   artifact's typed fields; `*` marks required serialized fields. Select a
+   or F12. **Suggestions** / Ctrl+Space opens Monaco suggestions for symbols, constructors and the current object's typed fields; required serialized fields are labelled `required`. Select a
    declaration from the jump menu. **Format** preserves semantics and comments.
 6. Select an artifact, enter a new local symbol name and click **Rename symbol
    safely**. References across files update. Implicit artifact IDs and names are
    made explicit to preserve installed identity. Changing a parameter or experiment
    name changes specialization/evidence identity and is an explicit source edit.
-7. Click **Run testbench**. All 43 reference experiments should pass. An expected
+7. Click **Run all tests**. All 43 reference experiments should pass. An expected
    invalid data fixture passes when the data engine reports `valid=false`; that is
    a negative control. Expand a case for expected/observed values and its trace.
 8. Open `test_case01.lce`. Change its expected `passed` value from true to false,
@@ -49,8 +103,8 @@ It is not IEEE VHDL. The older scalar component syntax remains available under
 11. Reload the app: the source and latest evidence recover through the existing
     IndexedDB draft system. **Installed packages** reopens the immutable server
     copy. Export is the portable backup. Evidence from older source is marked stale.
-12. Import an exported JSON project/package to share it. For native flat module
-    projects, select all `.lce` files together. Import a single legacy `.lce`
+12. Import an exported JSON project/package to share it. **Import folder** retains
+    nested `.lce` module paths. For flat module projects, select all `.lce` files together. Import a single legacy `.lce`
     component to migrate it, preserving its state scenarios and independent
     step/output/effect assertions. Compare a previous JSON package to review
     removals, immutable conflicts, data compatibility and behavior changes.
@@ -215,7 +269,7 @@ confinement. An adjacent `lock.json`, when present, is checked. JSON project bun
 work too. Exit codes: 0 successful, 1 failed expectations/compilation verdict,
 2 invalid input or execution failure. `-mode example` exports the reference project.
 
-The `/api/configuration` routes expose `compile`, `run`, `patch`, `format`, `rename`,
+The `/api/configuration` routes expose `compile`, `run`, `organize`, `testbench`, `patch`, `format`, `rename`,
 `definition`, `complete`, `pack`, `verify`, `replay`, `compare`, `migrate`, and `install`
 as POST actions. Editing takes `{project, expectedHash, file, declaration, ...}`;
 stale hashes return 409. GET `example`, `packages`, and `package?id=...&version=...`

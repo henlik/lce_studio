@@ -62,6 +62,10 @@ retains its existing simulation behavior; these models are not silently merged.
 
 **Weighted implementation: 33%**
 
+2026-11-15 authoring update: Monaco editor, nested component/testbench explorer,
+breadcrumbs and exact scoped tests. M1 remains 100%; this improves authoring UX
+and does not close additional runtime checkpoints.
+
 Configuration Language 1.0: **6/6 implementation gates complete**, with manual UX
 review pending. See [configuration acceptance](CONFIGURATION_V1_ACCEPTANCE.md).
 This authoring work adds no later-runtime checkpoint credit.

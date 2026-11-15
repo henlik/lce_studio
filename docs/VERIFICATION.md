@@ -1,5 +1,30 @@
 # Verification
 
+## Component authoring workspace — 15 November 2026
+
+- Replaced the configuration textarea with locally bundled Monaco, including its
+  CSS, icon font and editor worker. Added nested composition and filesystem trees,
+  file tabs, breadcrumbs, Back/Forward, per-file editor state, inline diagnostics,
+  contextual suggestions, definition jumps, formatting and safe rename actions.
+- Added an actual three-level project with four independent testbenches. Full and
+  component-scoped runs use the existing engines. Zero selected tests cannot pass;
+  newly scaffolded testbenches intentionally fail until their oracle is supplied.
+  Scoped evidence is rejected as a whole-package report.
+- Folder organization rewrites imports, preserves comments and whole modules, and
+  rejects changes to compiled content or independent expectations. Reused modules
+  stay shared; explicit source conflicts remain protected.
+- **Passed locally:** complete Go race suite with PostgreSQL, `go vet ./...`, Go
+  build, 56 frontend tests, TypeScript/Vue production build, the live configuration
+  API acceptance (56 artifacts/43 experiments plus four nested example tests),
+  and the hierarchy example through the standalone CLI. Additional Go tests cover
+  folder idempotence, stale hashes, scoped evidence and entry-file test scaffolds.
+- A real-browser acceptance script is wired into CI for Monaco, undo/find, nested
+  navigation, scoped execution, CSS and desktop/mobile overflow; screenshots are
+  retained as CI artifacts. **Local visual acceptance remains unverified:** Chromium
+  exits because the environment rejects its required Unix socket. The lazy Monaco
+  bundle adds roughly 1 MiB compressed and Vite reports a chunk-size warning.
+- **M1 100%; weighted roadmap 33%**, unchanged by this authoring UX work.
+
 ## Configuration Language 1.0 — 15 November 2026
 
 - Six authoring gates implemented: versioned parsing/AST and typed diagnostics;
