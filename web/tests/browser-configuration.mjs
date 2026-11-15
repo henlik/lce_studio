@@ -23,10 +23,11 @@ try {
  await page.waitForFunction(()=>document.querySelector('.active-path')?.textContent?.includes('ticket/component.lce'));
  // Real keyboard editing, per-file undo and draft persistence.
  const editor=page.locator('.monaco-editor');await editor.click();await page.keyboard.press('Control+End');await page.keyboard.type('\n-- browser draft marker');
+ const downloadReady=page.waitForEvent('download');await studio.getByRole('button',{name:'Export source',exact:true}).click();const download=await downloadReady;const exported=JSON.parse(await fs.readFile(await download.path(),'utf8'));assert.ok(exported.files['reception/components/queue/components/ticket/component.lce'].includes('-- browser draft marker'),'typed spaces and comment must be retained in canonical source');
  await studio.getByRole('button',{name:'Queue management',exact:true}).first().click();await studio.getByRole('button',{name:'Ticket selection',exact:true}).first().click();
- await page.waitForFunction(()=>document.querySelector('.monaco-editor .view-lines')?.textContent?.includes('browser draft marker'));
+ await page.waitForFunction(()=>document.querySelector('.monaco-editor .view-lines')?.textContent?.replace(/\u00a0/g,' ').includes('browser draft marker'));
  await editor.click();await page.keyboard.press('Control+z');
- await page.waitForFunction(()=>!document.querySelector('.monaco-editor .view-lines')?.textContent?.includes('browser draft marker'));
+ await page.waitForFunction(()=>!document.querySelector('.monaco-editor .view-lines')?.textContent?.replace(/\u00a0/g,' ').includes('browser draft marker'));
  await page.keyboard.press('Control+f');await page.locator('.monaco-editor .find-widget.visible').waitFor();await page.keyboard.press('Escape');
  await studio.getByRole('button',{name:'Testbench',exact:true}).click();await studio.getByRole('button',{name:'Run component tests',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.configuration-main .config-success')?.textContent?.includes('1 experiments'));
@@ -41,4 +42,4 @@ try {
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile horizontal overflow');
  await page.screenshot({path:'test-results/configuration-mobile.png',fullPage:true});
  assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');
-}catch(error){await page.screenshot({path:'test-results/configuration-failure.png',fullPage:true}).catch(()=>{});throw error}finally{await browser.close()}
+}catch(error){console.error('Browser errors:',errors);console.error('Editor text:',await page.locator('.monaco-editor .view-lines').textContent().catch(()=>''));await page.screenshot({path:'test-results/configuration-failure.png',fullPage:true}).catch(()=>{});throw error}finally{await browser.close()}
