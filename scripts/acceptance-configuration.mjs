@@ -27,3 +27,19 @@ const organized=await request('/organize',{project:nested,expectedHash:nc.source
 assert.equal((await request('/run',{project:organized.project})).cases.length,4);
 await request('/organize',{project:nested,expectedHash:'stale'},409);
 console.log('Hierarchy acceptance passed: three levels, four independent testbenches, exact scoped runs and semantics-preserving folders.');
+
+const empty={language:'1.0',entry:'main.lce',files:{'main.lce':'language "1.0";\nmodule "acceptance.empty" version "1.0.0";\n'}};
+const ec=await request('/compile',{project:empty});
+const created=await request('/component',{project:empty,expectedHash:ec.sourceHash,name:'Counter',valueType:'integer'});
+assert.equal(created.compilation.valid,true);assert.equal(created.compilation.artifacts.length,1);assert.equal(created.compilation.experiments.length,1);
+assert.equal((await request('/run',{project:created.project})).passed,false,'TODO testbench cannot pass');
+await request('/component',{project:empty,expectedHash:'stale',name:'Counter',valueType:'integer'},409);
+await request('/component',{project:created.project,expectedHash:created.compilation.sourceHash,name:'Counter',valueType:'integer'},422);
+const extracted=await request('/extract',{project:created.project,expectedHash:created.compilation.sourceHash,file:created.paths.component,declaration:'Counter',path:'behavior.nodes[0]',name:'Identity'});
+assert.equal(extracted.compilation.valid,true);assert.equal(extracted.compilation.artifacts.length,2);assert.equal(extracted.compilation.workspace.roots.length,1);
+assert.ok(extracted.paths.component.endsWith('/Counter/components/Identity/component.lce'));
+for(const bench of [created.paths.testbench,extracted.paths.testbench]){
+ extracted.project.files[bench]=extracted.project.files[bench].replace('scenario = {};','scenario = { inputs = { value = integer(23); }; };').replace('"TODO.expected.observation" = true','"outputs.result.integer" = 23');
+}
+const finished=await request('/run',{project:extracted.project});assert.equal(finished.passed,true);assert.equal(finished.cases.length,2);
+console.log('Creation acceptance passed: empty workspace, owned files/imports, nested extraction, TODO failure, independent parent/child expectations, conflicts and collision guards.');

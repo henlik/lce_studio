@@ -62,6 +62,12 @@ retains its existing simulation behavior; these models are not silently merged.
 
 **Weighted implementation: 33%**
 
+2026-11-15 creation update: explicit component creation and scalar primitive
+extraction now produce owned source/testbench folders and wired imports. Parent
+bindings and authored expectations stay intact; new testbenches require independent
+inputs and expectations. M1 stays **100%**, weighted roadmap **33%**; this improves
+authoring and does not close a runtime gate.
+
 2026-11-15 authoring update: Monaco editor, nested component/testbench explorer,
 breadcrumbs and exact scoped tests. M1 remains 100%; this improves authoring UX
 and does not close additional runtime checkpoints.

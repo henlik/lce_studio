@@ -12,6 +12,7 @@ import (
 type EditRequest struct {
 	Project      Project `json:"project"`
 	Kind         string  `json:"kind,omitempty"`
+	ValueType    string  `json:"valueType,omitempty"`
 	ExpectedHash string  `json:"expectedHash"`
 	File         string  `json:"file"`
 	Declaration  string  `json:"declaration"`

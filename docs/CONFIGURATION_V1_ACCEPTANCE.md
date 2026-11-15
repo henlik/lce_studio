@@ -61,3 +61,18 @@ desktop/mobile width, and mobile navigation containment. CI desktop/mobile
 screenshots were inspected; local Chromium cannot start under this workspace's
 socket policy. Manual usability review with the engineer remains separate.
 M1 stays 100% and the weighted roadmap stays 33%.
+
+## Create and extract acceptance
+
+Follow **Create your own component hierarchy** in `CONFIGURATION_LANGUAGE.md`.
+Start empty, create Counter, independently specify its test, extract Identity,
+complete Identity's test, and run both together and separately. Confirm the child
+folder, breadcrumbs and Back/Forward navigation. A fresh testbench must fail;
+changing an expected result must fail without changing the component.
+
+Automated coverage: `create_test.go` exercises all eleven scalar operations,
+upstream component outputs, literal/fixture bindings, standalone child compilation,
+unchanged parent expectations, stale hashes, invalid names and folder collisions.
+The live API acceptance covers empty-to-nested authoring with independently supplied
+parent and child expectations. The Chromium exercise covers the same controls and
+editing the generated TODO testbench into a passing independent test.

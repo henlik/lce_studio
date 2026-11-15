@@ -11,7 +11,35 @@ await fs.mkdir('test-results',{recursive:true});
 try {
  await page.goto(base);await page.getByRole('navigation',{name:'Studio planes and workspaces'}).getByRole('button',{name:'Components',exact:true}).click();
  await page.getByRole('button',{name:/^Component definitions/}).click();await page.getByRole('button',{name:'Configuration language',exact:true}).click();
- const studio=page.locator('.configuration-studio');await studio.getByRole('button',{name:'Nested component example',exact:true}).click();
+ const studio=page.locator('.configuration-studio');
+ // Start from an empty workspace, then create and extract through the actual UI.
+ await studio.getByRole('button',{name:'+ New component',exact:true}).click();
+ await studio.getByRole('textbox',{name:'Component symbol',exact:true}).fill('Counter');
+ await studio.getByRole('combobox',{name:'Starter value type',exact:true}).selectOption('integer');
+ await studio.getByRole('button',{name:'Create component',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.active-path')?.textContent==='components/Counter/component.lce');
+ await studio.getByRole('button',{name:'Extract primitive…',exact:true}).click();
+ await studio.getByRole('textbox',{name:'Component symbol',exact:true}).fill('Identity');
+ await studio.getByRole('button',{name:'Extract component',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.active-path')?.textContent==='components/Counter/components/Identity/component.lce');
+ assert.ok((await studio.locator('.config-breadcrumbs').textContent()).includes('Counter'));
+ await page.waitForFunction(()=>document.querySelectorAll('.studio-toast').length===0);
+ await page.screenshot({path:'test-results/configuration-created-hierarchy.png',fullPage:true});
+ await studio.getByRole('button',{name:'Testbench',exact:true}).click();
+ await studio.getByRole('button',{name:'Run component tests',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.configuration-main .config-error')?.textContent?.startsWith('Failed · 1 experiments'));
+ await studio.getByRole('button',{name:'Testbench · IdentityTest',exact:true}).click();
+ await page.locator('.monaco-editor').waitFor();
+ const draftReady=page.waitForEvent('download');await studio.getByRole('button',{name:'Export source',exact:true}).click();
+ const draft=await draftReady;const source=JSON.parse(await fs.readFile(await draft.path(),'utf8'));
+ const bench='components/Counter/components/Identity/testbench.lce';
+ const finishedBench=source.files[bench].replace('scenario = {};','scenario = { inputs = { value = integer(23); }; };').replace('"TODO.expected.observation" = true','"outputs.result.integer" = 23');
+ await page.locator('.monaco-editor').click();await page.keyboard.press('Control+a');await page.keyboard.insertText(finishedBench);
+ await studio.getByRole('button',{name:'Testbench',exact:true}).click();await studio.getByRole('button',{name:'Run component tests',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.configuration-main .config-success')?.textContent?.includes('1 experiments'));
+ await studio.getByRole('button',{name:'Counter',exact:true}).first().click();
+ await page.waitForFunction(()=>document.querySelector('.active-path')?.textContent==='components/Counter/component.lce');
+ await studio.getByRole('button',{name:'Nested component example',exact:true}).click();
  await page.locator('.monaco-editor').waitFor();await studio.getByRole('button',{name:'Reception composition',exact:true}).first().click();
  await page.waitForFunction(()=>document.querySelector('.monaco-editor .view-lines')?.textContent?.includes('Reception'));
  await studio.getByRole('button',{name:'Queue management',exact:true}).first().click();
@@ -43,5 +71,9 @@ try {
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile horizontal overflow');
  assert.equal(await page.evaluate(()=>{const rail=document.querySelector('.app-rail').getBoundingClientRect();return [...document.querySelectorAll('.studio-navigation .plane-toggle')].every(el=>{const r=el.getBoundingClientRect();return r.top>=rail.top&&r.bottom<=rail.bottom})}),true,'collapsed mobile plane navigation stays within the header');
  await page.screenshot({path:'test-results/configuration-mobile.png',fullPage:true});
- assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');
+ await studio.getByRole('button',{name:'+ New component',exact:true}).click();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile creation form overflow');
+ await page.screenshot({path:'test-results/configuration-mobile-create.png',fullPage:true});
+ await studio.getByRole('button',{name:'Close component creation',exact:true}).click();
+ assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: component creation, extraction, independent TODO-to-passing testbench, Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');
 }catch(error){console.error('Browser errors:',errors);console.error('Editor text:',await page.locator('.monaco-editor .view-lines').textContent().catch(()=>''));await page.screenshot({path:'test-results/configuration-failure.png',fullPage:true}).catch(()=>{});throw error}finally{await browser.close()}

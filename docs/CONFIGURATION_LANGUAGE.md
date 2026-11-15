@@ -61,6 +61,60 @@ and the Problems list navigate to the exact source. The explorer retains the las
 valid structure during an incomplete edit. Source, selected file, tabs and component
 context autosave; editor undo history is intentionally scoped to the current session.
 
+## Create your own component hierarchy
+
+1. In **Components → Component definitions → Configuration language**, click
+   **+ New component** in the explorer. Enter `Counter`, select **Integer**, and
+   click **Create component**. This is an explicit starter action; empty projects
+   still contain no components. The starter passes `value` through to `result`.
+2. The studio creates `components/Counter/component.lce` and the adjacent
+   `testbench.lce`, imports both, and opens Counter's source. Select the explorer's
+   **Testbench · CounterTest**. Replace `scenario = {};` with:
+
+   ```lce
+   scenario = { inputs = { value = integer(23); }; };
+   ```
+
+   Replace the TODO expectation with:
+
+   ```lce
+   expect = { "outputs.result.integer" = 23; };
+   ```
+
+3. Open the **Testbench** view and click **Run component tests**. One test passes.
+   Change the expected value to `24` to see it fail, then restore `23`.
+4. Return to Counter's source. Click **Extract primitive…**, select
+   `evaluate · identity`, name the new component `Identity`, and click
+   **Extract component**. You can also select a primitive on the Canvas and use
+   this action in its inspector.
+5. Counter now calls Identity. The explorer and breadcrumb show **Counter →
+   Identity**. Its files are under
+   `components/Counter/components/Identity/`. The input binding, node identity,
+   position, colour and comments in Counter remain intact. Identity is an
+   independently reusable behavior component containing the built-in primitive.
+6. Open **Testbench · IdentityTest** and supply the same scenario and independent
+   expectation from step 2. Click Counter in the breadcrumb, then **Testbench →
+   Run component tests** with **Include subcomponents and aspects** checked.
+   Both tests pass. Uncheck it to run only Counter's own test.
+7. Use **Back/Forward**, breadcrumbs, or file tabs to move between levels. Export
+   source to retain the complete project. Package and install it through the
+   existing package workflow when its independent tests are ready.
+
+Creation supplies syntax and wiring, not a test oracle: each generated testbench
+contains explicit TODOs and fails until completed. Creation and extraction reject
+stale drafts and occupied folders instead of overwriting work. Source edits made
+while the creation form is open require closing and reopening that form.
+
+Extraction currently supports the eleven scalar primitive operations, with
+boolean, integer and string interfaces, in unparameterized modules with inline
+nodes and literal operation names. Shared node fixtures, structured record or
+collection interfaces, and parameterized modules require explicit source authoring.
+Existing subcomponents already have their own source. Extraction preserves the
+scalar dataflow but adds a component call: execution trace paths, invocation
+counts and nesting-depth consumption change. Existing expectations are never
+rewritten; rerun them to assess these changes. This is not a formal equivalence
+proof under every execution budget.
+
 ## Start the review
 
 1. Start the branch's Go server and Vue app using the README instructions. Open

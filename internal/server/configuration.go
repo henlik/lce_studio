@@ -102,6 +102,10 @@ func (s *Server) configurationAPI(w http.ResponseWriter, r *http.Request) {
 		result, e = configuration.RunScoped(ctx, body.Project, body.Scope)
 	case "/testbench":
 		result, e = configuration.NewTestbench(body.EditRequest)
+	case "/component":
+		result, e = configuration.NewComponent(body.EditRequest)
+	case "/extract":
+		result, e = configuration.ExtractPrimitive(body.EditRequest)
 	case "/organize":
 		result, e = configuration.Organize(body.EditRequest)
 	case "/format":

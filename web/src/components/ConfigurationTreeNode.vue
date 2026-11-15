@@ -5,7 +5,7 @@ import type {Artifact,Compilation,Span} from '../configuration';
 import {componentChildren,componentTests,matchesComponent,parentCount} from '../configurationNavigation';
 const props=defineProps<{artifact:Artifact;compilation:Compilation;chain:string[];active:string;activeChain:string[];query:string}>();
 const emit=defineEmits<{open:[symbol:string,chain:string[],span?:Span];create:[symbol:string,chain:string[]]}>();
-const expanded=ref(props.chain.length===1),children=computed(()=>componentChildren(props.compilation,props.artifact.symbol).filter(c=>matchesComponent(props.compilation,c.artifact,props.query)));
+const expanded=ref(props.chain.length===1||props.activeChain.includes(props.artifact.symbol)),children=computed(()=>componentChildren(props.compilation,props.artifact.symbol).filter(c=>matchesComponent(props.compilation,c.artifact,props.query)));
 const tests=computed(()=>componentTests(props.compilation,props.artifact)),shared=computed(()=>parentCount(props.compilation,props.artifact.symbol)>1);
 const recursive=computed(()=>props.chain.slice(0,-1).includes(props.artifact.symbol));
 const primitives=computed(()=>props.artifact.kind==='behavior'?(props.artifact.body.behavior?.nodes||[]).filter((n:any)=>n.op):[]);

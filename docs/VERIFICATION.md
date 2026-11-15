@@ -1,5 +1,31 @@
 # Verification
 
+## Component creation and extraction — 15 November 2026
+
+- Explicit **New component** creates a scalar identity starter, its own source and
+  TODO testbench, and entry imports. New workspaces remain empty. **Extract
+  primitive** turns an inline scalar operation into a typed child with nested
+  source/testbench files, retaining parent node identity, bindings, comments,
+  fixtures, position and colour. Existing test expectations are not rewritten.
+- Backend tests cover all eleven scalar operations (including both select
+  branches), literals, upstream component outputs, child compilation without its
+  parent, unchanged parent expectations, safe names, occupied folders and stale
+  hashes. The extraction adds an invocation and therefore changes trace paths,
+  call counts and depth usage; it is not a formal execution-budget equivalence
+  proof. Structured and parameterized extraction require explicit authoring.
+- Passed locally: complete `go test -race -count=1 ./...` with PostgreSQL,
+  `go vet ./...`, Go build, 56 frontend tests, Vue/TypeScript checks and production
+  build, and live configuration acceptance in a disposable PostgreSQL schema.
+  The live exercise starts empty, creates/extracts a hierarchy, verifies unfinished
+  testbenches fail, then supplies independent parent/child expectations and passes
+  both. The existing 56-artifact/43-experiment and hierarchy acceptance still pass.
+- Chromium acceptance now also exercises the creation/extraction controls, edits a
+  generated TODO testbench into a passing independent test, and checks the mobile
+  creation form for overflow. CI retains desktop hierarchy and mobile form captures;
+  local browser launch remains unavailable under the workspace socket policy.
+- Instructions: **Create your own component hierarchy** in
+  `docs/CONFIGURATION_LANGUAGE.md`. **M1 100%; weighted roadmap 33%**, unchanged.
+
 ## Component authoring workspace — 15 November 2026
 
 - Replaced the configuration textarea with locally bundled Monaco, including its
