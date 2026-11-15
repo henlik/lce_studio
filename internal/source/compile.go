@@ -1,4 +1,4 @@
-// Package source implements the experimental LCE Assembly 0.1 frontend.
+// Package source implements the experimental LCE Source 0.2 frontend.
 // It is VHDL-inspired syntax, not an IEEE VHDL parser or execution engine.
 package source
 
@@ -12,7 +12,7 @@ import (
 	"software-studio/internal/system"
 )
 
-const Version = "lce-assembly-0.1"
+const Version = "lce-source-0.2"
 const MaxBytes = 64 << 10
 
 type Position struct {
@@ -28,6 +28,8 @@ type Result struct {
 	Language    string               `json:"language"`
 	Valid       bool                 `json:"valid"`
 	Design      *system.SystemDesign `json:"design,omitempty"`
+	Component   *Component           `json:"component,omitempty"`
+	Testbench   *Testbench           `json:"testbench,omitempty"`
 	Diagnostics []Diagnostic         `json:"diagnostics"`
 	Locations   map[string]Position  `json:"locations"`
 }
@@ -48,6 +50,8 @@ func Compile(input string) (result Result) {
 		if failure := recover(); failure != nil {
 			if e, ok := failure.(syntaxError); ok {
 				result.Design = nil
+				result.Component = nil
+				result.Testbench = nil
 				result.Valid = false
 				result.Diagnostics = append(result.Diagnostics, e.Diagnostic)
 			} else {
@@ -61,6 +65,10 @@ func Compile(input string) (result Result) {
 	}
 	p := parser{tokens: lex(input), locations: result.Locations}
 	p.mark("")
+	if p.peek().kind == "component" {
+		p.compileComponent(&result)
+		return
+	}
 	p.expect("system")
 	d := system.SystemDesign{SchemaVersion: 1, ID: p.text(), Components: []system.ComponentInstance{}, Connections: []system.Connection{}, DeploymentPlans: []system.DeploymentPlan{}}
 	p.expect("version")
@@ -96,7 +104,7 @@ func Compile(input string) (result Result) {
 	p.expect("begin")
 	for p.peek().kind != "end" {
 		switch p.peek().kind {
-		case "string":
+		case "quoted":
 			path := fmt.Sprintf("components[%d]", len(d.Components))
 			p.mark(path)
 			c := system.ComponentInstance{ID: p.text(), Artifacts: []system.ArtifactRef{}, Bindings: []system.Binding{}}
@@ -261,7 +269,7 @@ func (p *parser) component(c *system.ComponentInstance, path string) {
 				p.fail("Expected workflow owner or handoff")
 			}
 		default:
-			p.fail("Expected name, port map, entry, messages owner, workflow owner/handoff, or end; behavior bodies and generics are not supported")
+			p.fail("Expected name, port map, entry, messages owner, workflow owner/handoff, or end; author component bodies in a top-level component declaration")
 		}
 	}
 	p.expect("end")
@@ -300,7 +308,7 @@ func (p *parser) expect(kind string) {
 	}
 	p.index++
 }
-func (p *parser) text() string     { t := p.peek(); p.expect("string"); return t.value }
+func (p *parser) text() string     { t := p.peek(); p.expect("quoted"); return t.value }
 func (p *parser) mark(path string) { p.locations[path] = p.peek().Position }
 func (p *parser) fail(message string) {
 	panic(syntaxError{Diagnostic{Position: p.peek().Position, Message: message}})
@@ -382,21 +390,34 @@ func lex(input string) []token {
 			if err := json.Unmarshal([]byte(string(runes[start:i])), &value); err != nil {
 				fail("Quoted names use JSON string escapes")
 			}
-			out = append(out, token{"string", value, pos})
+			out = append(out, token{"quoted", value, pos})
 		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r == '_':
 			start := i
-			for i < len(runes) && ((runes[i] >= 'a' && runes[i] <= 'z') || (runes[i] >= 'A' && runes[i] <= 'Z') || runes[i] == '_') {
+			for i < len(runes) && ((runes[i] >= 'a' && runes[i] <= 'z') || (runes[i] >= 'A' && runes[i] <= 'Z') || (runes[i] >= '0' && runes[i] <= '9') || runes[i] == '_') {
 				advance(runes[i])
 				i++
 			}
-			value := strings.ToLower(string(runes[start:i]))
+			value := string(runes[start:i])
+			out = append(out, token{strings.ToLower(value), value, pos})
+		case r >= '0' && r <= '9':
+			start := i
+			for i < len(runes) && runes[i] >= '0' && runes[i] <= '9' {
+				advance(runes[i])
+				i++
+			}
+			out = append(out, token{"number", string(runes[start:i]), pos})
+		case (r == ':' || r == '<' || r == '>') && i+1 < len(runes) && runes[i+1] == '=':
+			advance(r)
+			advance('=')
+			i += 2
+			value := string(r) + "="
 			out = append(out, token{value, value, pos})
 		case r == '=' && i+1 < len(runes) && runes[i+1] == '>':
 			advance(r)
 			advance('>')
 			i += 2
 			out = append(out, token{"=>", "=>", pos})
-		case strings.ContainsRune(":;().,", r):
+		case strings.ContainsRune(":;().,=+-<>", r):
 			advance(r)
 			i++
 			out = append(out, token{string(r), string(r), pos})

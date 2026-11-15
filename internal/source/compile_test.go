@@ -81,6 +81,7 @@ end system;`, 1)
 }
 func FuzzCompile(f *testing.F) {
 	f.Add(sourceexamples.M1)
+	f.Add(sourceexamples.StockReservation)
 	f.Add("")
 	f.Add("system")
 	f.Add("\"\\\"")

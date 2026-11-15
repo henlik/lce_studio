@@ -310,9 +310,15 @@ remain subsequent milestones.
 
 ## Experimental source authoring branch
 
-On `codex/vhdl-style-authoring`, open **Design → System architecture → Source**
-to try VHDL-inspired component assembly. Load M1 source, install the M1 library,
-compile and check, then apply to the canvas and run the existing acceptance suite.
-This is **LCE Assembly 0.1**, not standard VHDL; it reuses the current model and
-execution engines. Read [the experiment and language decision](docs/SOURCE_AUTHORING_EXPERIMENT.md)
-for supported syntax, CLI usage and limits. M1 remains **100%**, overall **33%**.
+On `codex/vhdl-style-authoring`, open **Engineering → Components → Component
+definitions → Source & testbench**. Load the complete stock component, compile,
+run its nine test cases, then install the immutable component version. Data
+schemas, pure decisions, state bindings and catalog pins are generated from one
+body. Source and testbench evidence autosave in your browser and can be downloaded.
+
+**Design → System architecture → Source** also accepts system assembly and can
+apply a generated demonstration design after installation and provider checks.
+This is **LCE Source 0.2**, a small VHDL-inspired language, not standard VHDL.
+It reuses the existing engines. See [the step-by-step component guide](docs/COMPONENT_SOURCE_GUIDE.md)
+and [the syntax and scope](docs/SOURCE_AUTHORING_EXPERIMENT.md).
+M1 remains **100%**, overall **33%**; this UX experiment earns no new milestone credit.

@@ -1,102 +1,135 @@
-# VHDL-style source authoring experiment
+# LCE source authoring experiment
 
 Branch: `codex/vhdl-style-authoring`, based on M1 commit
 `25cf7d0cc6d47799570246945e9c3001694610b4`.
 
-This experiment tests whether engineers can assemble existing components more
-comfortably through text. **LCE Assembly 0.1 is a small VHDL-inspired frontend,
-not IEEE VHDL.** It compiles into the existing `SystemDesign` format and reuses
-catalog resolution, provider checks, scenario execution and saved replay.
-It introduces no second runtime or new command/message semantics.
+**LCE Source 0.2** is a bounded, VHDL-inspired frontend, not IEEE VHDL. It accepts
+either a complete scalar component with an optional testbench, or an assembly
+of installed component definitions. It lowers to the existing data, behavior,
+state and system model. It introduces no second execution engine.
 
-M1 remains **100%**, overall roadmap **33%**. This experiment earns no additional
-milestone credit. Source editing is available on this branch; browser interaction
-and authoring usability still need manual evaluation.
+Start with the [step-by-step component guide](COMPONENT_SOURCE_GUIDE.md) and
+[complete stock example](../examples/source/stock-reservation.lce). The earlier
+[M1 assembly example](../examples/source/m1-reservation.lce) remains supported
+without source changes. Its prepared plan and all six scenario reports remain
+equivalent to the reference M1 system.
 
-## Do we need a new language?
+M1 remains **100%**, overall roadmap **33%**. This authoring experiment earns no
+new milestone credit. Browser interaction and authoring usability still need
+manual evaluation.
 
-Not for configuration alone: the existing system JSON already describes the
-model, and the studio imports and exports it. A friendlier frontend is a UX choice.
+## Why a small frontend?
 
-| Option | What we gain | What we must maintain |
-| --- | --- | --- |
-| Existing JSON | Exact current model; established tooling; no new grammar | Verbose configuration and limited domain-specific editing assistance |
-| Standard VHDL | Established syntax, types, concurrency, simulators and testbenches | Domain libraries for software transactions/messages/failures; a constrained mapping or bridge into LCE; decisions about two execution models |
-| Small LCE frontend | Familiar component assembly and source diagnostics; direct lowering to the current model | A bounded grammar, compiler tests and language versioning |
+JSON remains the existing model representation. Standard VHDL brings established
+types, concurrent simulation and tooling, but integrating it still requires
+software-domain semantics for transactions, receipts, messages and failures.
+This experiment tests a direct frontend that removes repetitive declarations
+and navigation while keeping the current model authoritative. It does not
+implement or benchmark a GHDL bridge.
 
-VHDL can express algorithms, and it is not limited to synthesizable circuits.
-GHDL describes its execution as highly concurrent and event driven, oriented
-around hardware. Standard VHDL does not automatically supply LCE's particular
-receipt, atomic intent, correlated acknowledgement or offline-provider contracts.
-Those would need explicit modeling and integration. Using a standard language
-would therefore reduce syntax/tooling work, but would not remove domain work.
+Background references reviewed 15 November 2026:
+[GHDL execution model](https://ghdl.github.io/ghdl/about),
+[GHDL quick start](https://ghdl.github.io/ghdl/quick_start/simulation/index.html),
+[IEEE VHDL scope](https://standards.ieee.org/ieee/1076/12535/).
 
-Sources, reviewed 15 November 2026:
+## Component grammar
 
-- [GHDL: language and execution model](https://ghdl.github.io/ghdl/about)
-- [GHDL: analyze, elaborate and run](https://ghdl.github.io/ghdl/quick_start/simulation/index.html)
-- [IEEE: VHDL scope](https://standards.ieee.org/ieee/1076/12535/)
+```text
+component "namespace.id" version "1.0.0" is
+  name "Display name";
+  description "Optional description";
+  author "Author";
+  license "MIT";
+  state available : integer := 5 durable;
+  event reserved (quantity : integer, remaining : integer);
+  command reserve (quantity : integer) returns (remaining : integer) is
+    accept when quantity > 0 and quantity <= state.available;
+    let taken := select(accepted, quantity, 0);
+    set available := state.available - taken;
+    return remaining := next.available;
+    emit reserved (quantity => taken, remaining => next.available);
+  end command;
+end component;
+```
 
-Recommendation for the experiment: keep the existing model authoritative and
-try the small frontend. Treat choosing a permanent language as a later decision
-based on authoring experience. Standard VHDL remains an integration option,
-particularly for hardware/software co-simulation; this branch does not implement
-or benchmark a GHDL bridge.
+The example above is a syntax illustration. The runnable stock example also
+checks tenant/resource identity and nonnegative initial stock.
 
-## Try it in the studio
+- Metadata, state and event declarations precede commands. Names and descriptions
+  use quoted JSON strings. Local identifiers are case sensitive, start with a
+  letter, and contain at most 48 letters, digits or underscores. Keywords are
+  case insensitive. `--` begins a comment outside a string.
+- Scalar types are `integer`, `boolean` and `string`. Integer literals range from
+  −9007199254740991 to +9007199254740991. Strings use JSON escapes. State must
+  explicitly say `durable` or `volatile`.
+- Every command begins with one `accept when` Boolean expression. Its automatic
+  public Boolean `accepted` output cannot be redeclared. Public input/output types
+  are declared once. Each declared return requires exactly one assignment.
+- Inputs and earlier `let` values can appear in expressions. `state.name` reads
+  the prior value. `next.name` is available after that slot's single `set`.
+  `accepted`, `state`, `next`, `select`, `not`, `true`, `false`, `and`, and `or`
+  are reserved input/local names, including case variants.
+- Expressions support parentheses, scalar literals, `+`, binary `-`, `=`, `<`,
+  `<=`, `>`, `>=`, `and`, `or`, `not` and `select(condition, yes, no)`.
+  Precedence, from strongest to weakest: `not`, arithmetic, comparisons, `and`,
+  `or`. Unary minus is supported on integer literals only.
+- Expressions are **eager**, including Boolean operators and selection. Arithmetic
+  overflow is an evaluation error, not wraparound. Sanitize a quantity before
+  performing arithmetic, as the runnable example does; an acceptance guard does
+  not short-circuit the decision graph.
+- `set` generates an accepted-value selection and a state-write binding. Denied
+  commands leave state unchanged. `emit` creates an intent only on acceptance;
+  each event can be emitted once per command, with its complete typed payload.
+- State writes, receipt and intents follow the existing atomic command protocol.
+  Accepted commands advance the revision; denial stores a receipt without advancing
+  it. Duplicate requests replay a receipt; changed requests under the same ID
+  conflict. These semantics are not reimplemented in the compiler.
 
-1. Start the studio from this branch using the normal README instructions.
-2. Open **Engineering → Design → System architecture → Source**.
-3. Export the current design if you want to preserve a separate copy before applying.
-4. Click **Load M1 source**. The source editor receives the 31-line reservation
-   assembly. This does not change the architecture canvas or install artifacts.
-5. Click **Install M1 library** once. This explicitly installs the existing
-   immutable M1 dependencies; it does not replace the current design.
-6. Click **Compile and check**. Review the component summary and generated JSON.
-   Compilation checks the syntax and system structure. Preparation resolves exact
-   catalog versions, owners, routes and providers without executing a scenario.
-7. Click **Apply to canvas**. The architecture now contains Stock owner and
-   Reservation ledger with the compiled mappings. The system ID is
-   `learning.m1-reservation`, separate from the installed reference system.
-8. Open **Execution → Prepare execution → Load M1 acceptance suite**.
-9. Run all six cases and verify replay as described in
-   [M1 manual acceptance](M1_MANUAL_ACCEPTANCE.md).
-10. Return to Source. Change a provider target to `"missing"`, then compile.
-    Click its diagnostic to select the corresponding source location. The canvas
-    must stay unchanged and Apply must remain disabled.
-11. Replace `port map` with `generic map`. Compilation must reject the unsupported
-    construct explicitly. Restore it and compile again.
-12. Download the `.lce` file, reload the browser and inspect source draft recovery.
-    Open the downloaded source again to check file import.
+Generation creates `<id>.data`, `<id>.state`, `<id>.<command>.decision`, and the
+definition `<id>`, all at the component version. Public schemas and owned state
+become data records; exact digests and decision bindings are generated. The
+definition owns data and state aspects; its state commands embed the pure
+decision packages. A one-instance demonstration design binds `state/owner` to
+`modeled-state@1.0.0`, with the first command as the default entry.
 
-The compiled M1 plan is checked for exact equality with the installed reference
-plan. The six scenarios must produce identical reports and replay successfully.
-All dependency installation is explicit. Compilation does not write to catalogs,
-execute source code, connect to providers or evaluate contract claims.
+## Testbench grammar
 
-## What the example configures
+```text
+testbench "Acceptance" for "namespace.id" is
+  case "Reserve and retry" is
+    initial (available => 5);
+    call reserve (quantity => 2) id "first" revision 0
+      expect committed outputs (accepted => true, remaining => 3);
+    restart;
+    call reserve (quantity => 2) id "first" revision 0
+      expect replayed outputs (accepted => true, remaining => 3);
+    expect state (available => 3) revision 1 receipts 1 effects 1;
+    expect event reserved (quantity => 2, remaining => 3) from "first";
+  end case;
+end testbench;
+```
 
-The source declares provider instances, component versions and their bindings.
-`port map` in this prototype maps **provider requirements** to providers. This
-is an LCE meaning; it is not VHDL signal association. Data-port wiring has an
-explicit `connect` statement. The grammar keeps owner mappings and correlated
-handoffs visible because they affect execution semantics.
+The optional `initial` clause supplies all state slots and appears before steps.
+Omit it to use component defaults. Each case starts a fresh instance; its steps
+share that owner. Every case requires at least one step and an independent,
+complete final state/revision/receipt/effect expectation.
 
-The Stock component already owns its behavior, data, state, messages and workflow.
-Its initial stock of five comes from the pinned immutable definition. A source
-`generic map(initial_stock => 5)` is not implemented: supporting generics requires
-an explicit parameter contract and deterministic specialization in the shared
-model, not merely accepting another textual keyword.
+Calls require all typed input literals, command ID, expected revision and status.
+Statuses: `committed`, `denied`, `replayed`, `id_conflict`, `revision_conflict`,
+`rolled_back`, `evaluation_error`. Optional `outputs (...)` compares all public
+receipt outputs. Optional `fault before_commit` or
+`fault after_commit_before_reply` uses the existing fault model. The latter is
+asserted as `expect committed reply_lost`; receipt outputs in the engine trace
+remain internal evidence, not a received reply. Omitted `reply_lost` asserts false.
 
-The current example is [m1-reservation.lce](../examples/source/m1-reservation.lce).
-A shorter declaration does not remove the need to design reusable components;
-it removes navigation between their already defined interfaces and bindings.
+Event assertions compare the complete payload and require exactly one matching
+committed event under the specified command ID. Final effect counts detect extra
+intents. The compiler validates expectations but never derives them from a run.
+Failures retain the actual trace and map to the relevant test line. Restart
+asserts `restarted` automatically. Tests cover selected schedules, not every
+interleaving or a mathematical proof of the implementation.
 
-## Supported grammar
-
-Keywords are case insensitive. IDs, names, versions and descriptions are quoted
-JSON strings, preserving their case. `--` starts a comment outside strings.
-The parser accepts one complete system, with no trailing source.
+## System assembly grammar
 
 ```text
 system "id" version "1.0.0" is
@@ -120,77 +153,67 @@ begin
 end system;
 ```
 
-This grammar illustration is not itself an installed example. Components need
-only the declarations relevant to their owned aspects. `connect` creates a typed
-**data** connection. Interfaces and exact value types are resolved from catalog
-artifacts, not guessed by the parser. Missing/unsupported versions and mappings
-are rejected by the shared validators.
+Include only declarations needed by the installed aspects. `port map` maps
+provider requirements, not VHDL signals. `connect` creates a typed data connection.
+Owners, handoffs, types and provider capability checks use the existing catalog.
+The contract identity is `<system-id>.contract` at the system revision. Declared
+system claims are separate from scenario/testbench assertions and are not
+evaluated by these model runs.
 
-The source omits an explicit contract identity: it derives `<system-id>.contract`
-and uses the system revision. This rule is part of frontend version 0.1. Additional
-capability requirements, arbitrary artifact attachments, deployment declarations,
-new component bodies, primitives, generics, nested system definitions and text
-scenario/testbench authoring are outside this experiment. Unsupported statements
-fail rather than silently disappear.
-
-## CLI and API
+## CLI, APIs and installation
 
 ```sh
-go run ./cmd/sourcecheck examples/source/m1-reservation.lce > /tmp/m1.system.json
-# Or read source from stdin:
-go run ./cmd/sourcecheck < examples/source/m1-reservation.lce
+go run ./cmd/sourcecheck examples/source/m1-reservation.lce
+go run ./cmd/sourcecheck examples/source/stock-reservation.lce
+go run ./cmd/sourcecheck -test examples/source/stock-reservation.lce
 ```
 
-The CLI checks syntax and local model structure, emitting system JSON on success.
-It does not open a database or check whether the referenced catalog exists.
-Errors go to stderr with line/column and return a nonzero exit code.
+One file or stdin is accepted. Assembly compilation preserves the earlier system
+JSON output. Component compilation emits the full compilation result. `-test`
+emits portable source, source hash, compiled artifacts, expectations and traces.
+Invalid source and failed testbenches return a nonzero exit code.
 
-- `GET /api/systems/source/example` returns the version label and source.
-- `POST /api/systems/source/compile` accepts only `{ "source": "..." }`.
-- Compilation returns `language`, `valid`, `diagnostics`, `locations`, and a
-  `design` only on success. Syntax/model errors return `valid:false` with HTTP 200;
-  malformed HTTP request shapes return HTTP 400.
-- Feed a successful design to the existing `/api/systems/execution/prepare` API
-  for catalog-aware checks. Run via the existing scenario endpoint.
-
-Source is bounded to 64 KiB and 8,192 tokens; the existing model/execution limits
-still apply. The parser has no file imports, network access, shell execution,
-user-defined evaluators or unbounded recursive grammar. It is covered by malformed
-input tests and a fuzz target.
-
-## Editing and evidence boundaries
-
-- Source is an independently autosaved draft and can be downloaded as `.lce`.
-- Compile and check never replace the canvas. Applying is an explicit action.
-- A change to the source or the canvas invalidates approval to apply the previous
-  checked result. Check again before applying.
-- Canvas edits do not regenerate source. There is no bidirectional editing,
-  formatting-preserving roundtrip or automatic merge in this prototype.
-- Saved execution evidence contains the compiled model and pinned plan, as before.
-  The `.lce` text and its comments are not attached to or hashed into execution
-  evidence yet. Export source alongside evidence when inspecting this experiment.
-- Diagnostics point to the nearest known declaration. An error within an embedded
-  catalog workflow can fall back to the system header; it is not a complete language
-  server. The editor is a plain textarea with diagnostic selection.
-
-## Acceptance and next decision
-
-Automated checks cover bounded parsing, syntax errors, duplicate declarations,
-source locations, HTTP request validation, missing catalogs, wrong owner bindings,
-exact plan/report equivalence, six M1 cases and saved replay. Frontend helpers
-check Unicode selection and stale source/canvas guards.
-
-Manual observations to record:
-
-| Question | Observation |
+| Route under `/api/systems/source` | Behavior |
 | --- | --- |
-| Can the reservation system be assembled with fewer navigation steps? | Pending |
-| Are provider maps and owner/handoff declarations understandable? | Pending |
-| Do diagnostics make correction easier? | Pending |
-| Does explicit apply prevent accidental replacement? | Pending |
-| Do source export and autosave recovery work comfortably? | Pending |
-| Are source-to-evidence provenance and generics necessary next? | Pending |
+| `GET /example` | Existing M1 assembly text |
+| `GET /component-example` | Complete stock component and testbench text |
+| `POST /compile` | Pure compilation; `{source}` only |
+| `POST /testbench` | Recompile and run offline; `{source}` only |
+| `POST /install` | Recompile and install generated artifacts; `{source}` only |
 
-If this authoring style helps, the next slice should be typed component parameters
-and a text testbench format, backed by the existing model. New behavior-body syntax
-and bidirectional editing should follow only after defining their exact semantics.
+Compile returns `valid`, `language`, `diagnostics`, `locations`, and successful
+model artifacts. Invalid syntax/model returns HTTP 200 with `valid:false` from
+compile; malformed request shapes return 400. Test/install require valid
+component source (422 otherwise); failed assertions are valid execution evidence
+with HTTP 200 and `passed:false`. Installation conflicts/capacity return 409.
+
+Compilation and test execution perform no I/O. Installation is explicit,
+immutable and idempotent per artifact. A later installation failure may leave
+earlier artifacts installed; retry is safe. Installation does not run or require
+passing tests. The editor recommends running and reviewing them first.
+
+## Limits and boundaries
+
+- 64 KiB UTF-8 source, 8,192 tokens, expression nesting at most 32.
+- At most eight state slots, eight commands and eight events; public port limits
+  and all existing model bounds still apply. Each command expands to at most
+  32 primitive nodes and 16 total generated outputs.
+- At most 16 test cases, 64 steps per case, 256 total steps; each case retains the
+  state engine's work/receipt/effect bounds. Combined case evidence is bounded to
+  8 MiB. HTTP computations use the existing admission/deadline guard.
+- No imports, shell execution, network operations or arbitrary evaluator code.
+- Generics, nested component bodies, record expressions, broker/workflow body
+  syntax, deployment syntax and bidirectional canvas/source editing are not yet
+  supported. Unsupported constructs fail explicitly.
+- Browser drafts save source and the last testbench report independently of the
+  architecture canvas. Changed source marks previous evidence as stale. Downloads
+  preserve its exact source, SHA-256 hash, artifacts and engine traces.
+- Existing saved **system** execution evidence still contains the compiled model
+  and pinned plan, without the source text. Download source alongside that evidence.
+- Diagnostics use the closest known declaration; this is not a language server.
+  The plain-text editor has no completion or formatting-preserving roundtrip.
+
+Manual acceptance should assess whether this removes meaningful configuration
+work, whether failures are easy to fix, whether version installation is clear,
+and whether source/evidence survive reload comfortably. Automated compiler and
+engine checks do not establish that the UI feels good.

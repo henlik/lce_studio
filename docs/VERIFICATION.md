@@ -1,5 +1,42 @@
 # Verification
 
+## Complete component source and testbench — 15 November 2026
+
+- LCE Source 0.2 compiles scalar component bodies into generated data schemas,
+  pure decision packages, an owned state machine, immutable definition pins and
+  a demonstration system. Existing M1 assembly remains compatible. The stock
+  component has 12 generated primitive nodes; its authored testbench runs nine
+  independent cases, 22 steps and 74 checks.
+- Cases cover reservation/exhaustion, denied quantities and wrong owners,
+  rollback, lost replies, restart/replay, stale revisions, changed requests under
+  the same ID, another domain and invalid initial state. Mutation tests prove
+  incorrect status, outputs, state, revision, receipt/effect counts, event payload
+  and reply-loss assertions fail with source locations. Another component checks
+  multiple commands, strings, Booleans, durable values and volatile reset.
+- PostgreSQL integration checks compilation without installation, idempotent
+  catalog installation, immutable-version conflicts and new-version publication.
+  Seven default-fixture cases also execute through the installed system model;
+  states, revisions, receipts and event payloads match the source testbench,
+  with saved system replay matching. The two fixture-override cases run in the
+  standalone testbench; overrides do not alter installed definitions.
+- **Passed:** full `go test -race -count=1 ./...` with PostgreSQL, `go vet ./...`,
+  backend and CGO-disabled builds, 46 frontend tests, Vue production build and
+  the full live `scripts/acceptance-system.mjs` suite. The CLI checks successful
+  execution and nonzero exits for failed assertions and malformed source.
+  Parser fuzzing completed 41,366 executions without failure.
+- Components → Component definitions → Source & testbench exposes compile,
+  test, explicit install, diagnostic selection, trace inspection and evidence
+  download. Browser autosave includes source and the last report; stale evidence
+  is labeled. System Source retains explicit checked application to the canvas.
+- Manual browser/mobile usability and local Docker execution remain unverified;
+  the existing Vite chunk-size warning remains. Testbench evidence includes exact
+  source and hash; existing saved system evidence does not yet include source.
+  These are bounded offline checks, not production execution or formal proof.
+- **M1 100%; overall roadmap 33%, unchanged.** No milestone credit is added for
+  this UX experiment. Follow [COMPONENT_SOURCE_GUIDE.md](COMPONENT_SOURCE_GUIDE.md)
+  for manual inspection and [SOURCE_AUTHORING_EXPERIMENT.md](SOURCE_AUTHORING_EXPERIMENT.md)
+  for the supported language and limits.
+
 ## VHDL-style authoring experiment — 15 November 2026
 
 - Separate branch `codex/vhdl-style-authoring` adds bounded LCE Assembly 0.1,

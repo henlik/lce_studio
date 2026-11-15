@@ -1,0 +1,114 @@
+-- A complete component: no preinstalled component library is required.
+component "learning.stock-reservation" version "1.0.0" is
+  name "Reusable stock reservation";
+  description "One serialized resource owner. Tenant/resource matching is a routing guard, not authentication. Events are committed intents, not broker delivery.";
+  author "LCE Studio contributors";
+  license "MIT";
+
+  state tenantId : string := "hospitalA" durable;
+  state resourceId : string := "supplyA" durable;
+  state available : integer := 5 durable;
+
+  event reserved (tenantId : string, resourceId : string, quantity : integer, remaining : integer);
+
+  command reserve (tenantId : string, resourceId : string, quantity : integer)
+    returns (remaining : integer) is
+    accept when tenantId = state.tenantId and resourceId = state.resourceId
+      and state.available >= 0 and quantity > 0 and quantity <= state.available;
+    -- Expressions are eager. Bound the subtraction even for a denied request.
+    let taken := select(accepted, quantity, 0);
+    set available := state.available - taken;
+    return remaining := next.available;
+    emit reserved (tenantId => state.tenantId, resourceId => state.resourceId,
+      quantity => taken, remaining => next.available);
+  end command;
+end component;
+
+-- Each case starts a fresh owner. Calls within a case share its state.
+-- accepted, exact-revision checks and duplicate-command receipts are automatic.
+testbench "Stock reservation acceptance" for "learning.stock-reservation" is
+  case "Reserve, retry and exhaust stock" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 expect committed outputs (accepted => true, remaining => 3);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 expect replayed outputs (accepted => true, remaining => 3);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 3)
+      id "second" revision 1 expect committed outputs (accepted => true, remaining => 0);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 1)
+      id "third" revision 2 expect denied outputs (accepted => false, remaining => 0);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 0) revision 2 receipts 3 effects 2;
+    expect event reserved (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2, remaining => 3) from "first";
+    expect event reserved (tenantId => "hospitalA", resourceId => "supplyA", quantity => 3, remaining => 0) from "second";
+  end case;
+
+  case "Reject insufficient and invalid quantities" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 6)
+      id "tooMany" revision 0 expect denied outputs (accepted => false, remaining => 5);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 0)
+      id "zero" revision 0 expect denied outputs (accepted => false, remaining => 5);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => -9007199254740991)
+      id "negative" revision 0 expect denied outputs (accepted => false, remaining => 5);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 5) revision 0 receipts 3 effects 0;
+  end case;
+
+  case "Reject a different tenant or resource" is
+    call reserve (tenantId => "hospitalB", resourceId => "supplyA", quantity => 1)
+      id "wrongTenant" revision 0 expect denied outputs (accepted => false, remaining => 5);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyB", quantity => 1)
+      id "wrongResource" revision 0 expect denied outputs (accepted => false, remaining => 5);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 5) revision 0 receipts 2 effects 0;
+  end case;
+
+  case "Roll back before commit, then retry" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 fault before_commit expect rolled_back;
+    restart;
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 expect committed outputs (accepted => true, remaining => 3);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 3) revision 1 receipts 1 effects 1;
+    expect event reserved (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2, remaining => 3) from "first";
+  end case;
+
+  case "Lose reply after commit, restart and recover receipt" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 fault after_commit_before_reply expect committed reply_lost;
+    restart;
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 expect replayed outputs (accepted => true, remaining => 3);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 3) revision 1 receipts 1 effects 1;
+    expect event reserved (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2, remaining => 3) from "first";
+  end case;
+
+  case "Two requests race on the same revision" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 4)
+      id "first" revision 0 expect committed outputs (accepted => true, remaining => 1);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 4)
+      id "second" revision 0 expect revision_conflict;
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 4)
+      id "second" revision 1 expect denied outputs (accepted => false, remaining => 1);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 1) revision 1 receipts 2 effects 1;
+  end case;
+
+  case "A command ID cannot change its request" is
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 2)
+      id "first" revision 0 expect committed outputs (accepted => true, remaining => 3);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 3)
+      id "first" revision 0 expect id_conflict;
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => 3) revision 1 receipts 1 effects 1;
+  end case;
+
+  case "Reuse for a different owner and initial capacity" is
+    initial (tenantId => "schoolA", resourceId => "bookA", available => 10);
+    call reserve (tenantId => "schoolA", resourceId => "bookA", quantity => 3)
+      id "first" revision 0 expect committed outputs (accepted => true, remaining => 7);
+    expect state (tenantId => "schoolA", resourceId => "bookA", available => 7) revision 1 receipts 1 effects 1;
+    expect event reserved (tenantId => "schoolA", resourceId => "bookA", quantity => 3, remaining => 7) from "first";
+  end case;
+
+  case "Reject invalid initial stock" is
+    initial (tenantId => "hospitalA", resourceId => "supplyA", available => -1);
+    call reserve (tenantId => "hospitalA", resourceId => "supplyA", quantity => 1)
+      id "first" revision 0 expect denied outputs (accepted => false, remaining => -1);
+    expect state (tenantId => "hospitalA", resourceId => "supplyA", available => -1) revision 0 receipts 1 effects 0;
+  end case;
+end testbench;

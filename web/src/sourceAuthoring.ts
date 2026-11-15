@@ -1,7 +1,10 @@
 import type {SystemDesign} from './systemTypes';
+import type {StateMachineLock,StateResult} from './stateTypes';
+import type {ComponentDefinition} from './definitionTypes';
 export interface SourcePosition {line:number;column:number}
 export interface SourceDiagnostic extends SourcePosition {path:string;message:string}
-export interface SourceCompilation {language:string;valid:boolean;design?:SystemDesign;diagnostics:SourceDiagnostic[];locations:Record<string,SourcePosition>}
+export interface SourceCompilation {language:string;valid:boolean;design?:SystemDesign;component?:{definition:ComponentDefinition;machine:StateMachineLock;data:unknown;packages:unknown[]};testbench?:{name:string;cases:unknown[]};diagnostics:SourceDiagnostic[];locations:Record<string,SourcePosition>}
+export interface SourceTestReport {language:string;source:string;sourceHash:string;compilation:SourceCompilation;passed:boolean;cases:{name:string;passed:boolean;assertions:number;diagnostics:SourceDiagnostic[];result:StateResult}[]}
 export function locateSource(locations:Record<string,SourcePosition>,path:string):SourcePosition {
  let result=locations['']||{line:1,column:1},length=-1;
  for(const [key,pos] of Object.entries(locations))if((path===key||path.startsWith(key+'.')||path.startsWith(key+'['))&&key.length>length){result=pos;length=key.length;}

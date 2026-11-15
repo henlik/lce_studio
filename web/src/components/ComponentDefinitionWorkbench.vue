@@ -9,6 +9,7 @@ import {useActionFeedback} from '../composables/useNotifications';
 import StudioRibbon from './StudioRibbon.vue';
 import DraftStatus from './DraftStatus.vue';
 import CanvasInspector from './CanvasInspector.vue';
+import SystemSourceEditor from './SystemSourceEditor.vue';
 const emit=defineEmits<{openAspect:[request:AspectEditorRequest]}>();
 const draft=ref<ComponentDefinition>(emptyDefinition());
 const recovery=useWorkspaceDraft('component-definition',{draft});
@@ -33,6 +34,7 @@ function addLink(){
 
 async function action(label:string,fn:()=>Promise<void>){if(busy.value)return;busy.value=label;error.value='';notice.value='';try{await recovery.ready;await fn();}catch(e){error.value=e instanceof Error?e.message:String(e);if(e instanceof APIError)validation.value={valid:false,issues:e.issues};}finally{busy.value='';}}
 async function refresh(){const values=await Promise.all([api<SystemCatalogEntry[]>('/systems/catalog'),api<DefinitionRecord[]>('/systems/definitions')]);catalog.value=values[0];records.value=values[1];}
+function acceptSourceDefinition(definition:ComponentDefinition){draft.value=parseDefinition(JSON.stringify(definition));selected.value=-1;settings.value=false;void action('Refreshing installed source component',refresh);}
 function reset(){draft.value=emptyDefinition();selected.value=-1;settings.value=false;tab.value='Aspects';notice.value='Empty component definition created';}
 function load(record:DefinitionRecord){draft.value=parseDefinition(JSON.stringify(record.definition));selected.value=-1;settings.value=false;tab.value='Aspects';notice.value='Installed version opened. Change the version before installing modified content.';}
 function add(entry:SystemCatalogEntry){const slot=entry.kind+'-'+crypto.randomUUID().slice(0,6);draft.value.aspects.push({slot,kind:entry.kind,id:entry.id,version:entry.version,digest:entry.digest});selected.value=draft.value.aspects.length-1;settings.value=false;}
@@ -48,15 +50,16 @@ onMounted(()=>{void action('Loading component library',refresh);});
 
 <template>
 <section class="definition-workbench" :inert="recovery.status.value==='loading'" :aria-busy="!!busy">
- <StudioRibbon workspace="component-definition" :title="draft.name+' · '+draft.version" :active="tab" :structure="['Aspects','Connections']" :execution="['Versions']" @select="tab=$event;selected=-1;settings=false">
+ <StudioRibbon workspace="component-definition" :title="draft.name+' · '+draft.version" :active="tab" :structure="['Aspects','Connections','Source & testbench']" :execution="['Versions']" @select="tab=$event;selected=-1;settings=false">
   <template #status><span>{{installed?'Installed exact version':'Definition draft'}}</span><DraftStatus :draft="recovery"/></template>
   <template #file><div class="commands"><button :disabled="!!busy" @click="reset">New component definition</button><button @click="exportDefinition">Export definition</button><button :disabled="!!busy" @click="importInput?.click()">Import definition</button><input ref="importInput" type="file" accept=".json,application/json" hidden @change="importDefinition"/></div></template>
   <template #help><p>A component definition owns named links to exact installed behavior, data, state, message and workflow versions. Its aspects remain reusable. Installing makes this definition version immutable.</p><p>Opening an aspect creates an editor draft. Install a new artifact version, return here, refresh the library, replace its pin and install a new component version. Edits never silently update installed systems. This manifest does not execute its aspects together.</p></template>
-  <div class="commands"><button @click="settings=true;selected=-1;tab='Aspects'">Component identity</button><button :disabled="!!busy" @click="validate">Check compatibility</button><button :disabled="!!busy" @click="install">Install version</button><button :disabled="!!busy" @click="action('Refreshing library',refresh)">Refresh library</button><button :aria-pressed="tab==='Versions'" @click="tab=tab==='Versions'?'Aspects':'Versions'">{{tab==='Versions'?'Aspects':'Installed versions'}}</button><span role="status">{{busy}}</span></div>
+  <div v-if="tab!=='Source & testbench'" class="commands"><button @click="settings=true;selected=-1;tab='Aspects'">Component identity</button><button :disabled="!!busy" @click="validate">Check compatibility</button><button :disabled="!!busy" @click="install">Install version</button><button :disabled="!!busy" @click="action('Refreshing library',refresh)">Refresh library</button><button :aria-pressed="tab==='Versions'" @click="tab=tab==='Versions'?'Aspects':'Versions'">{{tab==='Versions'?'Aspects':'Installed versions'}}</button><span role="status">{{busy}}</span></div>
  </StudioRibbon>
  <p v-if="error" class="error" role="alert">{{error}}</p>
  <div v-if="validation&&!validation.valid" class="error"><button v-for="issue in validation.issues" :key="issue.path+issue.message" @click="locate(issue.path)">{{issue.path}}: {{issue.message}}</button></div>
  <div v-if="tab==='Versions'" class="version-list"><h2>Installed component definitions</h2><p>Versions are immutable. Open one to inspect it or create a new version.</p><p v-if="!records.length">No definitions installed yet.</p><button v-for="record in records" :key="record.definition.id+record.definition.version" @click="load(record)"><strong>{{record.definition.name}} · {{record.definition.version}}</strong><small>{{record.definition.id}} · {{record.definition.aspects.length}} aspects</small></button></div>
+ <SystemSourceEditor v-else-if="tab==='Source & testbench'" mode="component" @installed="acceptSourceDefinition"/>
  <div v-else-if="tab==='Connections'" class="definition-canvas">
   <h2>Aspect connections</h2><p>Check compatibility to inspect typed ports and dependencies. Links declare exact output-to-input types; they do not yet execute, schedule tasks or deliver messages. Unconnected inputs remain outside this check.</p>
   <div class="connection-form"><label>Source output<select v-model="linkSource"><option value="">Choose output…</option><template v-for="(port,index) in compatibility?.ports" :key="index"><option v-if="port.direction==='output'" :value="String(index)">{{endpointLabel(port)}}</option></template></select></label><label>Target input<select v-model="linkTarget"><option value="">Choose input…</option><template v-for="(port,index) in compatibility?.ports" :key="index"><option v-if="port.direction==='input'" :value="String(index)">{{endpointLabel(port)}}</option></template></select></label><button :disabled="linkSource===''||linkTarget===''||!!busy" @click="addLink">Add link</button></div>

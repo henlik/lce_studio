@@ -256,7 +256,7 @@ await request('/execution/run','POST',{design:m1.design,inputs:[]},422);
 console.log('PASS M1 provider checks, shared ownership, correlated acknowledgements, negative assertions and immutable replay');
 
 const sourceExample=await request('/source/example');
-assert.equal(sourceExample.language,'lce-assembly-0.1');
+assert.equal(sourceExample.language,'lce-source-0.2');
 const compiledSource=await request('/source/compile','POST',{source:sourceExample.source});
 assert.equal(compiledSource.valid,true);assert.equal(compiledSource.design.id,'learning.m1-reservation');
 const sourcePlan=await request('/execution/prepare','POST',{design:compiledSource.design});
@@ -272,3 +272,19 @@ const missingSource=await request('/source/compile','POST',{source:sourceExample
 assert.equal(missingSource.valid,false);assert.ok(missingSource.diagnostics.some(d=>d.path.includes('bindings')));
 await request('/source/compile','POST',{source:sourceExample.source,execute:true},400);
 console.log('PASS experimental source compilation, source locations, exact M1 plan equivalence, six scenarios and replay');
+
+const componentSource=await request('/source/component-example');
+const componentCompiled=await request('/source/compile','POST',{source:componentSource.source});
+assert.equal(componentCompiled.valid,true);assert.equal(componentCompiled.component.machine.machine.commands.length,1);
+const componentReport=await request('/source/testbench','POST',{source:componentSource.source});
+assert.equal(componentReport.passed,true);assert.equal(componentReport.cases.length,9);assert.equal(componentReport.source,componentSource.source);
+assert.ok(componentReport.cases.every(c=>c.passed&&c.assertions>0));
+const wrongComponent=componentSource.source.replace('outputs (accepted => true, remaining => 3)','outputs (accepted => true, remaining => 4)');
+const wrongComponentReport=await request('/source/testbench','POST',{source:wrongComponent});
+assert.equal(wrongComponentReport.passed,false);assert.ok(wrongComponentReport.cases[0].diagnostics[0].line>1);
+for(let i=0;i<2;i++)await request('/source/install','POST',{source:componentSource.source});
+const componentPlan=await request('/execution/prepare','POST',{design:componentCompiled.design});
+assert.equal(componentPlan.plan.tasks.length,1);
+await request('/source/install','POST',{source:componentSource.source.replace('available : integer := 5','available : integer := 9')},409);
+await request('/source/testbench','POST',{source:'broken'},422);
+console.log('PASS complete source component, nine testbench cases, independent failure assertions, catalog installation and immutable versions');

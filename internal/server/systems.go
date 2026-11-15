@@ -17,7 +17,7 @@ import (
 func (s *Server) systemsAPI(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/systems")
 	switch {
-	case path == "/source/compile" || path == "/source/example":
+	case path == "/source/compile" || path == "/source/example" || path == "/source/component-example" || path == "/source/testbench" || path == "/source/install":
 		s.sourceAPI(w, r, path)
 	case path == "/execution/prepare" || path == "/execution/run" || path == "/executions" || strings.HasPrefix(path, "/executions/") || strings.HasPrefix(path, "/execution-replays/"):
 		s.systemExecutionAPI(w, r, path)
