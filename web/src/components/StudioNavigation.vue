@@ -29,7 +29,7 @@ function toggleGroup(id: string) {
 </script>
 
 <template>
-  <nav class="studio-navigation" aria-label="Studio planes and workspaces">
+  <nav class="studio-navigation" :class="{compact:collapsed}" aria-label="Studio planes and workspaces">
     <button class="blueprint-link" :class="{active:view === 'blueprint' && !selectedCapability}" :aria-current="view === 'blueprint' && !selectedCapability ? 'page' : undefined" title="Product blueprint" aria-label="Product blueprint" @click="emit('blueprint')">
       <Compass :size="18"/><span v-if="!collapsed">Product blueprint</span>
     </button>
@@ -63,4 +63,8 @@ function toggleGroup(id: string) {
 .design-entry{display:flex;min-width:0}.design-entry .group-disclosure{width:32px;flex:none;justify-content:center}.design-entry .chevron{margin-left:0}
 
 .studio-navigation{margin-top:20px;min-width:0}.studio-navigation button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;color:#b5c6d7;background:transparent;border:0;border-radius:6px;cursor:pointer;min-width:0;font:inherit;font-size:12px;padding:10px 7px}.studio-navigation button:hover{background:#23394b;color:#fff}.studio-navigation button:focus-visible{outline:2px solid #68dbc2;outline-offset:-2px}.studio-navigation button.active{background:#23394b;color:#8ce2d3;box-shadow:inset 3px 0 #4acbb3}.studio-navigation svg{flex-shrink:0}.plane{margin-top:12px}.studio-navigation .plane-toggle{font-weight:650;font-size:11px}.chevron{margin-left:auto;transform:rotate(-90deg)}.chevron.open{transform:none}.studio-navigation .group-toggle{font-size:11px;color:#8ea8bd;padding:9px 8px}.nav-group{margin-left:7px;border-left:1px solid #304458;padding-left:5px}.nav-group ul{list-style:none;padding:0;margin:0}.studio-navigation .workspace-link{font-size:11px;padding:9px 7px;align-items:flex-start;line-height:1.4}.workspace-link>span{flex:1;min-width:0;overflow-wrap:anywhere}.workspace-link small{font-size:8px;flex-shrink:0;margin-top:2px}.available{color:#65d3b7}.partial{color:#f0ca80}.planned{color:#9aaec4}.nav-hint{font-size:10px;line-height:1.6;color:#91a7b9;margin:15px 8px}.blueprint-link{margin-bottom:14px}
+@media(max-width:600px){
+ .studio-navigation.compact{display:flex;flex:1;min-width:0;align-items:center;justify-content:flex-end;gap:4px;margin:0;overflow-x:auto;overflow-y:hidden}
+ .compact .plane{margin:0;flex:none}.compact .plane-toggle,.compact .blueprint-link{width:36px;height:38px;padding:9px;justify-content:center;margin:0;flex:none}
+}
 </style>

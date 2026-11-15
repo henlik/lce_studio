@@ -37,9 +37,11 @@ try {
  assert.equal(await editor.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(24, 35, 47)');
  assert.ok(await page.evaluate(()=>document.fonts.check('14px codicon')));
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'desktop horizontal overflow');
+ await page.waitForFunction(()=>document.querySelectorAll('.studio-toast').length===0);
  await page.screenshot({path:'test-results/configuration-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile horizontal overflow');
+ assert.equal(await page.evaluate(()=>{const rail=document.querySelector('.app-rail').getBoundingClientRect();return [...document.querySelectorAll('.studio-navigation .plane-toggle')].every(el=>{const r=el.getBoundingClientRect();return r.top>=rail.top&&r.bottom<=rail.bottom})}),true,'collapsed mobile plane navigation stays within the header');
  await page.screenshot({path:'test-results/configuration-mobile.png',fullPage:true});
  assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');
 }catch(error){console.error('Browser errors:',errors);console.error('Editor text:',await page.locator('.monaco-editor .view-lines').textContent().catch(()=>''));await page.screenshot({path:'test-results/configuration-failure.png',fullPage:true}).catch(()=>{});throw error}finally{await browser.close()}
