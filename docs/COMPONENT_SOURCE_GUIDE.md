@@ -7,6 +7,8 @@ It is a reusable resource reservation model, not production pharmacy software.
 ## 1. Open the component editor
 
 Open **Engineering → Components → Component definitions → Source & testbench**.
+The **Aspects**, **Connections**, **Source & testbench** and **Versions** buttons
+sit directly below the ribbon and remain visible when its commands are collapsed.
 Click **Load complete stock component**. This fills the source editor; it does
 not install artifacts or replace a system design. The editor starts empty until
 you load an example or open your own file.
