@@ -1,0 +1,31 @@
+-- LCE Assembly 0.1: VHDL-inspired assembly, not IEEE VHDL.
+-- Install the M1 library once; source compilation itself installs nothing.
+system "learning.m1-reservation" version "1.0.0" is
+  name "M1 reservation from source";
+  provider "owned-state" : "modeled-state" version "1.0.0";
+  provider "reservation-broker" : "modeled-broker" version "1.0.0";
+  provider "workflow-model" : "modeled-workflow" version "1.0.0";
+begin
+  "stock" : component "studio.message-stock" version "2.0.0" is
+    name "Stock owner";
+    port map (
+      "state/stock" => "owned-state",
+      "messages/notices" => "reservation-broker",
+      "workflow/flow" => "workflow-model"
+    );
+    messages "notices" owner "stock" => "stock"."stock";
+    messages "notices" owner "ledger" => "ledger"."ledger";
+    workflow "flow" owner "stock" => "stock"."stock";
+    workflow "flow" handoff "handoff" from "reserve"
+      via "stock"."notices"."reservationToLedger"
+      response map ("accepted" => "accepted");
+  end component;
+
+  "ledger" : component "studio.message-ledger" version "1.0.0" is
+    name "Reservation ledger";
+    port map ("state/ledger" => "owned-state");
+  end component;
+
+  claim "evidence" : "required_evidence"
+    description "Scenario assertions are checked separately; contract claims are not evaluated by this model run.";
+end system;

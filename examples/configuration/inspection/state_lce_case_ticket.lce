@@ -1,0 +1,185 @@
+language "1.0";
+module "export.state_lce_case_ticket" version "1.0.0";
+import "behavior_lce_issue_case_ticket.lce" as m_behavior_lce_issue_case_ticket;
+import "behavior_lce_call_case_ticket.lce" as m_behavior_lce_call_case_ticket;
+import "behavior_lce_cancel_case_ticket.lce" as m_behavior_lce_cancel_case_ticket;
+
+state state_lce_case_ticket {
+  author = "LCE Studio contributors";
+  commands = [
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        cancelled = {
+          state = "cancelled";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentCase = {
+          state = "caseId";
+        };
+        currentNext = {
+          state = "nextNumber";
+        };
+        currentNumber = {
+          state = "ticketNumber";
+        };
+        currentTicket = {
+          state = "ticketId";
+        };
+      };
+      decision = bundle(m_behavior_lce_issue_case_ticket.behavior_lce_issue_case_ticket);
+      effects = [];
+      inputs = [
+        {
+          name = "caseId";
+          type = "string";
+        }
+      ];
+      name = "issue";
+      outputs = [
+        {
+          name = "ticketId";
+          type = "string";
+        },
+        {
+          name = "ticketNumber";
+          type = "integer";
+        }
+      ];
+      results = {
+        ticketId = "ticketId";
+        ticketNumber = "ticketNumber";
+      };
+      writes = {
+        caseId = "caseId";
+        nextNumber = "nextNumber";
+        ticketId = "ticketId";
+        ticketNumber = "ticketNumber";
+      };
+    },
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        cancelled = {
+          state = "cancelled";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentCase = {
+          state = "caseId";
+        };
+        ticketId = {
+          state = "ticketId";
+        };
+      };
+      decision = bundle(m_behavior_lce_call_case_ticket.behavior_lce_call_case_ticket);
+      effects = [];
+      inputs = [
+        {
+          name = "caseId";
+          type = "string";
+        }
+      ];
+      name = "call";
+      outputs = [
+        {
+          name = "ticketId";
+          type = "string";
+        }
+      ];
+      results = {
+        ticketId = "ticketId";
+      };
+      writes = {
+        called = "accepted";
+      };
+    },
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        cancelled = {
+          state = "cancelled";
+        };
+        caseId = {
+          input = "caseId";
+        };
+        currentCase = {
+          state = "caseId";
+        };
+        ticketId = {
+          state = "ticketId";
+        };
+      };
+      decision = bundle(m_behavior_lce_cancel_case_ticket.behavior_lce_cancel_case_ticket);
+      effects = [];
+      inputs = [
+        {
+          name = "caseId";
+          type = "string";
+        }
+      ];
+      name = "cancel";
+      outputs = [
+        {
+          name = "ticketId";
+          type = "string";
+        }
+      ];
+      results = {
+        ticketId = "ticketId";
+      };
+      writes = {
+        cancelled = "accepted";
+      };
+    }
+  ];
+  dataContracts = [];
+  description = "Owns one case's durable ticket, call and cancellation facts. Ticket IDs are derived from an explicitly unique case ID; A configured starting sequence supplies the numeric display ticket; this one-case experiment does not share a facility queue across independent runs. Printing and human attendance remain explicit tasks.";
+  effects = [];
+  id = "lce.case-ticket";
+  license = "MIT";
+  name = "Case-scoped ticket lifecycle";
+  schemaVersion = 1;
+  state = [
+    {
+      durability = "durable";
+      initial = string("");
+      name = "caseId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = string("");
+      name = "ticketId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = boolean(false);
+      name = "called";
+      type = "boolean";
+    },
+    {
+      durability = "durable";
+      initial = boolean(false);
+      name = "cancelled";
+      type = "boolean";
+    },
+    {
+      durability = "durable";
+      initial = integer(1);
+      name = "nextNumber";
+      type = "integer";
+    },
+    {
+      durability = "durable";
+      initial = integer(0);
+      name = "ticketNumber";
+      type = "integer";
+    }
+  ];
+  version = "1.0.0";
+}

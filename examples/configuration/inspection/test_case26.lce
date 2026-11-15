@@ -1,0 +1,14 @@
+language "1.0";
+module "tests.case26" version "1.0.0";
+import "behavior_example_structured_school_access.lce" as m_behavior_example_structured_school_access;
+
+-- Structured school access
+experiment case26 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    tests = true;
+  };
+  target = target(m_behavior_example_structured_school_access.behavior_example_structured_school_access);
+}

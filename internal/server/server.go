@@ -58,7 +58,28 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	path := r.URL.Path
+	if strings.HasPrefix(path, "/api/studio/") {
+		s.studioMaintenance(w, r)
+		return
+	}
+	if s.store != nil {
+		release, epoch, err := s.store.StudioRequest(r.Context(), r.Header.Get("X-Studio-Epoch"))
+		if err != nil {
+			if r.Context().Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				fail(w, http.StatusRequestTimeout, "Studio request was cancelled or exceeded its time limit.", nil)
+			} else if errors.Is(err, store.ErrStudioChanged) {
+				fail(w, 409, "Studio was reset or restored. Export any unsaved edits, then reload this tab.", nil)
+			} else {
+				fail(w, 503, "Studio storage is unavailable or busy.", nil)
+			}
+			return
+		}
+		defer release()
+		w.Header().Set("X-Studio-Epoch", epoch)
+	}
 	switch {
+	case strings.HasPrefix(path, "/api/configuration/"):
+		s.configurationAPI(w, r)
 	case path == "/api/systems" || strings.HasPrefix(path, "/api/systems/"):
 		s.systemsAPI(w, r)
 	case path == "/api/health":

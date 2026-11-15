@@ -18,7 +18,10 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
-type Store struct{ db *sql.DB }
+type Store struct {
+	db     *sql.DB
+	leases *sql.DB
+}
 
 // RunSummary deliberately omits the potentially large trace and project. The
 // detail endpoint returns the exact snapshot used by the engine.
@@ -60,7 +63,10 @@ func Open(databaseURL string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("initialize PostgreSQL schema: %w", err)
 	}
-	return &Store{db: db}, nil
+	leases := stdlib.OpenDB(*config)
+	leases.SetMaxOpenConns(16)
+	leases.SetMaxIdleConns(4)
+	return &Store{db: db, leases: leases}, nil
 }
 
 func initialize(ctx context.Context, db *sql.DB) error {
@@ -74,6 +80,9 @@ func initialize(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS configuration_packages (
+ id TEXT NOT NULL, version TEXT NOT NULL, digest TEXT NOT NULL, body JSON NOT NULL, installed_at TIMESTAMPTZ NOT NULL, PRIMARY KEY(id,version)
+);
 CREATE TABLE IF NOT EXISTS projects (
  id TEXT PRIMARY KEY,
  body JSON NOT NULL,
@@ -170,10 +179,13 @@ CREATE INDEX IF NOT EXISTS workflow_runs_created ON workflow_runs(created_at DES
 	if err := initializeSystems(ctx, tx); err != nil {
 		return err
 	}
+	if err := initializeMaintenance(ctx, tx); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error { return errors.Join(s.db.Close(), s.leases.Close()) }
 
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 

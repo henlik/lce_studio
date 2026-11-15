@@ -1,0 +1,16 @@
+language "1.0";
+module "example.hierarchy.reception" version "1.0.0";
+import "components/queue/component.lce" as queue;
+import "components/identification/component.lce" as identification;
+behavior Reception {
+ name = "Reception composition";
+ behavior = {
+  inputs = [{name="ticket";type="integer";},{name="patientId";type="string";}];
+  outputs = [{name="ticket";type="integer";},{name="patientId";type="string";}];
+  nodes = [
+   {id="queue";component=ref(queue.Queue);inputs={ticket={input="ticket";};};},
+   {id="identification";component=ref(identification.Identification);inputs={patientId={input="patientId";};};}
+  ];
+  bindings = {ticket={node="queue";port="ticket";};patientId={node="identification";port="patientId";};};
+ };
+}

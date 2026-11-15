@@ -1,0 +1,469 @@
+language "1.0";
+module "export.behavior_lce_reserve_single_slot" version "1.0.0";
+
+
+behavior behavior_lce_reserve_single_slot {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      available = {
+        literal = integer(0);
+      };
+      held = {
+        node = "actualHeld";
+        port = "result";
+      };
+      holder = {
+        input = "caseId";
+      };
+      received = {
+        node = "actualReceived";
+        port = "result";
+      };
+      reservationToken = {
+        node = "actualToken";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "currentResource";
+        type = "string";
+      },
+      {
+        name = "available";
+        type = "integer";
+      },
+      {
+        name = "holder";
+        type = "string";
+      },
+      {
+        name = "alreadyAccepted";
+        type = "boolean";
+      },
+      {
+        name = "resourceId";
+        type = "string";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "eligible";
+        type = "boolean";
+      }
+    ];
+    nodes = [
+      {
+        id = "sameResource";
+        inputs = {
+          left = {
+            input = "currentResource";
+          };
+          right = {
+            input = "resourceId";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "caseNamedEmpty";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "caseNamed";
+        inputs = {
+          value = {
+            node = "caseNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "validTarget";
+        inputs = {
+          left = {
+            node = "sameResource";
+            port = "result";
+          };
+          right = {
+            node = "caseNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "sameHolder";
+        inputs = {
+          left = {
+            input = "holder";
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "reserved";
+        inputs = {
+          left = {
+            input = "available";
+          };
+          right = {
+            literal = integer(0);
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "ownedReservation";
+        inputs = {
+          left = {
+            node = "sameHolder";
+            port = "result";
+          };
+          right = {
+            node = "reserved";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "ownedTarget";
+        inputs = {
+          left = {
+            node = "validTarget";
+            port = "result";
+          };
+          right = {
+            node = "ownedReservation";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "oneAvailable";
+        inputs = {
+          left = {
+            input = "available";
+          };
+          right = {
+            literal = integer(1);
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      },
+      {
+        id = "unheld";
+        inputs = {
+          left = {
+            input = "holder";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 400;
+        };
+      },
+      {
+        id = "freeSlot";
+        inputs = {
+          left = {
+            node = "oneAvailable";
+            port = "result";
+          };
+          right = {
+            node = "unheld";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 400;
+        };
+      },
+      {
+        id = "freeOrOwned";
+        inputs = {
+          left = {
+            node = "freeSlot";
+            port = "result";
+          };
+          right = {
+            node = "ownedTarget";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 1080;
+          y = 400;
+        };
+      },
+      {
+        id = "eligibleSlot";
+        inputs = {
+          left = {
+            node = "freeOrOwned";
+            port = "result";
+          };
+          right = {
+            input = "eligible";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 600;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "validTarget";
+            port = "result";
+          };
+          right = {
+            node = "eligibleSlot";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 600;
+        };
+      },
+      {
+        id = "alreadyReceived";
+        inputs = {
+          left = {
+            node = "ownedTarget";
+            port = "result";
+          };
+          right = {
+            input = "alreadyAccepted";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 600;
+        };
+      },
+      {
+        id = "actualReceived";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            node = "alreadyReceived";
+            port = "result";
+          };
+          trueValue = {
+            node = "alreadyReceived";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 1080;
+          y = 600;
+        };
+      },
+      {
+        id = "actualHeld";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            node = "ownedTarget";
+            port = "result";
+          };
+          trueValue = {
+            literal = boolean(true);
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 800;
+        };
+      },
+      {
+        id = "tokenPrefix";
+        inputs = {
+          left = {
+            input = "currentResource";
+          };
+          right = {
+            literal = string(":");
+          };
+        };
+        op = "concat";
+        position = {
+          x = 360;
+          y = 800;
+        };
+      },
+      {
+        id = "token";
+        inputs = {
+          left = {
+            node = "tokenPrefix";
+            port = "result";
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "concat";
+        position = {
+          x = 720;
+          y = 800;
+        };
+      },
+      {
+        id = "actualToken";
+        inputs = {
+          condition = {
+            node = "actualHeld";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("");
+          };
+          trueValue = {
+            node = "token";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 1080;
+          y = 800;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "available";
+        type = "integer";
+      },
+      {
+        name = "holder";
+        type = "string";
+      },
+      {
+        name = "received";
+        type = "boolean";
+      },
+      {
+        name = "held";
+        type = "boolean";
+      },
+      {
+        name = "reservationToken";
+        type = "string";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Checks exact resource/case ownership. Reserve consumes one available slot atomically; release restores it only for its holder; accept records the receiving party's separately supplied acceptance.";
+  id = "lce.reserve-single-slot";
+  kernel = "composite";
+  license = "MIT";
+  name = "reserve one owned resource slot";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

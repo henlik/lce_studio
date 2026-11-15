@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case36" version "1.0.0";
+import "timing_inspection_cloud_placement.lce" as m_timing_inspection_cloud_placement;
+
+-- Reception services on remote cloud
+experiment case36 {
+  expect = {
+    "metrics.completed" = 12;
+  };
+  scenario = {};
+  target = target(m_timing_inspection_cloud_placement.timing_inspection_cloud_placement);
+}

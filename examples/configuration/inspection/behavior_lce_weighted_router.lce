@@ -1,0 +1,36 @@
+language "1.0";
+module "export.behavior_lce_weighted_router" version "1.0.0";
+
+
+behavior behavior_lce_weighted_router {
+  author = "LCE Studio contributors";
+  capabilities = [
+    "design",
+    "simulate"
+  ];
+  config = {
+    capacity = {
+      default = 2;
+      max = 100;
+      min = 1;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 64;
+      max = 8192;
+      min = 16;
+    };
+    processingMs = {
+      default = 5;
+      max = 60000;
+      min = 0;
+    };
+  };
+  description = "An exclusive weighted choice that follows one stable route per logical request across retries.";
+  id = "lce.weighted-router";
+  kernel = "router";
+  license = "MIT";
+  name = "Weighted router";
+  schemaVersion = 1;
+  version = "1.0.0";
+}

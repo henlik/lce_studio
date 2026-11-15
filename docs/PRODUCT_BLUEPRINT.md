@@ -62,6 +62,20 @@ retains its existing simulation behavior; these models are not silently merged.
 
 **Weighted implementation: 33%**
 
+2026-11-15 creation update: explicit component creation and scalar primitive
+extraction now produce owned source/testbench folders and wired imports. Parent
+bindings and authored expectations stay intact; new testbenches require independent
+inputs and expectations. M1 stays **100%**, weighted roadmap **33%**; this improves
+authoring and does not close a runtime gate.
+
+2026-11-15 authoring update: Monaco editor, nested component/testbench explorer,
+breadcrumbs and exact scoped tests. M1 remains 100%; this improves authoring UX
+and does not close additional runtime checkpoints.
+
+Configuration Language 1.0: **6/6 implementation gates complete**, with manual UX
+review pending. See [configuration acceptance](CONFIGURATION_V1_ACCEPTANCE.md).
+This authoring work adds no later-runtime checkpoint credit.
+
 Roadmap v1: six weighted milestones, five equal checkpoints within each. Only accepted checkpoints count. This is a scoped planning estimate, not test coverage or production readiness. Scope or weights changes require a new baseline; menu entries earn no credit.
 
 - 2026-11-14: **18%** — Retrospective v1 baseline: shared model, direct resolution and bounded conformance with negative controls.

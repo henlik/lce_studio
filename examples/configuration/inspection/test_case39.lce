@@ -1,0 +1,110 @@
+language "1.0";
+module "tests.case39" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "system_m1_unified_reservation.lce" as m_system_m1_unified_reservation;
+
+-- Lost acknowledgement stays waiting
+experiment case39 {
+  expect = {
+    "scenario.passed" = true;
+  };
+  scenario = {
+    expected = [
+      {
+        effects = 1;
+        receipts = 1;
+        revision = 1;
+        state = {
+          acceptedSinceRestart = integer(1);
+          available = integer(3);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+        };
+        taskId = "[\"stock\",\"stock\"]";
+      },
+      {
+        effects = 0;
+        receipts = 1;
+        revision = 1;
+        state = {
+          acceptedSinceRestart = integer(1);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+          totalReserved = integer(2);
+        };
+        taskId = "[\"ledger\",\"ledger\"]";
+      }
+    ];
+    expectedMessages = [
+      {
+        attempts = 1;
+        channelId = "[\"stock\",\"notices\"]";
+        name = "wfs_1ccc2a8cb0bc14c908fc0522c5c3714b9task2";
+        status = "pending";
+      }
+    ];
+    expectedWorkflows = [
+      {
+        activeTaskNode = "handoff";
+        instanceId = "reservation";
+        outcome = "";
+        outputs = {};
+        status = "waiting";
+        variables = {
+          accepted = boolean(true);
+          acknowledged = boolean(false);
+          remaining = integer(3);
+        };
+      }
+    ];
+    name = "M1 pending acknowledgement";
+    steps = [
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_start";
+        workflow = {
+          inputs = {
+            request = {
+              record = {
+                quantity = integer(2);
+                resourceId = string("resourceDefault");
+                tenantId = string("tenantDefault");
+              };
+              recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+              type = "record";
+            };
+          };
+          instanceId = "reservation";
+          workflowId = "[\"stock\",\"flow\"]";
+        };
+      },
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_event";
+        workflow = {
+          event = {
+            id = "approve";
+            kind = "response";
+            taskId = "task1";
+            values = {
+              proceed = boolean(true);
+            };
+          };
+          inputs = null;
+          instanceId = "reservation";
+        };
+      },
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_deliver";
+        workflow = {
+          fault = "after_recipient_commit_before_ack";
+          inputs = null;
+          instanceId = "reservation";
+          taskId = "task2";
+        };
+      }
+    ];
+  };
+  target = target(m_system_m1_unified_reservation.system_m1_unified_reservation);
+}

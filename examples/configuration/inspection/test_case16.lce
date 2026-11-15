@@ -1,0 +1,225 @@
+language "1.0";
+module "tests.case16" version "1.0.0";
+import "data_health_reception_values.lce" as m_data_health_reception_values;
+import "workflow_health_reception_inspection.lce" as m_workflow_health_reception_inspection;
+
+-- Capacity reservation denies stale availability
+experiment case16 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    events = [
+      {
+        id = "response1";
+        kind = "response";
+        taskId = "task1";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRecorded = boolean(true);
+          assessmentRef = string("screen-100");
+          emergencyIdentified = boolean(false);
+          evidenceRef = string("fixture-1");
+        };
+      },
+      {
+        id = "response2";
+        kind = "response";
+        taskId = "task2";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-2");
+          ready = boolean(true);
+        };
+      },
+      {
+        id = "response3";
+        kind = "response";
+        taskId = "task3";
+        values = {
+          actorRef = string("synthetic-actor");
+          completed = boolean(true);
+          evidenceRef = string("fixture-3");
+          matchCount = integer(1);
+          patientId = string("patient-42");
+        };
+      },
+      {
+        id = "response4";
+        kind = "response";
+        taskId = "task4";
+        values = {
+          actorRef = string("synthetic-actor");
+          confirmed = boolean(true);
+          evidenceRef = string("fixture-4");
+          patientId = string("patient-42");
+        };
+      },
+      {
+        id = "response5";
+        kind = "response";
+        taskId = "task5";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-5");
+          status = string("verified");
+        };
+      },
+      {
+        id = "response6";
+        kind = "response";
+        taskId = "task6";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRef = string("assessment-100");
+          evidenceRef = string("fixture-6");
+          feverAlert = boolean(false);
+          observationRef = string("observations-100");
+          observationsAccepted = boolean(true);
+        };
+      },
+      {
+        id = "response7";
+        kind = "response";
+        taskId = "task7";
+        values = {
+          actorRef = string("synthetic-actor");
+          assessmentRef = string("assessment-100");
+          authorized = boolean(true);
+          disposition = string("released");
+          evidenceRef = string("fixture-7");
+        };
+      },
+      {
+        id = "response8";
+        kind = "response";
+        taskId = "task8";
+        values = {
+          actorRef = string("synthetic-actor");
+          disposition = string("allow");
+          evidenceRef = string("fixture-8");
+        };
+      },
+      {
+        id = "response9";
+        kind = "response";
+        taskId = "task9";
+        values = {
+          actorRef = string("synthetic-actor");
+          candidateA = {
+            record = {
+              available = integer(1);
+              facilityMatches = boolean(true);
+              onDuty = boolean(true);
+              qualified = boolean(true);
+              resourceId = string("providerA");
+              serviceMatches = boolean(true);
+            };
+            recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+            type = "record";
+          };
+          candidateB = {
+            record = {
+              available = integer(1);
+              facilityMatches = boolean(true);
+              onDuty = boolean(true);
+              qualified = boolean(true);
+              resourceId = string("providerB");
+              serviceMatches = boolean(true);
+            };
+            recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+            type = "record";
+          };
+          evidenceRef = string("fixture-9");
+        };
+      },
+      {
+        id = "response10";
+        kind = "response";
+        taskId = "task10";
+        values = {
+          actorRef = string("synthetic-actor");
+          choice = string("candidateA");
+          evidenceRef = string("fixture-10");
+        };
+      }
+    ];
+    expected = {
+      activeTaskNode = "waitDoctor";
+      cancelledTasks = 0;
+      completedTasks = 10;
+      eventReceipts = 10;
+      outcome = "";
+      owners = [
+        {
+          effects = 0;
+          instanceId = "queue";
+          receipts = 2;
+          revision = 2;
+          state = {
+            called = boolean(true);
+            cancelled = boolean(false);
+            caseId = string("case-100");
+            nextNumber = integer(101);
+            ticketId = string("ticket:case-100");
+            ticketNumber = integer(100);
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "encounter";
+          receipts = 1;
+          revision = 1;
+          state = {
+            caseId = string("case-100");
+            encounterId = string("encounter:case-100");
+            patientId = string("patient-42");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorA";
+          receipts = 1;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(0);
+            holder = string("");
+            resourceId = string("providerA");
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "doctorB";
+          receipts = 0;
+          revision = 0;
+          state = {
+            accepted = boolean(false);
+            available = integer(1);
+            holder = string("");
+            resourceId = string("providerB");
+          };
+        }
+      ];
+      status = "waiting";
+      tasks = 11;
+      variables = {
+        doctorAccepted = boolean(false);
+        reservationHeld = boolean(false);
+      };
+    };
+    inputs = {
+      arrivalId = string("arrival-100");
+      capacityA = integer(0);
+      capacityB = integer(1);
+      caseId = string("case-100");
+      facilityId = string("hospital-alpha");
+      identifier = string("synthetic-id-100");
+      queueStart = integer(100);
+      serviceId = string("outpatient");
+    };
+    name = "Capacity reservation denies stale availability";
+    schemaVersion = 1;
+  };
+  target = target(m_workflow_health_reception_inspection.workflow_health_reception_inspection);
+}

@@ -1,0 +1,4 @@
+language "1.0";
+module "learning.basics" version "1.0.0";
+import "echo/component.lce" as echo;
+import "echo/testbench.lce" as tests;

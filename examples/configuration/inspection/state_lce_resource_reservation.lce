@@ -1,0 +1,123 @@
+language "1.0";
+module "export.state_lce_resource_reservation" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "behavior_lce_reserve_available.lce" as m_behavior_lce_reserve_available;
+
+state state_lce_resource_reservation {
+  author = "LCE Studio contributors";
+  commands = [
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        acceptedSinceRestart = {
+          state = "acceptedSinceRestart";
+        };
+        available = {
+          state = "available";
+        };
+        request = {
+          input = "request";
+        };
+        resourceId = {
+          state = "resourceId";
+        };
+        tenantId = {
+          state = "tenantId";
+        };
+      };
+      decision = bundle(m_behavior_lce_reserve_available.behavior_lce_reserve_available);
+      effects = [
+        {
+          effect = "reservation";
+          payload = {
+            notice = "notice";
+          };
+          whenOutput = "accepted";
+        }
+      ];
+      inputs = [
+        {
+          name = "request";
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+          type = "record";
+        }
+      ];
+      name = "reserve";
+      outputs = [
+        {
+          name = "accepted";
+          type = "boolean";
+        },
+        {
+          name = "remaining";
+          type = "integer";
+        },
+        {
+          name = "acceptedSinceRestart";
+          type = "integer";
+        },
+        {
+          name = "reason";
+          type = "string";
+        }
+      ];
+      results = {
+        accepted = "accepted";
+        acceptedSinceRestart = "acceptedSinceRestart";
+        reason = "reason";
+        remaining = "remaining";
+      };
+      writes = {
+        acceptedSinceRestart = "acceptedSinceRestart";
+        available = "remaining";
+      };
+    }
+  ];
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "One serialized resource owner with durable availability and a volatile accepted-command counter. Accepted commands commit a reservation notice intent; no external delivery, pharmacy-specific rules or authorization enforcement is implied.";
+  effects = [
+    {
+      name = "reservation";
+      payload = [
+        {
+          name = "notice";
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        }
+      ];
+    }
+  ];
+  id = "lce.resource-reservation";
+  license = "MIT";
+  name = "Owned resource reservation";
+  schemaVersion = 1;
+  state = [
+    {
+      durability = "durable";
+      initial = string("tenantDefault");
+      name = "tenantId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = string("resourceDefault");
+      name = "resourceId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = integer(0);
+      name = "available";
+      type = "integer";
+    },
+    {
+      durability = "volatile";
+      initial = integer(0);
+      name = "acceptedSinceRestart";
+      type = "integer";
+    }
+  ];
+  version = "1.0.0";
+}

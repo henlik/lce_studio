@@ -1,0 +1,86 @@
+language "1.0";
+module "tests.case19" version "1.0.0";
+import "workflow_example_service_desk.lce" as m_workflow_example_service_desk;
+
+-- Service desk reuses ticket and assignment owners
+experiment case19 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    events = [
+      {
+        id = "response1";
+        kind = "response";
+        taskId = "task1";
+        values = {
+          actorRef = string("synthetic-actor");
+          evidenceRef = string("fixture-1");
+          ready = boolean(true);
+        };
+      },
+      {
+        id = "response2";
+        kind = "response";
+        taskId = "task2";
+        values = {
+          accepted = boolean(true);
+          actorRef = string("synthetic-actor");
+          caseId = string("desk-case-7");
+          evidenceRef = string("fixture-2");
+          reference = string("service-acceptance-7");
+          resourceId = string("deskA");
+        };
+      }
+    ];
+    expected = {
+      activeTaskNode = "";
+      cancelledTasks = 0;
+      completedTasks = 2;
+      eventReceipts = 2;
+      outcome = "serviceAccepted";
+      owners = [
+        {
+          effects = 0;
+          instanceId = "queue";
+          receipts = 2;
+          revision = 2;
+          state = {
+            called = boolean(true);
+            cancelled = boolean(false);
+            caseId = string("desk-case-7");
+            nextNumber = integer(8);
+            ticketId = string("ticket:desk-case-7");
+            ticketNumber = integer(7);
+          };
+        },
+        {
+          effects = 0;
+          instanceId = "desk";
+          receipts = 2;
+          revision = 2;
+          state = {
+            accepted = boolean(true);
+            available = integer(0);
+            holder = string("desk-case-7");
+            resourceId = string("deskA");
+          };
+        }
+      ];
+      status = "completed";
+      tasks = 2;
+      variables = {
+        held = boolean(true);
+        received = boolean(true);
+        ticketNumber = integer(7);
+      };
+    };
+    inputs = {
+      caseId = string("desk-case-7");
+      queueStart = integer(7);
+    };
+    name = "Service desk reuses ticket and assignment owners";
+    schemaVersion = 1;
+  };
+  target = target(m_workflow_example_service_desk.workflow_example_service_desk);
+}

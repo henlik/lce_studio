@@ -1,0 +1,22 @@
+language "1.0";
+module "learning.basics.echoTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are authored independently of execution.
+experiment EchoPositive {
+  target = target(subject.Echo);
+  scenario = { inputs = { value = integer(23); }; };
+  expect = { "outputs.result.integer" = 23; };
+}
+
+experiment EchoZero {
+  target = target(subject.Echo);
+  scenario = { inputs = { value = integer(0); }; };
+  expect = { "outputs.result.integer" = 0; };
+}
+
+experiment EchoNegative {
+  target = target(subject.Echo);
+  scenario = { inputs = { value = integer(-7); }; };
+  expect = { "outputs.result.integer" = -7; };
+}

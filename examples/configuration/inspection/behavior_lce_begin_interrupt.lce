@@ -1,0 +1,65 @@
+language "1.0";
+module "export.behavior_lce_begin_interrupt" version "1.0.0";
+
+
+behavior behavior_lce_begin_interrupt {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      clinicalReleased = {
+        literal = boolean(false);
+      };
+      emergencyActive = {
+        literal = boolean(true);
+      };
+      routineActive = {
+        literal = boolean(false);
+      };
+    };
+    inputs = [];
+    nodes = [];
+    outputs = [
+      {
+        name = "routineActive";
+        type = "boolean";
+      },
+      {
+        name = "emergencyActive";
+        type = "boolean";
+      },
+      {
+        name = "clinicalReleased";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Marks the ordinary path inactive and clears its release flag before cleanup and explicit receiving acceptance.";
+  id = "lce.begin-interrupt";
+  kernel = "composite";
+  license = "MIT";
+  name = "Begin exclusive interrupt path";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

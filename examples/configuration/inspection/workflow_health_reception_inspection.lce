@@ -1,0 +1,2712 @@
+language "1.0";
+module "export.workflow_health_reception_inspection" version "1.0.0";
+import "data_health_reception_values.lce" as m_data_health_reception_values;
+import "behavior_health_reception_entry_route.lce" as m_behavior_health_reception_entry_route;
+import "behavior_lce_lookup_disposition.lce" as m_behavior_lce_lookup_disposition;
+import "behavior_lce_affiliation_disposition.lce" as m_behavior_lce_affiliation_disposition;
+import "behavior_lce_review_disposition.lce" as m_behavior_lce_review_disposition;
+import "behavior_lce_payment_disposition.lce" as m_behavior_lce_payment_disposition;
+import "behavior_lce_candidate_eligible.lce" as m_behavior_lce_candidate_eligible;
+import "behavior_lce_confirm_dispatch_choice.lce" as m_behavior_lce_confirm_dispatch_choice;
+import "behavior_lce_typed_candidate_eligible.lce" as m_behavior_lce_typed_candidate_eligible;
+import "behavior_lce_forward_boolean.lce" as m_behavior_lce_forward_boolean;
+import "behavior_lce_confirm_named_result.lce" as m_behavior_lce_confirm_named_result;
+import "behavior_lce_begin_interrupt.lce" as m_behavior_lce_begin_interrupt;
+import "behavior_lce_confirm_current_handoff.lce" as m_behavior_lce_confirm_current_handoff;
+import "behavior_lce_confirm_exception_handoff.lce" as m_behavior_lce_confirm_exception_handoff;
+import "state_lce_case_ticket.lce" as m_state_lce_case_ticket;
+import "state_lce_case_encounter.lce" as m_state_lce_case_encounter;
+import "state_lce_single_slot_assignment.lce" as m_state_lce_single_slot_assignment;
+
+workflow workflow_health_reception_inspection {
+  author = "LCE Studio contributors";
+  dataContracts = [
+    lock(m_data_health_reception_values.data_health_reception_values)
+  ];
+  decisions = [
+    bundle(m_behavior_health_reception_entry_route.behavior_health_reception_entry_route),
+    bundle(m_behavior_lce_lookup_disposition.behavior_lce_lookup_disposition),
+    bundle(m_behavior_lce_affiliation_disposition.behavior_lce_affiliation_disposition),
+    bundle(m_behavior_lce_review_disposition.behavior_lce_review_disposition),
+    bundle(m_behavior_lce_payment_disposition.behavior_lce_payment_disposition),
+    bundle(m_behavior_lce_candidate_eligible.behavior_lce_candidate_eligible),
+    bundle(m_behavior_lce_confirm_dispatch_choice.behavior_lce_confirm_dispatch_choice),
+    bundle(m_behavior_lce_typed_candidate_eligible.behavior_lce_typed_candidate_eligible),
+    bundle(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean),
+    bundle(m_behavior_lce_confirm_named_result.behavior_lce_confirm_named_result),
+    bundle(m_behavior_lce_begin_interrupt.behavior_lce_begin_interrupt),
+    bundle(m_behavior_lce_confirm_current_handoff.behavior_lce_confirm_current_handoff),
+    bundle(m_behavior_lce_confirm_exception_handoff.behavior_lce_confirm_exception_handoff)
+  ];
+  description = "A synthetic case-level reception workflow: explicit screening, ticket issue/call, identity and affiliation evidence, owned encounter, observations, professional release, payment policy, dispatcher choice, atomic capacity reservation and receiving acceptance. An emergency signal interrupts any active routine task, cancels the case ticket and releases its reservation before awaiting ECU acceptance. Numeric queue sequence is configured per experiment; independent runs do not share a global facility priority queue.";
+  entry = "initialScreening";
+  id = "health.reception-inspection";
+  inputs = [
+    {
+      name = "caseId";
+      type = "string";
+    },
+    {
+      name = "arrivalId";
+      type = "string";
+    },
+    {
+      name = "facilityId";
+      type = "string";
+    },
+    {
+      name = "serviceId";
+      type = "string";
+    },
+    {
+      name = "identifier";
+      type = "string";
+    },
+    {
+      name = "capacityA";
+      type = "integer";
+    },
+    {
+      name = "capacityB";
+      type = "integer";
+    },
+    {
+      name = "queueStart";
+      type = "integer";
+    }
+  ];
+  license = "MIT";
+  machines = [
+    lock(m_state_lce_case_ticket.state_lce_case_ticket),
+    lock(m_state_lce_case_encounter.state_lce_case_encounter),
+    lock(m_state_lce_single_slot_assignment.state_lce_single_slot_assignment)
+  ];
+  name = "Reception · staged inspection";
+  nodes = [
+    {
+      id = "initialScreening";
+      kind = "task";
+      name = "Initial emergency screening";
+      next = "entryRoute";
+      position = {
+        x = 0;
+        y = 0;
+      };
+      stage = "01 Arrival/Screening";
+      task = {
+        assign = {
+          assessmentRecorded = "assessmentRecorded";
+          assessmentRef = "assessmentRef";
+          emergencyIdentified = "emergencyIdentified";
+        };
+        instructions = "Record explicit initial screening. This form does not assess or diagnose the patient. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "assessmentRecorded";
+            type = "boolean";
+          },
+          {
+            name = "emergencyIdentified";
+            type = "boolean";
+          },
+          {
+            name = "assessmentRef";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Initial emergency screening";
+      };
+    },
+    {
+      branch = {
+        else = "screeningGate";
+        then = "beginEmergency";
+        variable = "emergencyIdentified";
+      };
+      decision = {
+        assign = {
+          routineAllowed = "routineAllowed";
+        };
+        component = ref(m_behavior_health_reception_entry_route.behavior_health_reception_entry_route);
+        inputs = {
+          assessmentRecorded = {
+            variable = "assessmentRecorded";
+          };
+          emergencyIdentified = {
+            variable = "emergencyIdentified";
+          };
+        };
+      };
+      id = "entryRoute";
+      kind = "decision";
+      name = "entryRoute";
+      position = {
+        x = 400;
+        y = 0;
+      };
+      stage = "01 Arrival/Screening";
+    },
+    {
+      branch = {
+        else = "initialScreening";
+        then = "issueTicket";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "routineAllowed";
+          };
+        };
+      };
+      id = "screeningGate";
+      kind = "decision";
+      name = "screeningGate";
+      position = {
+        x = 800;
+        y = 0;
+      };
+      stage = "01 Arrival/Screening";
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "callNext";
+        variable = "ticketIssued";
+      };
+      command = {
+        acceptedVariable = "ticketIssued";
+        assign = {
+          ticketId = "ticketId";
+          ticketNumber = "ticketNumber";
+        };
+        command = "issue";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        owner = "queue";
+      };
+      id = "issueTicket";
+      kind = "command";
+      name = "issueTicket";
+      position = {
+        x = 1200;
+        y = 0;
+      };
+      stage = "01 Arrival/Queue";
+    },
+    {
+      branch = {
+        else = "callNext";
+        then = "markCalled";
+        variable = "gate";
+      };
+      id = "callNext";
+      kind = "task";
+      name = "Call numeric ticket";
+      position = {
+        x = 0;
+        y = 220;
+      };
+      stage = "01 Arrival/Queue";
+      task = {
+        assign = {
+          gate = "ready";
+        };
+        instructions = "Call the displayed queue number and explicitly confirm attendance. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+        response = [
+          {
+            name = "ready";
+            type = "boolean";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Call numeric ticket";
+      };
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "lookupIdentity";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {};
+        command = "call";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        owner = "queue";
+      };
+      id = "markCalled";
+      kind = "command";
+      name = "markCalled";
+      position = {
+        x = 400;
+        y = 220;
+      };
+      stage = "01 Arrival/Queue";
+    },
+    {
+      id = "lookupIdentity";
+      kind = "task";
+      name = "Query identity registry";
+      next = "classifyLookup";
+      position = {
+        x = 800;
+        y = 220;
+      };
+      stage = "02 Identification";
+      task = {
+        assign = {
+          lookupCompleted = "completed";
+          matchCount = "matchCount";
+          patientId = "patientId";
+        };
+        instructions = "Supply completed=false on lookup failure, even when matchCount=0. Only a completed zero-match lookup permits registration. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "adapter";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          identifier = {
+            input = "identifier";
+          };
+        };
+        response = [
+          {
+            name = "completed";
+            type = "boolean";
+          },
+          {
+            name = "matchCount";
+            type = "integer";
+          },
+          {
+            name = "patientId";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Query identity registry";
+      };
+    },
+    {
+      branch = {
+        else = "identityRoute";
+        then = "registerPatient";
+        variable = "lookupRegister";
+      };
+      decision = {
+        assign = {
+          lookupConfirm = "confirm";
+          lookupRegister = "register";
+        };
+        component = ref(m_behavior_lce_lookup_disposition.behavior_lce_lookup_disposition);
+        inputs = {
+          completed = {
+            variable = "lookupCompleted";
+          };
+          matchCount = {
+            variable = "matchCount";
+          };
+        };
+      };
+      id = "classifyLookup";
+      kind = "decision";
+      name = "classifyLookup";
+      position = {
+        x = 1200;
+        y = 220;
+      };
+      stage = "02 Identification";
+    },
+    {
+      branch = {
+        else = "identityReview";
+        then = "confirmIdentity";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "lookupConfirm";
+          };
+        };
+      };
+      id = "identityRoute";
+      kind = "decision";
+      name = "identityRoute";
+      position = {
+        x = 0;
+        y = 440;
+      };
+      stage = "02 Identification";
+    },
+    {
+      id = "registerPatient";
+      kind = "task";
+      name = "Register new patient";
+      next = "validateIdentity";
+      position = {
+        x = 400;
+        y = 440;
+      };
+      stage = "02 Identification";
+      task = {
+        assign = {
+          identityConfirmed = "confirmed";
+          patientId = "patientId";
+        };
+        instructions = "Create a named patient only after confirmed zero-match lookup; return confirmed=false on registration failure. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "adapter";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          lookupCompleted = {
+            variable = "lookupCompleted";
+          };
+          matchCount = {
+            variable = "matchCount";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        response = [
+          {
+            name = "confirmed";
+            type = "boolean";
+          },
+          {
+            name = "patientId";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Register new patient";
+      };
+    },
+    {
+      id = "confirmIdentity";
+      kind = "task";
+      name = "Confirm existing patient identity";
+      next = "validateIdentity";
+      position = {
+        x = 800;
+        y = 440;
+      };
+      stage = "02 Identification";
+      task = {
+        assign = {
+          identityConfirmed = "confirmed";
+          patientId = "patientId";
+        };
+        instructions = "Explicitly confirm the candidate identity; no demographic merge is automatic. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          lookupCompleted = {
+            variable = "lookupCompleted";
+          };
+          matchCount = {
+            variable = "matchCount";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        response = [
+          {
+            name = "confirmed";
+            type = "boolean";
+          },
+          {
+            name = "patientId";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Confirm existing patient identity";
+      };
+    },
+    {
+      id = "identityReview";
+      kind = "task";
+      name = "Review unresolved identity";
+      next = "validateIdentity";
+      position = {
+        x = 1200;
+        y = 440;
+      };
+      stage = "02 Identification";
+      task = {
+        assign = {
+          identityConfirmed = "confirmed";
+          patientId = "patientId";
+        };
+        instructions = "Resolve unavailable, ambiguous or unconfirmed identity explicitly. confirmed=false remains in review. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          lookupCompleted = {
+            variable = "lookupCompleted";
+          };
+          matchCount = {
+            variable = "matchCount";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        response = [
+          {
+            name = "confirmed";
+            type = "boolean";
+          },
+          {
+            name = "patientId";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review unresolved identity";
+      };
+    },
+    {
+      branch = {
+        else = "identityReview";
+        then = "lookupAffiliation";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "valid";
+        };
+        component = ref(m_behavior_lce_confirm_named_result.behavior_lce_confirm_named_result);
+        inputs = {
+          confirmed = {
+            variable = "identityConfirmed";
+          };
+          value = {
+            variable = "patientId";
+          };
+        };
+      };
+      id = "validateIdentity";
+      kind = "decision";
+      name = "validateIdentity";
+      position = {
+        x = 0;
+        y = 660;
+      };
+      stage = "02 Identification";
+    },
+    {
+      id = "lookupAffiliation";
+      kind = "task";
+      name = "Query affiliation evidence";
+      next = "classifyAffiliation";
+      position = {
+        x = 400;
+        y = 660;
+      };
+      stage = "03 Affiliation";
+      task = {
+        assign = {
+          affiliationStatus = "status";
+        };
+        instructions = "Use verified or confirmedNone only with explicit evidence. unknown, unavailable, expired and contradictory require review. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "adapter";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        response = [
+          {
+            name = "status";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Query affiliation evidence";
+      };
+    },
+    {
+      id = "affiliationReview";
+      kind = "task";
+      name = "Review unresolved affiliation";
+      next = "classifyAffiliation";
+      position = {
+        x = 800;
+        y = 660;
+      };
+      stage = "03 Affiliation";
+      task = {
+        assign = {
+          affiliationStatus = "status";
+        };
+        instructions = "Use verified or confirmedNone only with explicit evidence. unknown, unavailable, expired and contradictory require review. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        response = [
+          {
+            name = "status";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review unresolved affiliation";
+      };
+    },
+    {
+      branch = {
+        else = "affiliationReview";
+        then = "openEncounter";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "resolved";
+          noAffiliation = "noAffiliation";
+        };
+        component = ref(m_behavior_lce_affiliation_disposition.behavior_lce_affiliation_disposition);
+        inputs = {
+          status = {
+            variable = "affiliationStatus";
+          };
+        };
+      };
+      id = "classifyAffiliation";
+      kind = "decision";
+      name = "classifyAffiliation";
+      position = {
+        x = 1200;
+        y = 660;
+      };
+      stage = "03 Affiliation";
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "recordVitals";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          encounterId = "encounterId";
+        };
+        command = "open";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+        };
+        owner = "encounter";
+      };
+      id = "openEncounter";
+      kind = "command";
+      name = "openEncounter";
+      position = {
+        x = 0;
+        y = 880;
+      };
+      stage = "04 Encounter";
+    },
+    {
+      id = "recordVitals";
+      kind = "task";
+      name = "Record observations and vitals";
+      next = "validateObservations";
+      position = {
+        x = 400;
+        y = 880;
+      };
+      stage = "05 Intake/Observations";
+      task = {
+        assign = {
+          assessmentRef = "assessmentRef";
+          feverAlert = "feverAlert";
+          observationRef = "observationRef";
+          observationsAccepted = "observationsAccepted";
+        };
+        instructions = "Record whether observations are accepted and supply their reference. Missing observations remain unresolved; feverAlert is an explicit professional observation, not a diagnostic threshold calculated here. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          encounterId = {
+            variable = "encounterId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "observationsAccepted";
+            type = "boolean";
+          },
+          {
+            name = "feverAlert";
+            type = "boolean";
+          },
+          {
+            name = "observationRef";
+            type = "string";
+          },
+          {
+            name = "assessmentRef";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Record observations and vitals";
+      };
+    },
+    {
+      id = "observationReview";
+      kind = "task";
+      name = "Review missing or invalid observations";
+      next = "validateObservations";
+      position = {
+        x = 800;
+        y = 880;
+      };
+      stage = "05 Intake/Observations";
+      task = {
+        assign = {
+          assessmentRef = "assessmentRef";
+          feverAlert = "feverAlert";
+          observationRef = "observationRef";
+          observationsAccepted = "observationsAccepted";
+        };
+        instructions = "Record whether observations are accepted and supply their reference. Missing observations remain unresolved; feverAlert is an explicit professional observation, not a diagnostic threshold calculated here. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          encounterId = {
+            variable = "encounterId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "observationsAccepted";
+            type = "boolean";
+          },
+          {
+            name = "feverAlert";
+            type = "boolean";
+          },
+          {
+            name = "observationRef";
+            type = "string";
+          },
+          {
+            name = "assessmentRef";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review missing or invalid observations";
+      };
+    },
+    {
+      branch = {
+        else = "observationReview";
+        then = "feverGate";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "valid";
+        };
+        component = ref(m_behavior_lce_confirm_named_result.behavior_lce_confirm_named_result);
+        inputs = {
+          confirmed = {
+            variable = "observationsAccepted";
+          };
+          value = {
+            variable = "observationRef";
+          };
+        };
+      };
+      id = "validateObservations";
+      kind = "decision";
+      name = "validateObservations";
+      position = {
+        x = 1200;
+        y = 880;
+      };
+      stage = "05 Intake/Observations";
+    },
+    {
+      branch = {
+        else = "clinicalReview";
+        then = "feverReview";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "feverAlert";
+          };
+        };
+      };
+      id = "feverGate";
+      kind = "decision";
+      name = "feverGate";
+      position = {
+        x = 0;
+        y = 1100;
+      };
+      stage = "05 Intake/Observations";
+    },
+    {
+      id = "feverReview";
+      kind = "task";
+      name = "Clinician fever assessment and release";
+      next = "classifyClinical";
+      position = {
+        x = 400;
+        y = 1100;
+      };
+      stage = "05 Intake/Clinical release";
+      task = {
+        assign = {
+          clinicalAuthorized = "authorized";
+          clinicalDisposition = "disposition";
+          reviewAssessmentRef = "assessmentRef";
+        };
+        instructions = "A professional explicitly supplies released, review or emergency. Release must be authorized and tied to the current assessment reference; no automatic clinical clearance is inferred. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          assessmentRef = {
+            variable = "assessmentRef";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          feverAlert = {
+            variable = "feverAlert";
+          };
+          observationRef = {
+            variable = "observationRef";
+          };
+        };
+        response = [
+          {
+            name = "disposition";
+            type = "string";
+          },
+          {
+            name = "authorized";
+            type = "boolean";
+          },
+          {
+            name = "assessmentRef";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Clinician fever assessment and release";
+      };
+    },
+    {
+      id = "clinicalReview";
+      kind = "task";
+      name = "Clinician review and release";
+      next = "classifyClinical";
+      position = {
+        x = 800;
+        y = 1100;
+      };
+      stage = "05 Intake/Clinical release";
+      task = {
+        assign = {
+          clinicalAuthorized = "authorized";
+          clinicalDisposition = "disposition";
+          reviewAssessmentRef = "assessmentRef";
+        };
+        instructions = "A professional explicitly supplies released, review or emergency. Release must be authorized and tied to the current assessment reference; no automatic clinical clearance is inferred. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          assessmentRef = {
+            variable = "assessmentRef";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          feverAlert = {
+            variable = "feverAlert";
+          };
+          observationRef = {
+            variable = "observationRef";
+          };
+        };
+        response = [
+          {
+            name = "disposition";
+            type = "string";
+          },
+          {
+            name = "authorized";
+            type = "boolean";
+          },
+          {
+            name = "assessmentRef";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Clinician review and release";
+      };
+    },
+    {
+      branch = {
+        else = "clinicalGate";
+        then = "beginEmergency";
+        variable = "emergencyIdentified";
+      };
+      decision = {
+        assign = {
+          clinicalReleased = "released";
+          emergencyIdentified = "emergency";
+        };
+        component = ref(m_behavior_lce_review_disposition.behavior_lce_review_disposition);
+        inputs = {
+          assessmentRef = {
+            variable = "reviewAssessmentRef";
+          };
+          authorized = {
+            variable = "clinicalAuthorized";
+          };
+          currentAssessmentRef = {
+            variable = "assessmentRef";
+          };
+          disposition = {
+            variable = "clinicalDisposition";
+          };
+        };
+      };
+      id = "classifyClinical";
+      kind = "decision";
+      name = "classifyClinical";
+      position = {
+        x = 1200;
+        y = 1100;
+      };
+      stage = "05 Intake/Clinical release";
+    },
+    {
+      branch = {
+        else = "feverGate";
+        then = "paymentPolicy";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "clinicalReleased";
+          };
+        };
+      };
+      id = "clinicalGate";
+      kind = "decision";
+      name = "clinicalGate";
+      position = {
+        x = 0;
+        y = 1320;
+      };
+      stage = "05 Intake/Clinical release";
+    },
+    {
+      id = "paymentPolicy";
+      kind = "task";
+      name = "Evaluate payment policy";
+      next = "classifyPayment";
+      position = {
+        x = 400;
+        y = 1320;
+      };
+      stage = "06 Financing";
+      task = {
+        assign = {
+          paymentDisposition = "disposition";
+        };
+        instructions = "Supply explicit allow, defer or waive to continue; review, policyError or unknown remain in review. Emergency interrupts bypass this task. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "adapter";
+        request = {
+          affiliationStatus = {
+            variable = "affiliationStatus";
+          };
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          noAffiliation = {
+            variable = "noAffiliation";
+          };
+        };
+        response = [
+          {
+            name = "disposition";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Evaluate payment policy";
+      };
+    },
+    {
+      id = "paymentReview";
+      kind = "task";
+      name = "Review financing policy";
+      next = "classifyPayment";
+      position = {
+        x = 800;
+        y = 1320;
+      };
+      stage = "06 Financing";
+      task = {
+        assign = {
+          paymentDisposition = "disposition";
+        };
+        instructions = "Supply explicit allow, defer or waive to continue; review, policyError or unknown remain in review. Emergency interrupts bypass this task. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          affiliationStatus = {
+            variable = "affiliationStatus";
+          };
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          noAffiliation = {
+            variable = "noAffiliation";
+          };
+        };
+        response = [
+          {
+            name = "disposition";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review financing policy";
+      };
+    },
+    {
+      branch = {
+        else = "paymentReview";
+        then = "queryWorkforce";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "proceed";
+        };
+        component = ref(m_behavior_lce_payment_disposition.behavior_lce_payment_disposition);
+        inputs = {
+          disposition = {
+            variable = "paymentDisposition";
+          };
+        };
+      };
+      id = "classifyPayment";
+      kind = "decision";
+      name = "classifyPayment";
+      position = {
+        x = 1200;
+        y = 1320;
+      };
+      stage = "06 Financing";
+    },
+    {
+      id = "queryWorkforce";
+      kind = "task";
+      name = "Read workforce availability";
+      next = "eligibleA";
+      position = {
+        x = 0;
+        y = 1540;
+      };
+      stage = "07 Dispatch/Selection";
+      task = {
+        assign = {
+          candidateA = "candidateA";
+          candidateB = "candidateB";
+        };
+        instructions = "Return explicit candidate facts for providerA and providerB. Snapshot availability is only a proposal; the owned slot command is the final atomic gate. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "adapter";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          serviceId = {
+            input = "serviceId";
+          };
+        };
+        response = [
+          {
+            name = "candidateA";
+            recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+            type = "record";
+          },
+          {
+            name = "candidateB";
+            recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+            type = "record";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Read workforce availability";
+      };
+    },
+    {
+      decision = {
+        assign = {
+          candidateAEligible = "eligible";
+        };
+        component = ref(m_behavior_lce_typed_candidate_eligible.behavior_lce_typed_candidate_eligible);
+        inputs = {
+          candidate = {
+            variable = "candidateA";
+          };
+          expectedResource = {
+            literal = string("providerA");
+          };
+        };
+      };
+      id = "eligibleA";
+      kind = "decision";
+      name = "eligibleA";
+      next = "eligibleB";
+      position = {
+        x = 400;
+        y = 1540;
+      };
+      stage = "07 Dispatch/Selection";
+    },
+    {
+      decision = {
+        assign = {
+          candidateBEligible = "eligible";
+        };
+        component = ref(m_behavior_lce_typed_candidate_eligible.behavior_lce_typed_candidate_eligible);
+        inputs = {
+          candidate = {
+            variable = "candidateB";
+          };
+          expectedResource = {
+            literal = string("providerB");
+          };
+        };
+      };
+      id = "eligibleB";
+      kind = "decision";
+      name = "eligibleB";
+      next = "selectDoctor";
+      position = {
+        x = 800;
+        y = 1540;
+      };
+      stage = "07 Dispatch/Selection";
+    },
+    {
+      id = "selectDoctor";
+      kind = "task";
+      name = "Dispatcher selects eligible doctor";
+      next = "validateChoice";
+      position = {
+        x = 1200;
+        y = 1540;
+      };
+      stage = "07 Dispatch/Selection";
+      task = {
+        assign = {
+          choice = "choice";
+        };
+        instructions = "Explicitly select candidateA, candidateB or wait. Selection does not reserve capacity. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          candidateAEligible = {
+            variable = "candidateAEligible";
+          };
+          candidateBEligible = {
+            variable = "candidateBEligible";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "choice";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Dispatcher selects eligible doctor";
+      };
+    },
+    {
+      branch = {
+        else = "waitDoctor";
+        then = "reserveChoice";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "available";
+          selectedA = "selectedA";
+          selectedResource = "resourceId";
+        };
+        component = ref(m_behavior_lce_confirm_dispatch_choice.behavior_lce_confirm_dispatch_choice);
+        inputs = {
+          candidateAEligible = {
+            variable = "candidateAEligible";
+          };
+          candidateBEligible = {
+            variable = "candidateBEligible";
+          };
+          choice = {
+            variable = "choice";
+          };
+          resourceA = {
+            literal = string("providerA");
+          };
+          resourceB = {
+            literal = string("providerB");
+          };
+        };
+      };
+      id = "validateChoice";
+      kind = "decision";
+      name = "validateChoice";
+      position = {
+        x = 0;
+        y = 1760;
+      };
+      stage = "07 Dispatch/Selection";
+    },
+    {
+      branch = {
+        else = "reserveB";
+        then = "reserveA";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "selectedA";
+          };
+        };
+      };
+      id = "reserveChoice";
+      kind = "decision";
+      name = "reserveChoice";
+      position = {
+        x = 400;
+        y = 1760;
+      };
+      stage = "07 Dispatch/Reservation";
+    },
+    {
+      branch = {
+        else = "waitDoctor";
+        then = "queryWorkforce";
+        variable = "gate";
+      };
+      id = "waitDoctor";
+      kind = "task";
+      name = "Wait or reselect doctor";
+      position = {
+        x = 800;
+        y = 1760;
+      };
+      stage = "07 Dispatch/Selection";
+      task = {
+        assign = {
+          gate = "recheck";
+        };
+        instructions = "No assignment has completed. Explicitly request another availability check; the emergency signal remains available. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "recheck";
+            type = "boolean";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Wait or reselect doctor";
+      };
+    },
+    {
+      branch = {
+        else = "waitDoctor";
+        then = "physicianAcceptance";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "reserve";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          eligible = {
+            variable = "candidateAEligible";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorA";
+      };
+      id = "reserveA";
+      kind = "command";
+      name = "reserveA";
+      position = {
+        x = 1200;
+        y = 1760;
+      };
+      stage = "07 Dispatch/Reservation";
+    },
+    {
+      branch = {
+        else = "waitDoctor";
+        then = "physicianAcceptance";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "reserve";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          eligible = {
+            variable = "candidateBEligible";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorB";
+      };
+      id = "reserveB";
+      kind = "command";
+      name = "reserveB";
+      position = {
+        x = 0;
+        y = 1980;
+      };
+      stage = "07 Dispatch/Reservation";
+    },
+    {
+      id = "physicianAcceptance";
+      kind = "task";
+      name = "Physician accepts consultation";
+      next = "validatePhysician";
+      position = {
+        x = 400;
+        y = 1980;
+      };
+      stage = "07 Dispatch/Handoff";
+      task = {
+        assign = {
+          handoffAccepted = "accepted";
+          handoffRef = "reference";
+          responseCase = "caseId";
+          responseResource = "resourceId";
+        };
+        instructions = "Receiving clinician explicitly accepts this case and selected resource. A reservation alone is not receiving acceptance. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          encounterId = {
+            variable = "encounterId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          reservationToken = {
+            variable = "reservationToken";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        response = [
+          {
+            name = "accepted";
+            type = "boolean";
+          },
+          {
+            name = "resourceId";
+            type = "string";
+          },
+          {
+            name = "caseId";
+            type = "string";
+          },
+          {
+            name = "reference";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Physician accepts consultation";
+      };
+    },
+    {
+      branch = {
+        else = "declineChoice";
+        then = "acceptChoice";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "valid";
+        };
+        component = ref(m_behavior_lce_confirm_current_handoff.behavior_lce_confirm_current_handoff);
+        inputs = {
+          accepted = {
+            variable = "handoffAccepted";
+          };
+          caseId = {
+            variable = "responseCase";
+          };
+          expectedCase = {
+            input = "caseId";
+          };
+          expectedResource = {
+            variable = "selectedResource";
+          };
+          reference = {
+            variable = "handoffRef";
+          };
+          resourceId = {
+            variable = "responseResource";
+          };
+        };
+      };
+      id = "validatePhysician";
+      kind = "decision";
+      name = "validatePhysician";
+      position = {
+        x = 800;
+        y = 1980;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      branch = {
+        else = "acceptB";
+        then = "acceptA";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "selectedA";
+          };
+        };
+      };
+      id = "acceptChoice";
+      kind = "decision";
+      name = "acceptChoice";
+      position = {
+        x = 1200;
+        y = 1980;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      branch = {
+        else = "declineB";
+        then = "declineA";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "selectedA";
+          };
+        };
+      };
+      id = "declineChoice";
+      kind = "decision";
+      name = "declineChoice";
+      position = {
+        x = 0;
+        y = 2200;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "routineComplete";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "accept";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorA";
+      };
+      id = "acceptA";
+      kind = "command";
+      name = "acceptA";
+      position = {
+        x = 400;
+        y = 2200;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "release";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorA";
+      };
+      id = "declineA";
+      kind = "command";
+      name = "declineA";
+      next = "waitDoctor";
+      position = {
+        x = 800;
+        y = 2200;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "release";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorA";
+      };
+      id = "emergencyReleaseA";
+      kind = "command";
+      name = "emergencyReleaseA";
+      next = "ecuAcceptance";
+      position = {
+        x = 1200;
+        y = 2200;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      branch = {
+        else = "dependencyReview";
+        then = "routineComplete";
+        variable = "gate";
+      };
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "accept";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorB";
+      };
+      id = "acceptB";
+      kind = "command";
+      name = "acceptB";
+      position = {
+        x = 0;
+        y = 2420;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "release";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorB";
+      };
+      id = "declineB";
+      kind = "command";
+      name = "declineB";
+      next = "waitDoctor";
+      position = {
+        x = 400;
+        y = 2420;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      command = {
+        acceptedVariable = "gate";
+        assign = {
+          doctorAccepted = "received";
+          reservationHeld = "held";
+          reservationToken = "reservationToken";
+        };
+        command = "release";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+          resourceId = {
+            variable = "selectedResource";
+          };
+        };
+        owner = "doctorB";
+      };
+      id = "emergencyReleaseB";
+      kind = "command";
+      name = "emergencyReleaseB";
+      next = "ecuAcceptance";
+      position = {
+        x = 800;
+        y = 2420;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      branch = {
+        else = "emergencyReservationGate";
+        then = "cancelTicket";
+        variable = "ticketIssued";
+      };
+      decision = {
+        assign = {
+          clinicalReleased = "clinicalReleased";
+          emergencyActive = "emergencyActive";
+          routineActive = "routineActive";
+        };
+        component = ref(m_behavior_lce_begin_interrupt.behavior_lce_begin_interrupt);
+        inputs = {};
+      };
+      id = "beginEmergency";
+      kind = "decision";
+      name = "beginEmergency";
+      position = {
+        x = 1200;
+        y = 2420;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      command = {
+        acceptedVariable = "gate";
+        assign = {};
+        command = "cancel";
+        errorNext = "dependencyReview";
+        inputs = {
+          caseId = {
+            input = "caseId";
+          };
+        };
+        owner = "queue";
+      };
+      id = "cancelTicket";
+      kind = "command";
+      name = "cancelTicket";
+      next = "emergencyReservationGate";
+      position = {
+        x = 0;
+        y = 2640;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      branch = {
+        else = "ecuAcceptance";
+        then = "emergencyReleaseChoice";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "reservationHeld";
+          };
+        };
+      };
+      id = "emergencyReservationGate";
+      kind = "decision";
+      name = "emergencyReservationGate";
+      position = {
+        x = 400;
+        y = 2640;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      branch = {
+        else = "emergencyReleaseB";
+        then = "emergencyReleaseA";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "result";
+        };
+        component = ref(m_behavior_lce_forward_boolean.behavior_lce_forward_boolean);
+        inputs = {
+          value = {
+            variable = "selectedA";
+          };
+        };
+      };
+      id = "emergencyReleaseChoice";
+      kind = "decision";
+      name = "emergencyReleaseChoice";
+      position = {
+        x = 800;
+        y = 2640;
+      };
+      stage = "Emergency/Cleanup";
+    },
+    {
+      id = "ecuAcceptance";
+      kind = "task";
+      name = "Emergency unit receiving acceptance";
+      next = "validateECU";
+      position = {
+        x = 1200;
+        y = 2640;
+      };
+      stage = "Emergency/ECU handoff";
+      task = {
+        assign = {
+          emergencyEncounterId = "encounterId";
+          handoffAccepted = "accepted";
+          handoffRef = "reference";
+          receivingUnit = "receivingUnit";
+          responseCase = "caseId";
+        };
+        instructions = "Explicit receiving-unit acceptance is required. accepted=false keeps emergency handoff pending. Supply the current case, receiving unit, emergency encounter and handoff reference. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          assessmentRef = {
+            variable = "assessmentRef";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+          previousEncounterId = {
+            variable = "encounterId";
+          };
+        };
+        response = [
+          {
+            name = "accepted";
+            type = "boolean";
+          },
+          {
+            name = "caseId";
+            type = "string";
+          },
+          {
+            name = "receivingUnit";
+            type = "string";
+          },
+          {
+            name = "encounterId";
+            type = "string";
+          },
+          {
+            name = "reference";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Emergency unit receiving acceptance";
+      };
+    },
+    {
+      id = "ecuPending";
+      kind = "task";
+      name = "Emergency unit unavailable: seek receiving acceptance";
+      next = "validateECU";
+      position = {
+        x = 0;
+        y = 2860;
+      };
+      stage = "Emergency/ECU handoff";
+      task = {
+        assign = {
+          emergencyEncounterId = "encounterId";
+          handoffAccepted = "accepted";
+          handoffRef = "reference";
+          receivingUnit = "receivingUnit";
+          responseCase = "caseId";
+        };
+        instructions = "Explicit receiving-unit acceptance is required. accepted=false keeps emergency handoff pending. Supply the current case, receiving unit, emergency encounter and handoff reference. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          assessmentRef = {
+            variable = "assessmentRef";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+          previousEncounterId = {
+            variable = "encounterId";
+          };
+        };
+        response = [
+          {
+            name = "accepted";
+            type = "boolean";
+          },
+          {
+            name = "caseId";
+            type = "string";
+          },
+          {
+            name = "receivingUnit";
+            type = "string";
+          },
+          {
+            name = "encounterId";
+            type = "string";
+          },
+          {
+            name = "reference";
+            type = "string";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Emergency unit unavailable: seek receiving acceptance";
+      };
+    },
+    {
+      branch = {
+        else = "ecuPending";
+        then = "emergencyComplete";
+        variable = "gate";
+      };
+      decision = {
+        assign = {
+          gate = "valid";
+        };
+        component = ref(m_behavior_lce_confirm_exception_handoff.behavior_lce_confirm_exception_handoff);
+        inputs = {
+          accepted = {
+            variable = "handoffAccepted";
+          };
+          caseId = {
+            variable = "responseCase";
+          };
+          encounterId = {
+            variable = "emergencyEncounterId";
+          };
+          expectedCase = {
+            input = "caseId";
+          };
+          receivingUnit = {
+            variable = "receivingUnit";
+          };
+          reference = {
+            variable = "handoffRef";
+          };
+        };
+      };
+      id = "validateECU";
+      kind = "decision";
+      name = "validateECU";
+      position = {
+        x = 400;
+        y = 2860;
+      };
+      stage = "Emergency/ECU handoff";
+    },
+    {
+      id = "dependencyReview";
+      kind = "task";
+      name = "Review owned dependency failure";
+      next = "dependencyReview";
+      position = {
+        x = 800;
+        y = 2860;
+      };
+      stage = "Dependency recovery";
+      task = {
+        assign = {};
+        instructions = "An owned command did not complete. This bounded experiment keeps the case pending for review; it does not pretend a retry or external recovery succeeded. Responses are explicit synthetic fixtures; actorRef and evidenceRef record their supplied provenance. No live integration is performed.";
+        kind = "human";
+        request = {
+          arrivalId = {
+            input = "arrivalId";
+          };
+          caseId = {
+            input = "caseId";
+          };
+          facilityId = {
+            input = "facilityId";
+          };
+        };
+        response = [
+          {
+            name = "reviewed";
+            type = "boolean";
+          },
+          {
+            name = "actorRef";
+            type = "string";
+          },
+          {
+            name = "evidenceRef";
+            type = "string";
+          }
+        ];
+        title = "Review owned dependency failure";
+      };
+    },
+    {
+      end = {
+        outcome = "consultationAccepted";
+        outputs = {
+          encounterId = {
+            variable = "encounterId";
+          };
+          handoffRef = {
+            variable = "handoffRef";
+          };
+          noAffiliation = {
+            variable = "noAffiliation";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+          reservationHeld = {
+            variable = "reservationHeld";
+          };
+          selectedResource = {
+            variable = "selectedResource";
+          };
+          ticketId = {
+            variable = "ticketId";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+      };
+      id = "routineComplete";
+      kind = "end";
+      name = "Consultation accepted";
+      position = {
+        x = 1200;
+        y = 2860;
+      };
+      stage = "07 Dispatch/Handoff";
+    },
+    {
+      end = {
+        outcome = "emergencyAccepted";
+        outputs = {
+          encounterId = {
+            variable = "emergencyEncounterId";
+          };
+          handoffRef = {
+            variable = "handoffRef";
+          };
+          noAffiliation = {
+            variable = "noAffiliation";
+          };
+          patientId = {
+            variable = "patientId";
+          };
+          reservationHeld = {
+            variable = "reservationHeld";
+          };
+          selectedResource = {
+            variable = "receivingUnit";
+          };
+          ticketId = {
+            variable = "ticketId";
+          };
+          ticketNumber = {
+            variable = "ticketNumber";
+          };
+        };
+      };
+      id = "emergencyComplete";
+      kind = "end";
+      name = "Emergency receiving unit accepted";
+      position = {
+        x = 0;
+        y = 3080;
+      };
+      stage = "Emergency/ECU handoff";
+    }
+  ];
+  outputs = [
+    {
+      name = "patientId";
+      type = "string";
+    },
+    {
+      name = "encounterId";
+      type = "string";
+    },
+    {
+      name = "ticketId";
+      type = "string";
+    },
+    {
+      name = "handoffRef";
+      type = "string";
+    },
+    {
+      name = "selectedResource";
+      type = "string";
+    },
+    {
+      name = "ticketNumber";
+      type = "integer";
+    },
+    {
+      name = "noAffiliation";
+      type = "boolean";
+    },
+    {
+      name = "reservationHeld";
+      type = "boolean";
+    }
+  ];
+  owners = [
+    {
+      id = "queue";
+      initial = {
+        nextNumber = {
+          input = "queueStart";
+        };
+      };
+      machine = ref(m_state_lce_case_ticket.state_lce_case_ticket);
+      name = "Case ticket";
+    },
+    {
+      id = "encounter";
+      initial = {};
+      machine = ref(m_state_lce_case_encounter.state_lce_case_encounter);
+      name = "Case encounter";
+    },
+    {
+      id = "doctorA";
+      initial = {
+        available = {
+          input = "capacityA";
+        };
+        resourceId = {
+          literal = string("providerA");
+        };
+      };
+      machine = ref(m_state_lce_single_slot_assignment.state_lce_single_slot_assignment);
+      name = "Provider A slot";
+    },
+    {
+      id = "doctorB";
+      initial = {
+        available = {
+          input = "capacityB";
+        };
+        resourceId = {
+          literal = string("providerB");
+        };
+      };
+      machine = ref(m_state_lce_single_slot_assignment.state_lce_single_slot_assignment);
+      name = "Provider B slot";
+    }
+  ];
+  schemaVersion = 1;
+  signals = [
+    {
+      inputs = [
+        {
+          name = "actorRef";
+          type = "string";
+        },
+        {
+          name = "assessmentRef";
+          type = "string";
+        }
+      ];
+      name = "escalateEmergency";
+      set = {
+        assessmentRef = {
+          input = "assessmentRef";
+        };
+        emergencyActive = {
+          literal = boolean(true);
+        };
+        routineActive = {
+          literal = boolean(false);
+        };
+      };
+      target = "beginEmergency";
+      when = "routineActive";
+    }
+  ];
+  variables = [
+    {
+      initial = boolean(true);
+      name = "routineActive";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "emergencyActive";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "assessmentRecorded";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "emergencyIdentified";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "routineAllowed";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "ticketIssued";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "identityConfirmed";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "lookupCompleted";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "noAffiliation";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "observationsAccepted";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "feverAlert";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "clinicalAuthorized";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "clinicalReleased";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "candidateAEligible";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "candidateBEligible";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "selectedA";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "reservationHeld";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "handoffAccepted";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "doctorAccepted";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "gate";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "lookupRegister";
+      type = "boolean";
+    },
+    {
+      initial = boolean(false);
+      name = "lookupConfirm";
+      type = "boolean";
+    },
+    {
+      initial = string("");
+      name = "ticketId";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "patientId";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "affiliationStatus";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "encounterId";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "observationRef";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "assessmentRef";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "clinicalDisposition";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "reviewAssessmentRef";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "paymentDisposition";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "choice";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "selectedResource";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "reservationToken";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "responseResource";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "responseCase";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "handoffRef";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "receivingUnit";
+      type = "string";
+    },
+    {
+      initial = string("");
+      name = "emergencyEncounterId";
+      type = "string";
+    },
+    {
+      initial = integer(0);
+      name = "ticketNumber";
+      type = "integer";
+    },
+    {
+      initial = integer(0);
+      name = "matchCount";
+      type = "integer";
+    },
+    {
+      initial = {
+        record = {
+          available = integer(0);
+          facilityMatches = boolean(true);
+          onDuty = boolean(true);
+          qualified = boolean(true);
+          resourceId = string("");
+          serviceMatches = boolean(true);
+        };
+        recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+        type = "record";
+      };
+      name = "candidateA";
+      recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+      type = "record";
+    },
+    {
+      initial = {
+        record = {
+          available = integer(0);
+          facilityMatches = boolean(true);
+          onDuty = boolean(true);
+          qualified = boolean(true);
+          resourceId = string("");
+          serviceMatches = boolean(true);
+        };
+        recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+        type = "record";
+      };
+      name = "candidateB";
+      recordRef = record(m_data_health_reception_values.data_health_reception_values, "CandidateFacts");
+      type = "record";
+    }
+  ];
+  version = "1.0.0";
+}

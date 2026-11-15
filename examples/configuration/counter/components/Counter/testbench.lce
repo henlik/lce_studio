@@ -1,0 +1,16 @@
+language "1.0";
+module "learning.counter.parentTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are authored independently of execution.
+experiment CounterTest {
+  target = target(subject.Counter);
+  scenario = { inputs = { value = integer(23); }; };
+  expect = { "outputs.result.integer" = 23; };
+}
+
+experiment CounterZero {
+  target = target(subject.Counter);
+  scenario = { inputs = { value = integer(0); }; };
+  expect = { "outputs.result.integer" = 0; };
+}

@@ -1,0 +1,698 @@
+language "1.0";
+module "export.behavior_lce_record_reservation" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+
+behavior behavior_lce_record_reservation {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      acceptedSinceRestart = {
+        node = "nextCounter";
+        port = "result";
+      };
+      reason = {
+        node = "reason";
+        port = "result";
+      };
+      totalReserved = {
+        node = "nextTotal";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "tenantId";
+        type = "string";
+      },
+      {
+        name = "resourceId";
+        type = "string";
+      },
+      {
+        name = "totalReserved";
+        type = "integer";
+      },
+      {
+        name = "acceptedSinceRestart";
+        type = "integer";
+      },
+      {
+        name = "notice";
+        recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+        type = "record";
+      }
+    ];
+    nodes = [
+      {
+        field = "tenantId";
+        id = "noticetenantId";
+        inputs = {
+          value = {
+            input = "notice";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        field = "resourceId";
+        id = "noticeresourceId";
+        inputs = {
+          value = {
+            input = "notice";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 320;
+          y = 0;
+        };
+      },
+      {
+        field = "quantity";
+        id = "noticequantity";
+        inputs = {
+          value = {
+            input = "notice";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 640;
+          y = 0;
+        };
+      },
+      {
+        id = "sameTenant";
+        inputs = {
+          left = {
+            input = "tenantId";
+          };
+          right = {
+            node = "noticetenantId";
+            port = "result";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 960;
+          y = 0;
+        };
+      },
+      {
+        id = "sameResource";
+        inputs = {
+          left = {
+            input = "resourceId";
+          };
+          right = {
+            node = "noticeresourceId";
+            port = "result";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 160;
+        };
+      },
+      {
+        id = "sameTarget";
+        inputs = {
+          left = {
+            node = "sameTenant";
+            port = "result";
+          };
+          right = {
+            node = "sameResource";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 320;
+          y = 160;
+        };
+      },
+      {
+        id = "positive";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            node = "noticequantity";
+            port = "result";
+          };
+        };
+        op = "less_than";
+        position = {
+          x = 640;
+          y = 160;
+        };
+      },
+      {
+        id = "validTotal";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            input = "totalReserved";
+          };
+        };
+        op = "less_or_equal";
+        position = {
+          x = 960;
+          y = 160;
+        };
+      },
+      {
+        id = "safeTotal";
+        inputs = {
+          condition = {
+            node = "validTotal";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            input = "totalReserved";
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 320;
+        };
+      },
+      {
+        id = "headroom";
+        inputs = {
+          left = {
+            literal = integer(9007199254740991);
+          };
+          right = {
+            node = "safeTotal";
+            port = "result";
+          };
+        };
+        op = "subtract";
+        position = {
+          x = 320;
+          y = 320;
+        };
+      },
+      {
+        id = "capacity";
+        inputs = {
+          left = {
+            node = "noticequantity";
+            port = "result";
+          };
+          right = {
+            node = "headroom";
+            port = "result";
+          };
+        };
+        op = "less_or_equal";
+        position = {
+          x = 640;
+          y = 320;
+        };
+      },
+      {
+        id = "validQuantity";
+        inputs = {
+          left = {
+            node = "positive";
+            port = "result";
+          };
+          right = {
+            node = "capacity";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 960;
+          y = 320;
+        };
+      },
+      {
+        id = "validTotalQuantity";
+        inputs = {
+          left = {
+            node = "validTotal";
+            port = "result";
+          };
+          right = {
+            node = "validQuantity";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 480;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "sameTarget";
+            port = "result";
+          };
+          right = {
+            node = "validTotalQuantity";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 320;
+          y = 480;
+        };
+      },
+      {
+        id = "delta";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            node = "noticequantity";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 640;
+          y = 480;
+        };
+      },
+      {
+        id = "nextTotal";
+        inputs = {
+          left = {
+            input = "totalReserved";
+          };
+          right = {
+            node = "delta";
+            port = "result";
+          };
+        };
+        op = "add";
+        position = {
+          x = 960;
+          y = 480;
+        };
+      },
+      {
+        id = "counterDelta";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            literal = integer(1);
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 640;
+        };
+      },
+      {
+        id = "nextCounter";
+        inputs = {
+          left = {
+            input = "acceptedSinceRestart";
+          };
+          right = {
+            node = "counterDelta";
+            port = "result";
+          };
+        };
+        op = "add";
+        position = {
+          x = 320;
+          y = 640;
+        };
+      },
+      {
+        id = "quantityReason";
+        inputs = {
+          condition = {
+            node = "positive";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("invalid_quantity");
+          };
+          trueValue = {
+            literal = string("capacity");
+          };
+        };
+        op = "select";
+        position = {
+          x = 640;
+          y = 640;
+        };
+      },
+      {
+        id = "stateReason";
+        inputs = {
+          condition = {
+            node = "validTotal";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("invalid_state");
+          };
+          trueValue = {
+            node = "quantityReason";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 960;
+          y = 640;
+        };
+      },
+      {
+        id = "acceptedReason";
+        inputs = {
+          condition = {
+            node = "accepted";
+            port = "result";
+          };
+          falseValue = {
+            node = "stateReason";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("recorded");
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 800;
+        };
+      },
+      {
+        id = "reason";
+        inputs = {
+          condition = {
+            node = "sameTarget";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("wrong_target");
+          };
+          trueValue = {
+            node = "acceptedReason";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 320;
+          y = 800;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "totalReserved";
+        type = "integer";
+      },
+      {
+        name = "acceptedSinceRestart";
+        type = "integer";
+      },
+      {
+        name = "reason";
+        type = "string";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "Pure proposal to add the quantity in an exact reservation notice to a bounded owned total. Checks target identifiers and arithmetic bounds; command receipts in the state host supply deduplication.";
+  id = "lce.record-reservation";
+  kernel = "composite";
+  license = "MIT";
+  name = "Record a reservation notice";
+  schemaVersion = 3;
+  tests = [
+    {
+      expected = {
+        accepted = boolean(true);
+        acceptedSinceRestart = integer(11);
+        reason = string("recorded");
+        totalReserved = integer(2);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(2);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(0);
+      };
+      name = "Record two units";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("wrong_target");
+        totalReserved = integer(3);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(1);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantB");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(3);
+      };
+      name = "Wrong tenant";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("wrong_target");
+        totalReserved = integer(3);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(1);
+            remaining = integer(0);
+            resourceId = string("resourceB");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(3);
+      };
+      name = "Wrong resource";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("invalid_quantity");
+        totalReserved = integer(3);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(0);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(3);
+      };
+      name = "Zero quantity";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("invalid_quantity");
+        totalReserved = integer(9007199254740991);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(-9007199254740991);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(9007199254740991);
+      };
+      name = "Extreme negative quantity";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("capacity");
+        totalReserved = integer(9007199254740991);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(1);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(9007199254740991);
+      };
+      name = "Total already at boundary";
+    },
+    {
+      expected = {
+        accepted = boolean(true);
+        acceptedSinceRestart = integer(11);
+        reason = string("recorded");
+        totalReserved = integer(9007199254740991);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(1);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(9007199254740990);
+      };
+      name = "Reach exact boundary";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        acceptedSinceRestart = integer(10);
+        reason = string("invalid_state");
+        totalReserved = integer(-9007199254740991);
+      };
+      inputs = {
+        acceptedSinceRestart = integer(10);
+        notice = {
+          record = {
+            quantity = integer(1);
+            remaining = integer(0);
+            resourceId = string("resourceA");
+            tenantId = string("tenantA");
+          };
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        };
+        resourceId = string("resourceA");
+        tenantId = string("tenantA");
+        totalReserved = integer(-9007199254740991);
+      };
+      name = "Extreme negative initial total";
+    }
+  ];
+  version = "1.0.0";
+}

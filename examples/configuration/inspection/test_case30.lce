@@ -1,0 +1,272 @@
+language "1.0";
+module "tests.case30" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "messages_lce_reservation_delivery.lce" as m_messages_lce_reservation_delivery;
+
+-- Library reservation delivery
+experiment case30 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    expected = [
+      {
+        effects = 3;
+        instanceId = "stock";
+        receipts = 4;
+        revision = 3;
+        state = {
+          acceptedSinceRestart = integer(2);
+          available = integer(0);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+        };
+      },
+      {
+        effects = 0;
+        instanceId = "ledger";
+        receipts = 3;
+        revision = 3;
+        state = {
+          acceptedSinceRestart = integer(10);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+          totalReserved = integer(4);
+        };
+      }
+    ];
+    expectedMessages = [
+      {
+        accepted = true;
+        attempts = 4;
+        name = "firstReservation";
+        status = "acknowledged";
+      },
+      {
+        accepted = true;
+        attempts = 1;
+        name = "secondReservation";
+        status = "acknowledged";
+      },
+      {
+        accepted = true;
+        attempts = 1;
+        name = "thirdReservation";
+        status = "acknowledged";
+      }
+    ];
+    initial = [
+      {
+        initial = {
+          acceptedSinceRestart = integer(0);
+          available = integer(4);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+        };
+        instanceId = "stock";
+      },
+      {
+        initial = {
+          acceptedSinceRestart = integer(10);
+          resourceId = string("titleA");
+          tenantId = string("schoolAlpha");
+          totalReserved = integer(0);
+        };
+        instanceId = "ledger";
+      }
+    ];
+    name = "Library reservation delivery";
+    schemaVersion = 1;
+    steps = [
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        expectedRevision = 0;
+        inputs = null;
+        kind = "dispatch";
+        message = "firstReservation";
+        routeId = "reservationToLedger";
+        sourceCommandId = "reserveA";
+      },
+      {
+        fault = "drop_before_receive";
+        inputs = null;
+        kind = "deliver";
+        message = "firstReservation";
+      },
+      {
+        fault = "before_recipient_commit";
+        inputs = null;
+        kind = "deliver";
+        message = "firstReservation";
+      },
+      {
+        fault = "after_recipient_commit_before_ack";
+        inputs = null;
+        kind = "deliver";
+        message = "firstReservation";
+      },
+      {
+        inputs = null;
+        instanceId = "ledger";
+        kind = "restart";
+      },
+      {
+        inputs = null;
+        instanceId = "stock";
+        kind = "restart";
+      },
+      {
+        inputs = null;
+        kind = "deliver";
+        message = "firstReservation";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveA";
+        expectedRevision = 0;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        expectedRevision = 0;
+        inputs = null;
+        kind = "dispatch";
+        message = "firstReservation";
+        routeId = "reservationToLedger";
+        sourceCommandId = "reserveA";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveB";
+        expectedRevision = 1;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        expectedRevision = 1;
+        inputs = null;
+        kind = "dispatch";
+        message = "secondReservation";
+        routeId = "reservationToLedger";
+        sourceCommandId = "reserveB";
+      },
+      {
+        inputs = null;
+        kind = "deliver";
+        message = "secondReservation";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveC";
+        expectedRevision = 2;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(2);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        expectedRevision = 2;
+        inputs = null;
+        kind = "dispatch";
+        message = "thirdReservation";
+        routeId = "reservationToLedger";
+        sourceCommandId = "reserveC";
+      },
+      {
+        inputs = null;
+        kind = "deliver";
+        message = "thirdReservation";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveD";
+        expectedRevision = 3;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        command = "reserve";
+        commandId = "reserveD";
+        expectedRevision = 3;
+        inputs = {
+          request = {
+            record = {
+              quantity = integer(1);
+              resourceId = string("titleA");
+              tenantId = string("schoolAlpha");
+            };
+            recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+            type = "record";
+          };
+        };
+        instanceId = "stock";
+        kind = "command";
+      },
+      {
+        inputs = null;
+        instanceId = "ledger";
+        kind = "restart";
+      }
+    ];
+  };
+  target = target(m_messages_lce_reservation_delivery.messages_lce_reservation_delivery);
+}

@@ -1,0 +1,12 @@
+language "1.0";
+module "example.hierarchy.queue" version "1.0.0";
+import "components/ticket/component.lce" as ticket;
+behavior Queue {
+ name = "Queue management";
+ behavior = {
+  inputs=[{name="ticket";type="integer";}];
+  outputs=[{name="ticket";type="integer";}];
+  nodes=[{id="selection";component=ref(ticket.Ticket);inputs={ticket={input="ticket";};};}];
+  bindings={ticket={node="selection";port="ticket";};};
+ };
+}

@@ -1,0 +1,10 @@
+language "1.0";
+module "example.hierarchy.identificationTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are specified independently of execution.
+experiment IdentificationExample {
+ target=target(subject.Identification);
+ scenario={inputs={patientId=string("PAT-002");};};
+ expect={"outputs.patientId.string"="PAT-002";};
+}

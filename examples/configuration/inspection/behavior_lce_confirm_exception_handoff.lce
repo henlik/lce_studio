@@ -1,0 +1,255 @@
+language "1.0";
+module "export.behavior_lce_confirm_exception_handoff" version "1.0.0";
+
+
+behavior behavior_lce_confirm_exception_handoff {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      valid = {
+        node = "referenceValid";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "expectedCase";
+        type = "string";
+      },
+      {
+        name = "receivingUnit";
+        type = "string";
+      },
+      {
+        name = "encounterId";
+        type = "string";
+      },
+      {
+        name = "reference";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "caseMatch";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            input = "expectedCase";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "acceptedCase";
+        inputs = {
+          left = {
+            node = "caseMatch";
+            port = "result";
+          };
+          right = {
+            input = "accepted";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "receivingUnitNamedEmpty";
+        inputs = {
+          left = {
+            input = "receivingUnit";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "receivingUnitNamed";
+        inputs = {
+          value = {
+            node = "receivingUnitNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "receivingUnitValid";
+        inputs = {
+          left = {
+            node = "acceptedCase";
+            port = "result";
+          };
+          right = {
+            node = "receivingUnitNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "encounterIdNamedEmpty";
+        inputs = {
+          left = {
+            input = "encounterId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "encounterIdNamed";
+        inputs = {
+          value = {
+            node = "encounterIdNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "encounterIdValid";
+        inputs = {
+          left = {
+            node = "receivingUnitValid";
+            port = "result";
+          };
+          right = {
+            node = "encounterIdNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "referenceNamedEmpty";
+        inputs = {
+          left = {
+            input = "reference";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      },
+      {
+        id = "referenceNamed";
+        inputs = {
+          value = {
+            node = "referenceNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 360;
+          y = 400;
+        };
+      },
+      {
+        id = "referenceValid";
+        inputs = {
+          left = {
+            node = "encounterIdValid";
+            port = "result";
+          };
+          right = {
+            node = "referenceNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 400;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "valid";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Requires explicit acceptance for the current case, named receiving unit, encounter and receiving reference. This is a response check, not emergency triage.";
+  id = "lce.confirm-exception-handoff";
+  kernel = "composite";
+  license = "MIT";
+  name = "Confirm exceptional receiving handoff";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

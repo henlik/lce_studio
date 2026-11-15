@@ -1,0 +1,344 @@
+language "1.0";
+module "export.behavior_lce_review_disposition" version "1.0.0";
+
+
+behavior behavior_lce_review_disposition {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      emergency = {
+        node = "emergency";
+        port = "result";
+      };
+      released = {
+        node = "releaseAllowed";
+        port = "result";
+      };
+      route = {
+        node = "route";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "disposition";
+        type = "string";
+      },
+      {
+        name = "authorized";
+        type = "boolean";
+      },
+      {
+        name = "assessmentRef";
+        type = "string";
+      },
+      {
+        name = "currentAssessmentRef";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "emergency";
+        inputs = {
+          left = {
+            input = "disposition";
+          };
+          right = {
+            literal = string("emergency");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "released";
+        inputs = {
+          left = {
+            input = "disposition";
+          };
+          right = {
+            literal = string("released");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "currentAssessment";
+        inputs = {
+          left = {
+            input = "assessmentRef";
+          };
+          right = {
+            input = "currentAssessmentRef";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "emptyAssessment";
+        inputs = {
+          left = {
+            input = "assessmentRef";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "assessmentNamed";
+        inputs = {
+          value = {
+            node = "emptyAssessment";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "currentAuthority";
+        inputs = {
+          left = {
+            input = "authorized";
+          };
+          right = {
+            node = "currentAssessment";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "validAssessment";
+        inputs = {
+          left = {
+            node = "currentAuthority";
+            port = "result";
+          };
+          right = {
+            node = "assessmentNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "releaseAllowed";
+        inputs = {
+          left = {
+            node = "validAssessment";
+            port = "result";
+          };
+          right = {
+            node = "released";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "routineRoute";
+        inputs = {
+          condition = {
+            node = "releaseAllowed";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("review");
+          };
+          trueValue = {
+            literal = string("released");
+          };
+        };
+        op = "select";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      },
+      {
+        id = "route";
+        inputs = {
+          condition = {
+            node = "emergency";
+            port = "result";
+          };
+          falseValue = {
+            node = "routineRoute";
+            port = "result";
+          };
+          trueValue = {
+            literal = string("emergency");
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 400;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "released";
+        type = "boolean";
+      },
+      {
+        name = "emergency";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Release requires an explicit authorized response tied to the current assessment. An emergency disposition takes precedence over ordinary release. This decision performs no clinical assessment or treatment.";
+  id = "lce.review-disposition";
+  kernel = "composite";
+  license = "MIT";
+  name = "Record professional review disposition";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        emergency = boolean(false);
+        released = boolean(true);
+        route = string("released");
+      };
+      inputs = {
+        assessmentRef = string("assessment1");
+        authorized = boolean(true);
+        currentAssessmentRef = string("assessment1");
+        disposition = string("released");
+      };
+      name = "Explicit current release";
+    },
+    {
+      expected = {
+        emergency = boolean(false);
+        released = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        assessmentRef = string("assessment1");
+        authorized = boolean(true);
+        currentAssessmentRef = string("assessment1");
+        disposition = string("review");
+      };
+      name = "Review remains pending";
+    },
+    {
+      expected = {
+        emergency = boolean(false);
+        released = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        assessmentRef = string("assessment1");
+        authorized = boolean(true);
+        currentAssessmentRef = string("assessment2");
+        disposition = string("released");
+      };
+      name = "Old assessment cannot clear new review";
+    },
+    {
+      expected = {
+        emergency = boolean(false);
+        released = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        assessmentRef = string("assessment1");
+        authorized = boolean(false);
+        currentAssessmentRef = string("assessment1");
+        disposition = string("released");
+      };
+      name = "Unauthorized release rejected";
+    },
+    {
+      expected = {
+        emergency = boolean(false);
+        released = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        assessmentRef = string("");
+        authorized = boolean(true);
+        currentAssessmentRef = string("");
+        disposition = string("released");
+      };
+      name = "Unnamed assessment rejected";
+    },
+    {
+      expected = {
+        emergency = boolean(true);
+        released = boolean(false);
+        route = string("emergency");
+      };
+      inputs = {
+        assessmentRef = string("");
+        authorized = boolean(false);
+        currentAssessmentRef = string("assessment2");
+        disposition = string("emergency");
+      };
+      name = "Emergency bypasses routine paperwork";
+    }
+  ];
+  version = "1.0.0";
+}

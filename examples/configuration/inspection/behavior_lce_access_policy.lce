@@ -1,0 +1,260 @@
+language "1.0";
+module "export.behavior_lce_access_policy" version "1.0.0";
+import "behavior_lce_same_tenant.lce" as m_behavior_lce_same_tenant;
+
+behavior behavior_lce_access_policy {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      permitted = {
+        node = "decision";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "subjectTenant";
+        type = "string";
+      },
+      {
+        name = "resourceTenant";
+        type = "string";
+      },
+      {
+        name = "role";
+        type = "string";
+      },
+      {
+        name = "requiredRole";
+        type = "string";
+      },
+      {
+        name = "requestedScope";
+        type = "string";
+      },
+      {
+        name = "allowedScope";
+        type = "string";
+      },
+      {
+        name = "active";
+        type = "boolean";
+      }
+    ];
+    nodes = [
+      {
+        component = ref(m_behavior_lce_same_tenant.behavior_lce_same_tenant);
+        id = "tenant";
+        inputs = {
+          resourceTenant = {
+            input = "resourceTenant";
+          };
+          subjectTenant = {
+            input = "subjectTenant";
+          };
+        };
+        position = {
+          x = 80;
+          y = 40;
+        };
+      },
+      {
+        id = "role";
+        inputs = {
+          left = {
+            input = "role";
+          };
+          right = {
+            input = "requiredRole";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 80;
+          y = 180;
+        };
+      },
+      {
+        id = "scope";
+        inputs = {
+          left = {
+            input = "requestedScope";
+          };
+          right = {
+            input = "allowedScope";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 80;
+          y = 320;
+        };
+      },
+      {
+        id = "tenantRole";
+        inputs = {
+          left = {
+            node = "tenant";
+            port = "sameTenant";
+          };
+          right = {
+            node = "role";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 420;
+          y = 110;
+        };
+      },
+      {
+        id = "tenantRoleScope";
+        inputs = {
+          left = {
+            node = "tenantRole";
+            port = "result";
+          };
+          right = {
+            node = "scope";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 760;
+          y = 190;
+        };
+      },
+      {
+        id = "decision";
+        inputs = {
+          left = {
+            node = "tenantRoleScope";
+            port = "result";
+          };
+          right = {
+            input = "active";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1100;
+          y = 220;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "permitted";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Permits only when tenant, required role, requested scope and active status all match. This small pure decision is not production authorization enforcement.";
+  id = "lce.access-policy";
+  kernel = "composite";
+  license = "MIT";
+  name = "Explicit access policy";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        permitted = boolean(true);
+      };
+      inputs = {
+        active = boolean(true);
+        allowedScope = string("data:read");
+        requestedScope = string("data:read");
+        requiredRole = string("reader");
+        resourceTenant = string("tenant-alpha");
+        role = string("reader");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Permit";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        allowedScope = string("data:read");
+        requestedScope = string("data:read");
+        requiredRole = string("reader");
+        resourceTenant = string("tenant-beta");
+        role = string("reader");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong tenant";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        allowedScope = string("data:read");
+        requestedScope = string("data:read");
+        requiredRole = string("reader");
+        resourceTenant = string("tenant-alpha");
+        role = string("visitor");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong role";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(true);
+        allowedScope = string("data:read");
+        requestedScope = string("other:write");
+        requiredRole = string("reader");
+        resourceTenant = string("tenant-alpha");
+        role = string("reader");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Wrong scope";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        active = boolean(false);
+        allowedScope = string("data:read");
+        requestedScope = string("data:read");
+        requiredRole = string("reader");
+        resourceTenant = string("tenant-alpha");
+        role = string("reader");
+        subjectTenant = string("tenant-alpha");
+      };
+      name = "Inactive subject";
+    }
+  ];
+  version = "1.0.0";
+}

@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case34" version "1.0.0";
+import "timing_inspection_power_loss.lce" as m_timing_inspection_power_loss;
+
+-- Reception edge power interrupted
+experiment case34 {
+  expect = {
+    "metrics.completed" = 0;
+  };
+  scenario = {};
+  target = target(m_timing_inspection_power_loss.timing_inspection_power_loss);
+}

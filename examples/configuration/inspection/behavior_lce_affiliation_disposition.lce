@@ -1,0 +1,212 @@
+language "1.0";
+module "export.behavior_lce_affiliation_disposition" version "1.0.0";
+
+
+behavior behavior_lce_affiliation_disposition {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      noAffiliation = {
+        node = "confirmedNone";
+        port = "result";
+      };
+      resolved = {
+        node = "resolved";
+        port = "result";
+      };
+      route = {
+        node = "route";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "status";
+        type = "string";
+      }
+    ];
+    nodes = [
+      {
+        id = "verified";
+        inputs = {
+          left = {
+            input = "status";
+          };
+          right = {
+            literal = string("verified");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "confirmedNone";
+        inputs = {
+          left = {
+            input = "status";
+          };
+          right = {
+            literal = string("confirmedNone");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "resolved";
+        inputs = {
+          left = {
+            node = "verified";
+            port = "result";
+          };
+          right = {
+            node = "confirmedNone";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "route";
+        inputs = {
+          condition = {
+            node = "resolved";
+            port = "result";
+          };
+          falseValue = {
+            literal = string("review");
+          };
+          trueValue = {
+            literal = string("continue");
+          };
+        };
+        op = "select";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "route";
+        type = "string";
+      },
+      {
+        name = "noAffiliation";
+        type = "boolean";
+      },
+      {
+        name = "resolved";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Only explicit verified or confirmedNone evidence permits routine continuation. Unknown, unavailable, expired and contradictory evidence remains unresolved; absence is never inferred.";
+  id = "lce.affiliation-disposition";
+  kernel = "composite";
+  license = "MIT";
+  name = "Classify affiliation evidence";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        noAffiliation = boolean(false);
+        resolved = boolean(true);
+        route = string("continue");
+      };
+      inputs = {
+        status = string("verified");
+      };
+      name = "verified";
+    },
+    {
+      expected = {
+        noAffiliation = boolean(true);
+        resolved = boolean(true);
+        route = string("continue");
+      };
+      inputs = {
+        status = string("confirmedNone");
+      };
+      name = "confirmedNone";
+    },
+    {
+      expected = {
+        noAffiliation = boolean(false);
+        resolved = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        status = string("unknown");
+      };
+      name = "unknown";
+    },
+    {
+      expected = {
+        noAffiliation = boolean(false);
+        resolved = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        status = string("unavailable");
+      };
+      name = "unavailable";
+    },
+    {
+      expected = {
+        noAffiliation = boolean(false);
+        resolved = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        status = string("expired");
+      };
+      name = "expired";
+    },
+    {
+      expected = {
+        noAffiliation = boolean(false);
+        resolved = boolean(false);
+        route = string("review");
+      };
+      inputs = {
+        status = string("contradictory");
+      };
+      name = "contradictory";
+    }
+  ];
+  version = "1.0.0";
+}

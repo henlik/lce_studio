@@ -1,0 +1,14 @@
+language "1.0";
+module "tests.case24" version "1.0.0";
+import "behavior_example_school_record_access.lce" as m_behavior_example_school_record_access;
+
+-- School record access
+experiment case24 {
+  expect = {
+    passed = true;
+  };
+  scenario = {
+    tests = true;
+  };
+  target = target(m_behavior_example_school_record_access.behavior_example_school_record_access);
+}

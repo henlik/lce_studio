@@ -1,0 +1,51 @@
+language "1.0";
+module "export.messages_studio_stock_ledger_delivery" version "1.0.0";
+import "state_lce_reservation_ledger.lce" as m_state_lce_reservation_ledger;
+import "state_studio_message_stock_owner.lce" as m_state_studio_message_stock_owner;
+
+messages messages_studio_stock_ledger_delivery {
+  author = "LCE Studio contributors";
+  description = "A resource owner commits reservation intentions; explicit dispatch and delivery submit typed notices to an independently owned reservation ledger. Scripted faults and retries demonstrate receipt deduplication, not external delivery or a distributed transaction.";
+  id = "studio.stock-ledger-delivery";
+  instances = [
+    {
+      id = "stock";
+      machine = ref(m_state_studio_message_stock_owner.state_studio_message_stock_owner);
+      name = "Resource owner";
+      position = {
+        x = 70;
+        y = 100;
+      };
+    },
+    {
+      id = "ledger";
+      machine = ref(m_state_lce_reservation_ledger.state_lce_reservation_ledger);
+      name = "Reservation register";
+      position = {
+        x = 600;
+        y = 100;
+      };
+    }
+  ];
+  license = "MIT";
+  machines = [
+    lock(m_state_studio_message_stock_owner.state_studio_message_stock_owner),
+    lock(m_state_lce_reservation_ledger.state_lce_reservation_ledger)
+  ];
+  name = "Reservation notice delivery";
+  routes = [
+    {
+      command = "recordReservation";
+      effect = "reservation";
+      id = "reservationToLedger";
+      inputs = {
+        notice = "notice";
+      };
+      name = "Record a reservation notice";
+      sourceInstanceId = "stock";
+      targetInstanceId = "ledger";
+    }
+  ];
+  schemaVersion = 1;
+  version = "1.0.0";
+}

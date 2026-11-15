@@ -1,0 +1,11 @@
+language "1.0";
+module "example.hierarchy.identification" version "1.0.0";
+behavior Identification {
+ name="Patient identification";
+ behavior={
+  inputs=[{name="patientId";type="string";}];
+  outputs=[{name="patientId";type="string";}];
+  nodes=[{id="identity";op="identity";inputs={value={input="patientId";};};}];
+  bindings={patientId={node="identity";port="result";};};
+ };
+}

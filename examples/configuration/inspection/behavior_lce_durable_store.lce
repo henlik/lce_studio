@@ -1,0 +1,36 @@
+language "1.0";
+module "export.behavior_lce_durable_store" version "1.0.0";
+
+
+behavior behavior_lce_durable_store {
+  author = "LCE Studio contributors";
+  capabilities = [
+    "design",
+    "simulate"
+  ];
+  config = {
+    capacity = {
+      default = 1;
+      max = 100;
+      min = 1;
+    };
+    deduplicate = true;
+    memoryMb = {
+      default = 256;
+      max = 8192;
+      min = 16;
+    };
+    processingMs = {
+      default = 10;
+      max = 60000;
+      min = 0;
+    };
+  };
+  description = "A terminal store with optional request-ID deduplication; committed writes survive the modelled host outage.";
+  id = "lce.durable-store";
+  kernel = "database";
+  license = "MIT";
+  name = "Durable store";
+  schemaVersion = 1;
+  version = "1.0.0";
+}

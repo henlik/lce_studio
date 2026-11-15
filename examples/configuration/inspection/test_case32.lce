@@ -1,0 +1,12 @@
+language "1.0";
+module "tests.case32" version "1.0.0";
+import "timing_exclusive_branching.lce" as m_timing_exclusive_branching;
+
+-- Reusable components and exclusive routes
+experiment case32 {
+  expect = {
+    "metrics.completed" = 12;
+  };
+  scenario = {};
+  target = target(m_timing_exclusive_branching.timing_exclusive_branching);
+}

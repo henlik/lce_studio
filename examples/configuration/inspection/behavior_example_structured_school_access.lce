@@ -1,0 +1,311 @@
+language "1.0";
+module "export.behavior_example_structured_school_access" version "1.0.0";
+import "data_lce_organization_registry.lce" as m_data_lce_organization_registry;
+import "behavior_lce_access_policy.lce" as m_behavior_lce_access_policy;
+
+behavior behavior_example_structured_school_access {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      permitted = {
+        node = "policy";
+        port = "permitted";
+      };
+    };
+    inputs = [
+      {
+        name = "subject";
+        recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+        type = "record";
+      },
+      {
+        name = "resource";
+        recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+        type = "record";
+      }
+    ];
+    nodes = [
+      {
+        field = "tenantId";
+        id = "subjectTenant";
+        inputs = {
+          value = {
+            input = "subject";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 60;
+          y = 40;
+        };
+      },
+      {
+        field = "role";
+        id = "role";
+        inputs = {
+          value = {
+            input = "subject";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 60;
+          y = 200;
+        };
+      },
+      {
+        field = "active";
+        id = "active";
+        inputs = {
+          value = {
+            input = "subject";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 60;
+          y = 360;
+        };
+      },
+      {
+        field = "tenantId";
+        id = "resourceTenant";
+        inputs = {
+          value = {
+            input = "resource";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 400;
+          y = 40;
+        };
+      },
+      {
+        field = "scope";
+        id = "scope";
+        inputs = {
+          value = {
+            input = "resource";
+          };
+        };
+        op = "record_get";
+        position = {
+          x = 400;
+          y = 200;
+        };
+      },
+      {
+        component = ref(m_behavior_lce_access_policy.behavior_lce_access_policy);
+        id = "policy";
+        inputs = {
+          active = {
+            node = "active";
+            port = "result";
+          };
+          allowedScope = {
+            literal = string("student:read");
+          };
+          requestedScope = {
+            node = "scope";
+            port = "result";
+          };
+          requiredRole = {
+            literal = string("teacher");
+          };
+          resourceTenant = {
+            node = "resourceTenant";
+            port = "result";
+          };
+          role = {
+            node = "role";
+            port = "result";
+          };
+          subjectTenant = {
+            node = "subjectTenant";
+            port = "result";
+          };
+        };
+        position = {
+          x = 740;
+          y = 160;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "permitted";
+        type = "boolean";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  dataContracts = [
+    lock(m_data_lce_organization_registry.data_lce_organization_registry)
+  ];
+  description = "Extracts explicit subject and resource fields from exact typed records, then reuses the unchanged shared scalar access policy. Synthetic examples demonstrate composition, not production authorization enforcement.";
+  id = "example.structured-school-access";
+  kernel = "composite";
+  license = "MIT";
+  name = "Structured school access";
+  schemaVersion = 3;
+  tests = [
+    {
+      expected = {
+        permitted = boolean(true);
+      };
+      inputs = {
+        resource = {
+          record = {
+            id = string("resource-1");
+            scope = string("student:read");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+          type = "record";
+        };
+        subject = {
+          record = {
+            active = boolean(true);
+            id = string("subject-1");
+            role = string("teacher");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+          type = "record";
+        };
+      };
+      name = "Permit";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        resource = {
+          record = {
+            id = string("resource-1");
+            scope = string("student:read");
+            tenantId = string("tenant-beta");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+          type = "record";
+        };
+        subject = {
+          record = {
+            active = boolean(true);
+            id = string("subject-1");
+            role = string("teacher");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+          type = "record";
+        };
+      };
+      name = "Wrong tenant";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        resource = {
+          record = {
+            id = string("resource-1");
+            scope = string("student:read");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+          type = "record";
+        };
+        subject = {
+          record = {
+            active = boolean(true);
+            id = string("subject-1");
+            role = string("visitor");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+          type = "record";
+        };
+      };
+      name = "Wrong role";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        resource = {
+          record = {
+            id = string("resource-1");
+            scope = string("other:write");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+          type = "record";
+        };
+        subject = {
+          record = {
+            active = boolean(true);
+            id = string("subject-1");
+            role = string("teacher");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+          type = "record";
+        };
+      };
+      name = "Wrong scope";
+    },
+    {
+      expected = {
+        permitted = boolean(false);
+      };
+      inputs = {
+        resource = {
+          record = {
+            id = string("resource-1");
+            scope = string("student:read");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Resource");
+          type = "record";
+        };
+        subject = {
+          record = {
+            active = boolean(false);
+            id = string("subject-1");
+            role = string("teacher");
+            tenantId = string("tenant-alpha");
+          };
+          recordRef = record(m_data_lce_organization_registry.data_lce_organization_registry, "Subject");
+          type = "record";
+        };
+      };
+      name = "Inactive subject";
+    }
+  ];
+  version = "1.0.0";
+}

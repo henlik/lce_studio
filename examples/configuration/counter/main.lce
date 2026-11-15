@@ -1,0 +1,5 @@
+language "1.0";
+module "learning.counter" version "1.0.0";
+import "components/Counter/component.lce" as counter;
+import "components/Counter/testbench.lce" as counterTests;
+import "components/Counter/components/Identity/testbench.lce" as identityTests;

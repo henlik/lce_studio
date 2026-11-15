@@ -1,0 +1,172 @@
+language "1.0";
+module "export.behavior_lce_call_case_ticket" version "1.0.0";
+
+
+behavior behavior_lce_call_case_ticket {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      ticketId = {
+        input = "ticketId";
+      };
+    };
+    inputs = [
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "currentCase";
+        type = "string";
+      },
+      {
+        name = "ticketId";
+        type = "string";
+      },
+      {
+        name = "cancelled";
+        type = "boolean";
+      }
+    ];
+    nodes = [
+      {
+        id = "sameCase";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            input = "currentCase";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "ticketExistsEmpty";
+        inputs = {
+          left = {
+            input = "ticketId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "ticketExists";
+        inputs = {
+          value = {
+            node = "ticketExistsEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "ownedTicket";
+        inputs = {
+          left = {
+            node = "sameCase";
+            port = "result";
+          };
+          right = {
+            node = "ticketExists";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "active";
+        inputs = {
+          value = {
+            input = "cancelled";
+          };
+        };
+        op = "not";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "ownedTicket";
+            port = "result";
+          };
+          right = {
+            node = "active";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "ticketId";
+        type = "string";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Checks case ownership and existing ticket before changing a durable lifecycle flag.";
+  id = "lce.call-case-ticket";
+  kernel = "composite";
+  license = "MIT";
+  name = "call case ticket";
+  schemaVersion = 2;
+  version = "1.0.0";
+}

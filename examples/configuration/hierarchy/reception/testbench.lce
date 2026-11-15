@@ -1,0 +1,10 @@
+language "1.0";
+module "example.hierarchy.receptionTests" version "1.0.0";
+import "component.lce" as subject;
+
+-- Expected values are specified independently of execution.
+experiment ReceptionExample {
+ target=target(subject.Reception);
+ scenario={inputs={ticket=integer(17);patientId=string("PAT-001");};};
+ expect={"outputs.ticket.integer"=17;"outputs.patientId.string"="PAT-001";};
+}

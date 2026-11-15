@@ -84,6 +84,10 @@ import { LoaderCircle, X, CircleAlert, Check } from "lucide-vue-next";
     transform: rotate(360deg);
   }
 }
+@media(max-width:600px){
+ .studio-feedback{right:12px;bottom:12px;max-height:min(240px,32dvh);overflow:auto;overscroll-behavior:contain}
+ .studio-toast{padding:10px 12px;font-size:12px}
+}
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;

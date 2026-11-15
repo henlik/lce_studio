@@ -307,3 +307,55 @@ Use [the complete manual acceptance guide](docs/M1_MANUAL_ACCEPTANCE.md) to insp
 the five owned aspects, typed providers, six integrated scenarios, saved evidence
 and recovery. Manual UI acceptance is pending. Live adapters and runtime autonomy
 remain subsequent milestones.
+
+## Experimental source authoring branch
+
+On `codex/vhdl-style-authoring`, open **Engineering → Components → Component
+definitions → Source & testbench**. Load the complete stock component, compile,
+run its nine test cases, then install the immutable component version. Data
+schemas, pure decisions, state bindings and catalog pins are generated from one
+body. Source and testbench evidence autosave in your browser and can be downloaded.
+
+**Design → System architecture → Source** also accepts system assembly and can
+apply a generated demonstration design after installation and provider checks.
+This is **LCE Source 0.2**, a small VHDL-inspired language, not standard VHDL.
+It reuses the existing engines. See [the step-by-step component guide](docs/COMPONENT_SOURCE_GUIDE.md)
+and [the syntax and scope](docs/SOURCE_AUTHORING_EXPERIMENT.md).
+M1 remains **100%**, overall **33%**; this UX experiment earns no new milestone credit.
+
+
+### Configuration Language 1.0
+
+Open **Components → Component definitions → Configuration language** (also under
+**Design → System architecture**). The new workspace supports local modules,
+parameters, reusable fixtures, typed artifacts, source/graph property editing,
+experiments and portable packages. Start empty or explicitly load **Inspection
+example**: 56 artifacts and 43 experiments, including reception, service-desk reuse,
+the shared M1 system and separate resource/fault simulations.
+
+Start with the [hands-on configuration tutorial](docs/CONFIGURATION_TUTORIAL.md)
+and [runnable example index](examples/configuration/README.md): one component,
+intentional test failure, nested composition, parameterized reuse and the full
+inspection project. Use [the language reference](docs/CONFIGURATION_LANGUAGE.md)
+for syntax, constructors and API operations.
+The older **Source & testbench** editor remains available; importing its complete
+component migrates its definitions and independent testbench assertions.
+
+```sh
+go run ./cmd/configcheck -file examples/configuration/reuse/main.lce
+go run ./cmd/configcheck -file examples/configuration/inspection/main.lce
+```
+
+Configuration packages bind source, exact dependencies and replayable evidence.
+Installation is atomic across the artifact catalogs and package snapshot. These are
+bounded offline models, not signed live releases. Language gates: **6/6 implemented**;
+manual UX review follows. **M1 100%; overall roadmap 33%, unchanged.**
+
+### Backup and reset
+
+The global **Backup & reset** button creates a downloadable, server-retained backup
+before clearing the studio. It includes PostgreSQL application records and this
+browser's workspace drafts, source/testbench files and recovery checkpoints.
+Restore from a downloaded file or retained copy; the current state is backed up
+before replacement. See [backup, reset and recovery](docs/BACKUP_AND_RESET.md) for
+scope, confirmation steps, other-tab handling and limits.

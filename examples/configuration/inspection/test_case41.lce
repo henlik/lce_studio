@@ -1,0 +1,98 @@
+language "1.0";
+module "tests.case41" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "system_m1_unified_reservation.lce" as m_system_m1_unified_reservation;
+
+-- Atomic rollback
+experiment case41 {
+  expect = {
+    "scenario.passed" = true;
+  };
+  scenario = {
+    expected = [
+      {
+        effects = 0;
+        receipts = 0;
+        revision = 0;
+        state = {
+          acceptedSinceRestart = integer(0);
+          available = integer(5);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+        };
+        taskId = "[\"stock\",\"stock\"]";
+      },
+      {
+        effects = 0;
+        receipts = 0;
+        revision = 0;
+        state = {
+          acceptedSinceRestart = integer(0);
+          resourceId = string("resourceDefault");
+          tenantId = string("tenantDefault");
+          totalReserved = integer(0);
+        };
+        taskId = "[\"ledger\",\"ledger\"]";
+      }
+    ];
+    expectedWorkflows = [
+      {
+        activeTaskNode = "";
+        instanceId = "reservation";
+        outcome = "reservationFailed";
+        outputs = {
+          recorded = boolean(false);
+          remaining = integer(0);
+        };
+        status = "completed";
+        variables = {
+          accepted = boolean(false);
+          acknowledged = boolean(false);
+          remaining = integer(0);
+        };
+      }
+    ];
+    name = "M1 rollback";
+    steps = [
+      {
+        expectedWorkflowStatus = "waiting";
+        kind = "workflow_start";
+        workflow = {
+          faults = {
+            reserve = "before_commit";
+          };
+          inputs = {
+            request = {
+              record = {
+                quantity = integer(2);
+                resourceId = string("resourceDefault");
+                tenantId = string("tenantDefault");
+              };
+              recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationCommand");
+              type = "record";
+            };
+          };
+          instanceId = "reservation";
+          workflowId = "[\"stock\",\"flow\"]";
+        };
+      },
+      {
+        expectedWorkflowStatus = "completed";
+        kind = "workflow_event";
+        workflow = {
+          event = {
+            id = "approve";
+            kind = "response";
+            taskId = "task1";
+            values = {
+              proceed = boolean(true);
+            };
+          };
+          inputs = null;
+          instanceId = "reservation";
+        };
+      }
+    ];
+  };
+  target = target(m_system_m1_unified_reservation.system_m1_unified_reservation);
+}

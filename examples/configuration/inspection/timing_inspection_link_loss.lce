@@ -1,0 +1,197 @@
+language "1.0";
+module "export.timing_inspection_link_loss" version "1.0.0";
+
+
+timing timing_inspection_link_loss {
+  description = "Compare the same request pipeline on edge or cloud resources. Edit host power and network outages to test interruption and recovery; locations are descriptive and link delays are explicit.";
+  edges = [
+    {
+      id = "client-service";
+      latencyMs = 2;
+      source = "client";
+      target = "service";
+    },
+    {
+      id = "service-database";
+      latencyMs = 2;
+      source = "service";
+      target = "database";
+    }
+  ];
+  id = "inspection-link-loss";
+  infrastructure = {
+    hosts = [
+      {
+        activeWatts = 8;
+        cpuCores = 1;
+        id = "device-host";
+        idleWatts = 3;
+        memoryMb = 512;
+        name = "Client device";
+        outages = [];
+        siteId = "field-site";
+        tier = "device";
+      },
+      {
+        activeWatts = 45;
+        cpuCores = 4;
+        id = "edge-host";
+        idleWatts = 12;
+        memoryMb = 4096;
+        name = "Edge server";
+        outages = [];
+        siteId = "field-site";
+        tier = "edge";
+      },
+      {
+        activeWatts = 160;
+        cpuCores = 8;
+        id = "cloud-host";
+        idleWatts = 40;
+        memoryMb = 16384;
+        name = "Remote server";
+        outages = [];
+        siteId = "remote-site";
+        tier = "cloud";
+      }
+    ];
+    links = [
+      {
+        bandwidthKbps = 10000;
+        id = "local-link";
+        latencyMs = 2;
+        outages = [
+          {
+            endMs = 100000;
+            startMs = 0;
+          }
+        ];
+        sourceHostId = "device-host";
+        targetHostId = "edge-host";
+      },
+      {
+        bandwidthKbps = 256;
+        id = "device-wan";
+        latencyMs = 80;
+        outages = [];
+        sourceHostId = "device-host";
+        targetHostId = "cloud-host";
+      },
+      {
+        bandwidthKbps = 256;
+        id = "edge-wan";
+        latencyMs = 80;
+        outages = [];
+        sourceHostId = "edge-host";
+        targetHostId = "cloud-host";
+      }
+    ];
+    messageBytes = 1024;
+    placements = [
+      {
+        hostId = "device-host";
+        nodeId = "client";
+      },
+      {
+        hostId = "edge-host";
+        nodeId = "service";
+      },
+      {
+        hostId = "edge-host";
+        nodeId = "database";
+      }
+    ];
+    sites = [
+      {
+        id = "field-site";
+        latitude = 2;
+        longitude = 29;
+        name = "Field site";
+      },
+      {
+        id = "remote-site";
+        latitude = 50.85;
+        longitude = 4.35;
+        name = "Remote site";
+      }
+    ];
+  };
+  name = "Reception local network interrupted";
+  nodes = [
+    {
+      config = {
+        capacity = 1;
+        deduplicate = false;
+        memoryMb = 64;
+        processingMs = 0;
+      };
+      id = "client";
+      name = "Request client";
+      position = {
+        x = 60;
+        y = 160;
+      };
+      type = "client";
+    },
+    {
+      config = {
+        capacity = 2;
+        deduplicate = false;
+        memoryMb = 128;
+        processingMs = 20;
+      };
+      id = "service";
+      name = "Request service";
+      position = {
+        x = 360;
+        y = 160;
+      };
+      type = "service";
+    },
+    {
+      config = {
+        capacity = 1;
+        deduplicate = true;
+        memoryMb = 256;
+        processingMs = 10;
+      };
+      id = "database";
+      name = "Durable store";
+      position = {
+        x = 660;
+        y = 160;
+      };
+      type = "database";
+    }
+  ];
+  requirements = [
+    {
+      id = "REQ-001";
+      rule = "no_duplicates";
+      targetMs = 0;
+      text = "A retried request must not create a duplicate operation.";
+    },
+    {
+      id = "REQ-002";
+      rule = "all_complete";
+      targetMs = 0;
+      text = "Every request receives a successful response before retries are exhausted.";
+    },
+    {
+      id = "REQ-003";
+      rule = "latency_p95";
+      targetMs = 500;
+      text = "95% of requests complete within 500 ms.";
+    }
+  ];
+  scenario = {
+    dropFirstResponse = false;
+    intervalMs = 250;
+    jitterMs = 0;
+    maxRetries = 2;
+    requestCount = 12;
+    seed = 42;
+    timeoutMs = 500;
+  };
+  schemaVersion = 2;
+}

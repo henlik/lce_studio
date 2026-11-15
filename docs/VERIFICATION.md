@@ -1,5 +1,200 @@
 # Verification
 
+## Studio backup, reset and restore — 15 November 2026
+
+- Global backup/reset/restore dialog; downloadable and retained archives include
+  the 18 application tables, current-browser drafts/checkpoints and ribbon settings.
+  Restore creates a safety backup before replacing data. Built-ins remain.
+- Snapshot comparison, PostgreSQL request leases, API epochs and IndexedDB
+  generations protect against stale writes. Durable browser intent and idempotent
+  server retries recover an interrupted reset/restore.
+- Local targeted PostgreSQL tests passed for all-table round trips, 64-bit values,
+  unrelated-table preservation, retained history, concurrent edits, FK rollback,
+  cross-instance leases, confirmation and cross-origin/stale-session rejection.
+- All Go packages passed with race detection (the server package was rerun after
+  preserving HTTP 408 for cancelled request leases); `go vet ./...`, 56 frontend
+  tests, TypeScript checks and the production build passed locally. Chromium and
+  Docker Compose checks passed on `bcf67b8` (workflow `43769348054`). Browser
+  acceptance covers failed backup, stale-snapshot rejection, download, a simulated
+  storage failure after server commit, reload/recovery, old-tab fencing, damaged
+  file rejection, restore and retained-backup selection. Desktop/mobile captures
+  were inspected; the dialog header/footer were then kept outside its scroll area.
+  No user workspace was reset during development.
+- Guide: `docs/BACKUP_AND_RESET.md`. **M1 100%; weighted roadmap 33%, unchanged.**
+
+## Language tutorial and source examples — 15 November 2026
+
+- Added a task-oriented tutorial, an example index, primitive/binding reference,
+  exact model-source links and the component/extraction API request fields.
+- Added complete `basics`, `counter` and `expected-failure` projects. Each component
+  has its own source and testbench. Existing hierarchy, reuse and inspection
+  projects are included in the documented learning sequence.
+- `go test ./cmd/configcheck -count=1` and `go vet ./cmd/configcheck` pass. The new
+  acceptance test reads all six actual projects: 56 positive experiments pass;
+  the negative control compiles, runs, reports expected 24 versus observed 23,
+  and passes after the documented expectation repair.
+- Also ran the built CLI on all six projects, checked their case counts and exit
+  codes, and packed, verified and replayed Counter's four experiments. Relative
+  documentation links were checked against the repository files.
+- Engine and UI implementations are unchanged by this documentation increment.
+  **M1 100%; weighted roadmap 33%**, unchanged.
+
+## Component creation and extraction — 15 November 2026
+
+- Explicit **New component** creates a scalar identity starter, its own source and
+  TODO testbench, and entry imports. New workspaces remain empty. **Extract
+  primitive** turns an inline scalar operation into a typed child with nested
+  source/testbench files, retaining parent node identity, bindings, comments,
+  fixtures, position and colour. Existing test expectations are not rewritten.
+- Backend tests cover all eleven scalar operations (including both select
+  branches), literals, upstream component outputs, child compilation without its
+  parent, unchanged parent expectations, safe names, occupied folders and stale
+  hashes. The extraction adds an invocation and therefore changes trace paths,
+  call counts and depth usage; it is not a formal execution-budget equivalence
+  proof. Structured and parameterized extraction require explicit authoring.
+- Passed locally: complete `go test -race -count=1 ./...` with PostgreSQL,
+  `go vet ./...`, Go build, 56 frontend tests, Vue/TypeScript checks and production
+  build, and live configuration acceptance in a disposable PostgreSQL schema.
+  The live exercise starts empty, creates/extracts a hierarchy, verifies unfinished
+  testbenches fail, then supplies independent parent/child expectations and passes
+  both. The existing 56-artifact/43-experiment and hierarchy acceptance still pass.
+- Chromium acceptance passed on code commit `7ac06fe` in workflow `43758382483`,
+  including creation/extraction, editing a generated TODO testbench into a passing
+  independent test, and mobile creation-form overflow checks. Desktop hierarchy
+  and mobile form captures were inspected. The Docker Compose build and all
+  container API checks also passed. Local browser launch remains unavailable under
+  the workspace socket policy.
+- Instructions: **Create your own component hierarchy** in
+  `docs/CONFIGURATION_LANGUAGE.md`. **M1 100%; weighted roadmap 33%**, unchanged.
+
+## Component authoring workspace — 15 November 2026
+
+- Replaced the configuration textarea with locally bundled Monaco, including its
+  CSS, icon font and editor worker. Added nested composition and filesystem trees,
+  file tabs, breadcrumbs, Back/Forward, per-file editor state, inline diagnostics,
+  contextual suggestions, definition jumps, formatting and safe rename actions.
+- Added an actual three-level project with four independent testbenches. Full and
+  component-scoped runs use the existing engines. Zero selected tests cannot pass;
+  newly scaffolded testbenches intentionally fail until their oracle is supplied.
+  Scoped evidence is rejected as a whole-package report.
+- Folder organization rewrites imports, preserves comments and whole modules, and
+  rejects changes to compiled content or independent expectations. Reused modules
+  stay shared; explicit source conflicts remain protected.
+- **Passed locally:** complete Go race suite with PostgreSQL, `go vet ./...`, Go
+  build, 56 frontend tests, TypeScript/Vue production build, the live configuration
+  API acceptance (56 artifacts/43 experiments plus four nested example tests),
+  and the hierarchy example through the standalone CLI. Additional Go tests cover
+  folder idempotence, stale hashes, scoped evidence and entry-file test scaffolds.
+- **Passed in Chromium CI:** Monaco and its production CSS/worker/font under the
+  Go server CSP; raw source retains typed spaces across file changes; per-file undo,
+  find, three-level navigation, component/full test execution, no horizontal overflow
+  at 1440×1000 and 390×844, and mobile plane icons contained within the header.
+  Desktop and mobile screenshots were inspected from workflow run `43745393916`
+  (code commit `2ecfa23`). Docker Compose build and all container API checks also
+  passed. Manual usability review with the engineer remains separate.
+- Browser testing uses Ubuntu 24.04, supported by the pinned Playwright version.
+  Monaco uses its established input mode after a real-browser test reproduced
+  dropped spaces with experimental EditContext. Internal compilation no longer
+  emits duplicate run notifications; mobile toast height is bounded. Local Chromium
+  cannot start under this workspace's Unix-socket policy, so browser evidence comes
+  from CI. The lazy Monaco bundle is roughly 1 MiB compressed (Vite size warning).
+- **M1 100%; weighted roadmap 33%**, unchanged by this authoring UX work.
+
+## Configuration Language 1.0 — 15 November 2026
+
+- Six authoring gates implemented: versioned parsing/AST and typed diagnostics;
+  local modules, parameters and fixtures; all eight current artifact kinds;
+  shared-engine experiments; source/canvas editing; and portable immutable packages.
+- The reference project compiles **56 artifacts in 100 source files** and passes
+  **43 independently expected experiments**. It includes 37 inspection exercises
+  plus six shared M1 scenarios. The two-module reuse example passes two separate
+  expectations. Legacy stock migration preserves all nine component test cases.
+- The installed catalog and portable compiler share `internal/assembly` resolution,
+  compatibility checking and execution planning. No independent runtime semantics
+  were introduced. Timed deployment experiments remain separate from logical
+  workflow/state/message execution.
+- **Passed:** full `go test -race -count=1 ./...` against isolated PostgreSQL schemas,
+  `go vet ./...`, backend and standalone CLI builds, **53 frontend tests** and Vue
+  production build. Three mounted Vue checks cover empty creation, visible navigation
+  despite ribbon collapse, source-backed graph edits/test execution, and stale
+  response protection. Compiler fuzzing completed 3,713 executions without failure.
+- All eleven live API acceptance scripts passed, including the new configuration
+  suite. CLI package generation and fresh replay succeeded without PostgreSQL.
+  Tests reject wrong expectations, missing observations, corrupt provenance, unknown
+  fields, stale edit hashes, escaping imports, cycles and excessive fixture expansion.
+- PostgreSQL tests cover transaction rollback on a later artifact conflict,
+  concurrent/idempotent installation, immutable release snapshots and reopening.
+  A package with evidence is re-executed before installation; structural verification
+  alone is not presented as proof that its supplied test report is authentic.
+- Manual browser/mobile visual review and local Docker execution remain pending;
+  the existing Vite chunk-size warning remains. Source hashes are integrity metadata,
+  not signing, authorization or implementation-build attestation.
+- **Configuration-language gates 6/6 (100% of the bounded authoring scope).
+  M1 remains 100%; overall roadmap remains 33%.**
+  Review with [CONFIGURATION_LANGUAGE.md](CONFIGURATION_LANGUAGE.md).
+
+
+## Complete component source and testbench — 15 November 2026
+
+- LCE Source 0.2 compiles scalar component bodies into generated data schemas,
+  pure decision packages, an owned state machine, immutable definition pins and
+  a demonstration system. Existing M1 assembly remains compatible. The stock
+  component has 12 generated primitive nodes; its authored testbench runs nine
+  independent cases, 22 steps and 74 checks.
+- Cases cover reservation/exhaustion, denied quantities and wrong owners,
+  rollback, lost replies, restart/replay, stale revisions, changed requests under
+  the same ID, another domain and invalid initial state. Mutation tests prove
+  incorrect status, outputs, state, revision, receipt/effect counts, event payload
+  and reply-loss assertions fail with source locations. Another component checks
+  multiple commands, strings, Booleans, durable values and volatile reset.
+- PostgreSQL integration checks compilation without installation, idempotent
+  catalog installation, immutable-version conflicts and new-version publication.
+  Seven default-fixture cases also execute through the installed system model;
+  states, revisions, receipts and event payloads match the source testbench,
+  with saved system replay matching. The two fixture-override cases run in the
+  standalone testbench; overrides do not alter installed definitions.
+- **Passed:** full `go test -race -count=1 ./...` with PostgreSQL, `go vet ./...`,
+  backend and CGO-disabled builds, 46 frontend tests, Vue production build and
+  the full live `scripts/acceptance-system.mjs` suite. The CLI checks successful
+  execution and nonzero exits for failed assertions and malformed source.
+  Parser fuzzing completed 41,366 executions without failure.
+- Components → Component definitions → Source & testbench exposes compile,
+  test, explicit install, diagnostic selection, trace inspection and evidence
+  download. Browser autosave includes source and the last report; stale evidence
+  is labeled. System Source retains explicit checked application to the canvas.
+- Manual browser/mobile usability and local Docker execution remain unverified;
+  the existing Vite chunk-size warning remains. Testbench evidence includes exact
+  source and hash; existing saved system evidence does not yet include source.
+  These are bounded offline checks, not production execution or formal proof.
+- **M1 100%; overall roadmap 33%, unchanged.** No milestone credit is added for
+  this UX experiment. Follow [COMPONENT_SOURCE_GUIDE.md](COMPONENT_SOURCE_GUIDE.md)
+  for manual inspection and [SOURCE_AUTHORING_EXPERIMENT.md](SOURCE_AUTHORING_EXPERIMENT.md)
+  for the supported language and limits.
+
+## VHDL-style authoring experiment — 15 November 2026
+
+- Separate branch `codex/vhdl-style-authoring` adds bounded LCE Assembly 0.1,
+  a VHDL-inspired component-assembly frontend into the existing system model.
+  Standard VHDL, component behavior bodies, generics and new runtime semantics
+  are not implemented. The existing graphical and execution paths are retained.
+- Source has line/column diagnostics, a CLI, pure compile/example APIs, an
+  independently autosaved UI draft, file import/export, compiled JSON preview
+  and explicit apply after catalog/provider preparation. Stale source or canvas
+  changes block applying the prior result. Canvas edits do not rewrite source.
+- The 31-line M1 source produces the exact same prepared plan and reports as the
+  reference example. All six scenarios and immutable saved replays pass. Missing
+  dependencies, wrong owner mappings, malformed syntax, duplicate declarations,
+  unsupported generics, request shapes and source limits are checked.
+- Full Go race suite against PostgreSQL, go vet, backend/static builds, Vue
+  production build, all 46 frontend tests and live system API acceptance passed.
+  Parser fuzzing completed 98,093 executions without failure. Existing Vite
+  chunk-size warning remains. Dockerfile now includes the embedded source sample;
+  local Docker/container verification is unavailable because Docker is absent.
+- Browser/manual authoring acceptance remains pending. Source text is exported
+  separately and is not yet attached to saved execution provenance. No milestone
+  credit is added: **M1 100%; overall 33%**. See
+  [SOURCE_AUTHORING_EXPERIMENT.md](SOURCE_AUTHORING_EXPERIMENT.md).
+
 ## M1 connected offline engineering model — 14 November 2026
 
 - Workflows now use the existing system state sessions and budget. Pure decisions,

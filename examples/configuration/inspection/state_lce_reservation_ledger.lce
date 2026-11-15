@@ -1,0 +1,104 @@
+language "1.0";
+module "export.state_lce_reservation_ledger" version "1.0.0";
+import "data_lce_reservation_data.lce" as m_data_lce_reservation_data;
+import "behavior_lce_record_reservation.lce" as m_behavior_lce_record_reservation;
+
+state state_lce_reservation_ledger {
+  author = "LCE Studio contributors";
+  commands = [
+    {
+      acceptedOutput = "accepted";
+      bindings = {
+        acceptedSinceRestart = {
+          state = "acceptedSinceRestart";
+        };
+        notice = {
+          input = "notice";
+        };
+        resourceId = {
+          state = "resourceId";
+        };
+        tenantId = {
+          state = "tenantId";
+        };
+        totalReserved = {
+          state = "totalReserved";
+        };
+      };
+      decision = bundle(m_behavior_lce_record_reservation.behavior_lce_record_reservation);
+      effects = [];
+      inputs = [
+        {
+          name = "notice";
+          recordRef = record(m_data_lce_reservation_data.data_lce_reservation_data, "ReservationNotice");
+          type = "record";
+        }
+      ];
+      name = "recordReservation";
+      outputs = [
+        {
+          name = "accepted";
+          type = "boolean";
+        },
+        {
+          name = "totalReserved";
+          type = "integer";
+        },
+        {
+          name = "acceptedSinceRestart";
+          type = "integer";
+        },
+        {
+          name = "reason";
+          type = "string";
+        }
+      ];
+      results = {
+        accepted = "accepted";
+        acceptedSinceRestart = "acceptedSinceRestart";
+        reason = "reason";
+        totalReserved = "totalReserved";
+      };
+      writes = {
+        acceptedSinceRestart = "acceptedSinceRestart";
+        totalReserved = "totalReserved";
+      };
+    }
+  ];
+  dataContracts = [
+    lock(m_data_lce_reservation_data.data_lce_reservation_data)
+  ];
+  description = "Owns an independently committed total of typed reservation notices. Durable command receipts deduplicate the frozen generated delivery command; volatile acceptance count resets to the effective per-instance baseline. No external database or authorization enforcement is provided.";
+  effects = [];
+  id = "lce.reservation-ledger";
+  license = "MIT";
+  name = "Owned reservation ledger";
+  schemaVersion = 1;
+  state = [
+    {
+      durability = "durable";
+      initial = string("tenantDefault");
+      name = "tenantId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = string("resourceDefault");
+      name = "resourceId";
+      type = "string";
+    },
+    {
+      durability = "durable";
+      initial = integer(0);
+      name = "totalReserved";
+      type = "integer";
+    },
+    {
+      durability = "volatile";
+      initial = integer(0);
+      name = "acceptedSinceRestart";
+      type = "integer";
+    }
+  ];
+  version = "1.0.0";
+}

@@ -1,0 +1,52 @@
+language "1.0";
+module "tests.case20" version "1.0.0";
+import "data_lce_organization_registry.lce" as m_data_lce_organization_registry;
+
+-- Healthcare registry
+experiment case20 {
+  expect = {
+    valid = true;
+  };
+  scenario = {
+    name = "Healthcare registry";
+    rows = {
+      Organizations = [
+        {
+          id = string("tenant-alpha");
+          name = string("Example hospital");
+        },
+        {
+          id = string("tenant-beta");
+          name = string("Independent organization");
+        }
+      ];
+      Resources = [
+        {
+          id = string("resource-1");
+          scope = string("record:read");
+          tenantId = string("tenant-alpha");
+        },
+        {
+          id = string("resource-2");
+          scope = string("record:read");
+          tenantId = string("tenant-beta");
+        }
+      ];
+      Subjects = [
+        {
+          active = boolean(true);
+          id = string("subject-1");
+          role = string("clinician");
+          tenantId = string("tenant-alpha");
+        },
+        {
+          active = boolean(false);
+          id = string("subject-2");
+          role = string("clinician");
+          tenantId = string("tenant-beta");
+        }
+      ];
+    };
+  };
+  target = target(m_data_lce_organization_registry.data_lce_organization_registry);
+}

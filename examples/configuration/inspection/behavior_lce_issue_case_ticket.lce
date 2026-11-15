@@ -1,0 +1,492 @@
+language "1.0";
+module "export.behavior_lce_issue_case_ticket" version "1.0.0";
+
+
+behavior behavior_lce_issue_case_ticket {
+  author = "LCE Studio contributors";
+  behavior = {
+    bindings = {
+      accepted = {
+        node = "accepted";
+        port = "result";
+      };
+      caseId = {
+        input = "caseId";
+      };
+      nextNumber = {
+        node = "nextNumber";
+        port = "result";
+      };
+      ticketId = {
+        node = "ticket";
+        port = "result";
+      };
+      ticketNumber = {
+        node = "ticketNumber";
+        port = "result";
+      };
+    };
+    inputs = [
+      {
+        name = "currentCase";
+        type = "string";
+      },
+      {
+        name = "currentTicket";
+        type = "string";
+      },
+      {
+        name = "cancelled";
+        type = "boolean";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "currentNext";
+        type = "integer";
+      },
+      {
+        name = "currentNumber";
+        type = "integer";
+      }
+    ];
+    nodes = [
+      {
+        id = "unowned";
+        inputs = {
+          left = {
+            input = "currentCase";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 0;
+          y = 0;
+        };
+      },
+      {
+        id = "sameCase";
+        inputs = {
+          left = {
+            input = "currentCase";
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "equal";
+        position = {
+          x = 360;
+          y = 0;
+        };
+      },
+      {
+        id = "ownerAllowed";
+        inputs = {
+          left = {
+            node = "unowned";
+            port = "result";
+          };
+          right = {
+            node = "sameCase";
+            port = "result";
+          };
+        };
+        op = "or";
+        position = {
+          x = 720;
+          y = 0;
+        };
+      },
+      {
+        id = "caseNamedEmpty";
+        inputs = {
+          left = {
+            input = "caseId";
+          };
+          right = {
+            literal = string("");
+          };
+        };
+        op = "equal";
+        position = {
+          x = 1080;
+          y = 0;
+        };
+      },
+      {
+        id = "caseNamed";
+        inputs = {
+          value = {
+            node = "caseNamedEmpty";
+            port = "result";
+          };
+        };
+        op = "not";
+        position = {
+          x = 0;
+          y = 200;
+        };
+      },
+      {
+        id = "active";
+        inputs = {
+          value = {
+            input = "cancelled";
+          };
+        };
+        op = "not";
+        position = {
+          x = 360;
+          y = 200;
+        };
+      },
+      {
+        id = "validOwner";
+        inputs = {
+          left = {
+            node = "ownerAllowed";
+            port = "result";
+          };
+          right = {
+            node = "caseNamed";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 200;
+        };
+      },
+      {
+        id = "positiveSequence";
+        inputs = {
+          left = {
+            literal = integer(0);
+          };
+          right = {
+            input = "currentNext";
+          };
+        };
+        op = "less_than";
+        position = {
+          x = 1080;
+          y = 200;
+        };
+      },
+      {
+        id = "boundedSequence";
+        inputs = {
+          left = {
+            input = "currentNext";
+          };
+          right = {
+            literal = integer(9007199254740991);
+          };
+        };
+        op = "less_than";
+        position = {
+          x = 0;
+          y = 400;
+        };
+      },
+      {
+        id = "sequenceValid";
+        inputs = {
+          left = {
+            node = "positiveSequence";
+            port = "result";
+          };
+          right = {
+            node = "boundedSequence";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 360;
+          y = 400;
+        };
+      },
+      {
+        id = "eligible";
+        inputs = {
+          left = {
+            node = "validOwner";
+            port = "result";
+          };
+          right = {
+            node = "active";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 720;
+          y = 400;
+        };
+      },
+      {
+        id = "accepted";
+        inputs = {
+          left = {
+            node = "eligible";
+            port = "result";
+          };
+          right = {
+            node = "sequenceValid";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 1080;
+          y = 400;
+        };
+      },
+      {
+        id = "firstIssue";
+        inputs = {
+          left = {
+            node = "accepted";
+            port = "result";
+          };
+          right = {
+            node = "unowned";
+            port = "result";
+          };
+        };
+        op = "and";
+        position = {
+          x = 0;
+          y = 600;
+        };
+      },
+      {
+        id = "increment";
+        inputs = {
+          condition = {
+            node = "firstIssue";
+            port = "result";
+          };
+          falseValue = {
+            literal = integer(0);
+          };
+          trueValue = {
+            literal = integer(1);
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 600;
+        };
+      },
+      {
+        id = "nextNumber";
+        inputs = {
+          left = {
+            input = "currentNext";
+          };
+          right = {
+            node = "increment";
+            port = "result";
+          };
+        };
+        op = "add";
+        position = {
+          x = 720;
+          y = 600;
+        };
+      },
+      {
+        id = "ticketNumber";
+        inputs = {
+          condition = {
+            node = "unowned";
+            port = "result";
+          };
+          falseValue = {
+            input = "currentNumber";
+          };
+          trueValue = {
+            input = "currentNext";
+          };
+        };
+        op = "select";
+        position = {
+          x = 1080;
+          y = 600;
+        };
+      },
+      {
+        id = "newTicket";
+        inputs = {
+          left = {
+            literal = string("ticket:");
+          };
+          right = {
+            input = "caseId";
+          };
+        };
+        op = "concat";
+        position = {
+          x = 0;
+          y = 800;
+        };
+      },
+      {
+        id = "ticket";
+        inputs = {
+          condition = {
+            node = "unowned";
+            port = "result";
+          };
+          falseValue = {
+            input = "currentTicket";
+          };
+          trueValue = {
+            node = "newTicket";
+            port = "result";
+          };
+        };
+        op = "select";
+        position = {
+          x = 360;
+          y = 800;
+        };
+      }
+    ];
+    outputs = [
+      {
+        name = "accepted";
+        type = "boolean";
+      },
+      {
+        name = "caseId";
+        type = "string";
+      },
+      {
+        name = "ticketId";
+        type = "string";
+      },
+      {
+        name = "ticketNumber";
+        type = "integer";
+      },
+      {
+        name = "nextNumber";
+        type = "integer";
+      }
+    ];
+  };
+  capabilities = [
+    "design",
+    "evaluate"
+  ];
+  config = {
+    capacity = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    deduplicate = false;
+    memoryMb = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+    processingMs = {
+      default = 0;
+      max = 0;
+      min = 0;
+    };
+  };
+  description = "Proposes one case-derived ticket; another case cannot take ownership of an existing ticket.";
+  id = "lce.issue-case-ticket";
+  kernel = "composite";
+  license = "MIT";
+  name = "Issue or reuse case ticket";
+  schemaVersion = 2;
+  tests = [
+    {
+      expected = {
+        accepted = boolean(true);
+        caseId = string("caseOne");
+        nextNumber = integer(101);
+        ticketId = string("ticket:caseOne");
+        ticketNumber = integer(100);
+      };
+      inputs = {
+        cancelled = boolean(false);
+        caseId = string("caseOne");
+        currentCase = string("");
+        currentNext = integer(100);
+        currentNumber = integer(99);
+        currentTicket = string("");
+      };
+      name = "Issue first ticket";
+    },
+    {
+      expected = {
+        accepted = boolean(true);
+        caseId = string("caseOne");
+        nextNumber = integer(100);
+        ticketId = string("ticket:caseOne");
+        ticketNumber = integer(99);
+      };
+      inputs = {
+        cancelled = boolean(false);
+        caseId = string("caseOne");
+        currentCase = string("caseOne");
+        currentNext = integer(100);
+        currentNumber = integer(99);
+        currentTicket = string("ticket:caseOne");
+      };
+      name = "Same case reuses ticket";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        caseId = string("caseTwo");
+        nextNumber = integer(100);
+        ticketId = string("ticket:caseOne");
+        ticketNumber = integer(99);
+      };
+      inputs = {
+        cancelled = boolean(false);
+        caseId = string("caseTwo");
+        currentCase = string("caseOne");
+        currentNext = integer(100);
+        currentNumber = integer(99);
+        currentTicket = string("ticket:caseOne");
+      };
+      name = "Different case denied";
+    },
+    {
+      expected = {
+        accepted = boolean(false);
+        caseId = string("caseOne");
+        nextNumber = integer(100);
+        ticketId = string("ticket:caseOne");
+        ticketNumber = integer(99);
+      };
+      inputs = {
+        cancelled = boolean(true);
+        caseId = string("caseOne");
+        currentCase = string("caseOne");
+        currentNext = integer(100);
+        currentNumber = integer(99);
+        currentTicket = string("ticket:caseOne");
+      };
+      name = "Cancelled case denied";
+    }
+  ];
+  version = "1.0.0";
+}
