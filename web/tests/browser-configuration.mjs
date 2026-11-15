@@ -41,4 +41,4 @@ try {
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'mobile horizontal overflow');
  await page.screenshot({path:'test-results/configuration-mobile.png',fullPage:true});
  assert.deepEqual(errors,[],'browser/CSP errors');console.log('Browser acceptance passed: Monaco, nested navigation, per-file undo, find, scoped tests, production CSS and responsive widths.');
-}finally{await browser.close()}
+}catch(error){await page.screenshot({path:'test-results/configuration-failure.png',fullPage:true}).catch(()=>{});throw error}finally{await browser.close()}

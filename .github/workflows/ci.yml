@@ -40,7 +40,6 @@ jobs:
       - run: npm --prefix web ci
       - run: npm --prefix web test
       - run: npm --prefix web run build
-      - run: cd web && npx playwright install --with-deps chromium
       - run: go build -trimpath -o bin/studio ./cmd/studio
       - name: Check complete API workflow
         shell: bash
@@ -64,6 +63,49 @@ jobs:
           node scripts/acceptance-inspection.mjs
           node scripts/acceptance-system.mjs
           node scripts/acceptance-configuration.mjs
+
+  browser:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: studio
+          POSTGRES_PASSWORD: studio_ci_only
+          POSTGRES_DB: studio_browser
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U studio -d studio_browser"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://studio:studio_ci_only@127.0.0.1:5432/studio_browser?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - run: cd web && npx playwright install --with-deps chromium
+      - run: go build -trimpath -o bin/studio ./cmd/studio
+      - name: Check configuration editor in Chromium
+        shell: bash
+        run: |
+          ./bin/studio &
+          studio_pid=$!
+          trap 'kill "$studio_pid"' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/api/health; then break; fi
+            sleep 1
+          done
           node web/tests/browser-configuration.mjs
       - uses: actions/upload-artifact@v4
         if: always()
