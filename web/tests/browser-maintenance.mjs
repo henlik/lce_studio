@@ -71,6 +71,9 @@ try {
  await page.getByLabel('Upload backup JSON').setInputFiles({name:'studio.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(b))});
  await page.getByText('Validated ·',{exact:false}).waitFor();
  await prepare();await page.getByRole('textbox',{name:'Type RESTORE to confirm'}).fill('RESTORE');
+ assert.equal(await page.getByRole('button',{name:'Close backup and reset'}).isVisible(),true);
+ const closeBox=await page.getByRole('button',{name:'Close backup and reset'}).boundingBox();assert.ok(closeBox.y>=0&&closeBox.y+closeBox.height<=1000,'dialog header stays within viewport after scrolling to confirmation');
+ const doneBox=await page.getByRole('button',{name:'Done',exact:true}).boundingBox();assert.ok(doneBox.y>=0&&doneBox.y+doneBox.height<=1000,'dialog footer stays within viewport');
  await page.screenshot({path:'test-results/maintenance-restore-ready.png',fullPage:true});
  await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Restore studio',exact:true}).click()]);
  await page.getByRole('button',{name:'Configuration language',exact:true}).click();await page.locator('.monaco-editor').waitFor();

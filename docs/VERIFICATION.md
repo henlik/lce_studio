@@ -14,7 +14,12 @@
 - All Go packages passed with race detection (the server package was rerun after
   preserving HTTP 408 for cancelled request leases); `go vet ./...`, 56 frontend
   tests, TypeScript checks and the production build passed locally. Chromium and
-  container checks run in CI. No user workspace was reset during development.
+  Docker Compose checks passed on `bcf67b8` (workflow `43769348054`). Browser
+  acceptance covers failed backup, stale-snapshot rejection, download, a simulated
+  storage failure after server commit, reload/recovery, old-tab fencing, damaged
+  file rejection, restore and retained-backup selection. Desktop/mobile captures
+  were inspected; the dialog header/footer were then kept outside its scroll area.
+  No user workspace was reset during development.
 - Guide: `docs/BACKUP_AND_RESET.md`. **M1 100%; weighted roadmap 33%, unchanged.**
 
 ## Language tutorial and source examples — 15 November 2026
